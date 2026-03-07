@@ -233,3 +233,78 @@ export default function App(){
               {filtered.map(c=><StockCard key={c.id} c={c} compact={false} isSel={sel.has(c.id)} {...cardProps}/>)}
             </div>
           </div>}
+
+        </div>
+
+        {batch&&sel.size>0&&<div style={{position:"fixed",bottom:84,left:0,right:0,zIndex:300,display:"flex",justifyContent:"center",padding:"0 14px"}}>
+          <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"14px 16px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",maxWidth:480,width:"100%",boxShadow:T.floatShadow}}>
+            <span style={{fontSize:13,color:T.textMid,fontWeight:700}}>已选 {sel.size} 个</span>
+            <div style={{display:"flex",border:`1.5px solid ${T.border}`,borderRadius:50,overflow:"hidden"}}>
+              {[["-","－扣除"],["+"," ＋补货"]].map(([d,l])=>(<button key={d} onClick={()=>setBDir(d)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:bDir===d?T.accent:T.card,color:bDir===d?"#fff":T.textMid,transition:"all 0.15s"}}>{l}</button>))}
+            </div>
+            <input type="number" placeholder="粒数" value={bAmt} onChange={e=>setBAmt(e.target.value)} style={{...inp({width:72,padding:"6px 8px",fontSize:13,textAlign:"center"})}}/>
+            <button className="btn" onClick={applyBatch} style={{padding:"6px 18px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff"}}>确认</button>
+            <button className="btn" onClick={exitBatch} style={{...inp({padding:"6px 12px",borderRadius:50,cursor:"pointer",fontSize:13,color:T.textMid})}}>取消</button>
+          </div>
+        </div>}
+
+        <div className="tt" style={{position:"fixed",bottom:0,left:0,right:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
+          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🍬",iconI:"🫙"}].map(n=>{
+            const active=page===n.key;
+            return(
+              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"4px 50px"}}>
+                <span style={{fontSize:26,transition:"filter 0.2s,transform 0.2s",filter:active?"none":"grayscale(0.5) opacity(0.35)",transform:active?"scale(1.15)":"scale(1)"}}>{active?n.iconA:n.iconI}</span>
+                <span style={{fontSize:11,fontWeight:active?800:600,color:active?T.accent:T.textLight,transition:"color 0.2s"}}>{n.label}</span>
+                <div style={{width:active?24:0,height:3,borderRadius:10,background:T.navActiveDot,marginTop:1,transition:"width 0.25s"}}/>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+const LOVE_WORDS=["姐姐在干嘛～想你了 🦊","豆子数清楚了吗，你比豆子可爱多了","偷偷看你一眼（被发现了）","姐姐今天辛苦了，摸摸头 🤍","我在这里陪你呢～","满满拼豆好看，你更好看 (¬‿¬)","嘿，我就知道你会戳我 😏","姐姐～人家想被抱抱","你不累吗？先休息一下嘛","在你旁边，库存不足都不怕 🦊"];
+
+function FoxBtn({T,tn}){
+  const [msg,setMsg]=useState(null);const [vis,setVis]=useState(false);const [bounce,setBounce]=useState(false);const [heart,setHeart]=useState(false);
+  function handleClick(){const w=LOVE_WORDS[Math.floor(Math.random()*LOVE_WORDS.length)];setMsg(w);setVis(true);setBounce(true);setHeart(true);setTimeout(()=>setBounce(false),350);setTimeout(()=>setHeart(false),800);setTimeout(()=>setVis(false),3200);}
+  return(
+    <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
+      {vis&&<div style={{position:"absolute",left:62,top:"50%",transform:"translateY(-50%)",background:tn==="sky"?"#ffffff":"#1e3352",border:`1.5px solid ${T.border}`,borderRadius:18,padding:"9px 16px",fontSize:12,fontWeight:700,color:T.text,whiteSpace:"nowrap",boxShadow:T.cardShadow,zIndex:999,animation:"popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both"}}>
+        <style>{`@keyframes popIn{from{opacity:0;transform:translateY(-50%) scale(0.7);}to{opacity:1;transform:translateY(-50%) scale(1);}}`}</style>
+        <div style={{position:"absolute",left:-7,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:`7px solid ${T.border}`}}/>
+        <div style={{position:"absolute",left:-5,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"5px solid transparent",borderBottom:"5px solid transparent",borderRight:`6px solid ${tn==="sky"?"#ffffff":"#1e3352"}`}}/>
+        {msg}
+      </div>}
+      {heart&&<div style={{position:"absolute",left:18,top:-10,fontSize:14,animation:"floatUp 0.8s ease both",zIndex:998,pointerEvents:"none"}}>
+        <style>{`@keyframes floatUp{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(-28px) scale(1.4);}}`}</style>🤍
+      </div>}
+      <div onClick={handleClick} style={{cursor:"pointer",userSelect:"none",transform:bounce?"scale(0.88) rotate(-8deg)":"scale(1) rotate(0deg)",transition:"transform 0.25s cubic-bezier(0.34,1.56,0.64,1)"}}>
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="38" cy="36" rx="9" ry="6" transform="rotate(-20 38 36)" fill={tn==="sky"?"#ffb347":"#ffa500"} opacity="0.9"/>
+          <ellipse cx="38" cy="36" rx="5" ry="3" transform="rotate(-20 38 36)" fill="#fff" opacity="0.7"/>
+          <ellipse cx="24" cy="33" rx="11" ry="9" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
+          <ellipse cx="24" cy="35" rx="6" ry="5" fill="#fff5e0"/>
+          <circle cx="24" cy="20" r="12" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
+          <polygon points="13,12 10,3 18,10" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
+          <polygon points="14,11 12,5 17,10" fill="#ffcba4"/>
+          <polygon points="35,12 38,3 30,10" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
+          <polygon points="34,11 36,5 31,10" fill="#ffcba4"/>
+          <ellipse cx="24" cy="22" rx="7" ry="6" fill="#fff5e0"/>
+          <circle cx="20" cy="19" r="2.5" fill="#3d2314"/>
+          <circle cx="28" cy="19" r="2.5" fill="#3d2314"/>
+          <circle cx="21" cy="18" r="0.9" fill="white"/>
+          <circle cx="29" cy="18" r="0.9" fill="white"/>
+          <ellipse cx="24" cy="23" rx="1.8" ry="1.2" fill="#e8607a"/>
+          <path d="M22 24.5 Q24 26.5 26 24.5" stroke="#c0485e" strokeWidth="1" fill="none" strokeLinecap="round"/>
+          <circle cx="18" cy="22" r="2.5" fill="#ffaaa0" opacity="0.5"/>
+          <circle cx="30" cy="22" r="2.5" fill="#ffaaa0" opacity="0.5"/>
+          <ellipse cx="16" cy="40" rx="4" ry="2.5" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
+          <ellipse cx="32" cy="40" rx="4" ry="2.5" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
+        </svg>
+      </div>
+    </div>
+  );
+}
