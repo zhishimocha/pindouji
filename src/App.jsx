@@ -13,7 +13,7 @@ const ALL_COLORS = [
 ];
 
 const SERIES=["A","B","C","D","E","F","G","H","M"];
-const INIT_STOCK=ALL_COLORS.reduce((a,c)=>({...a,[c.id]:10}),{});
+const INIT_STOCK=ALL_COLORS.reduce((a,c)=>({...a,[c.id]:1000}),{});
 const INIT_USED=ALL_COLORS.reduce((a,c)=>({...a,[c.id]:0}),{});
 function isDark(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return(r*299+g*587+b*114)/1000<128;}
 function gToBeads(g){return Math.round(g*100);}
@@ -37,36 +37,24 @@ const G=`
 .btn:active{transform:scale(0.95);}
 `;
 
-// ── 色卡组件（memo + 内部local state，焦点稳定）──
-const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch,isSel,onToggleSel,onSave}){
-  const wC=200,wL=500;
-  const beads=gToBeads(stock[c.id]);
+// ── 色卡组件（粒为主单位）──
+const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch,isSel,onToggleSel,onSave,wC,wL}){
+  const beads=Math.round(stock[c.id]);
   const st=beads<wC?"c":beads<wL?"l":"ok";
   const col=st==="c"?T.danger:st==="l"?T.warn:T.text;
   const dk=isDark(c.hex);
+  const [localB,setLocalB]=useState(String(beads));
+  const inputRef=useRef(null);
+
+  // 每次stock变化时同步localB（未在编辑时）
   const [editing,setEditing]=useState(false);
-  const [localG,setLocalG]=useState("");
-  const [localB,setLocalB]=useState("");
-  const gRef=useRef(null);
+  useEffect(()=>{if(!editing)setLocalB(String(Math.round(stock[c.id])));},[stock[c.id],editing]);
 
-  function startEdit(e){
-    if(batch)return;
-    e.stopPropagation();
-    setLocalG(fmtG(stock[c.id]));
-    setLocalB(String(gToBeads(stock[c.id])));
-    setEditing(true);
-  }
-  useEffect(()=>{if(editing&&gRef.current)gRef.current.focus();},[editing]);
+  function startEdit(e){if(batch)return;e.stopPropagation();setLocalB(String(Math.round(stock[c.id])));setEditing(true);setTimeout(()=>inputRef.current&&inputRef.current.focus(),0);}
+  function save(){const n=parseInt(localB);if(!isNaN(n)&&n>=0)onSave(c.id,n);setEditing(false);}
+  function onKey(e){if(e.key==="Enter")save();if(e.key==="Escape")setEditing(false);}
 
-  function onG(v){setLocalG(v);const n=parseFloat(v);if(!isNaN(n)&&n>=0)setLocalB(String(Math.round(n*100)));}
-  function onB(v){setLocalB(v);const n=parseInt(v);if(!isNaN(n)&&n>=0)setLocalG(fmtG(n/100));}
-  function save(){
-    const g=parseFloat(localG);
-    if(!isNaN(g)&&g>=0)onSave(c.id,g);
-    setEditing(false);
-  }
-  function onKey(e){if(e.key==="Enter")save();if(e.key==="Escape"){setEditing(false);}}
-
+  const gVal=(Math.round(stock[c.id])/100).toFixed(1).replace(/\.0$/,"");
   const pad=compact?"6px 8px":"10px 10px 10px";
 
   return(
@@ -83,133 +71,26 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
       </div>
       {editing&&!batch
         ?<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3,marginBottom:4}}>
-            <input ref={gRef} value={localG} onChange={e=>onG(e.target.value)} onBlur={save} onKeyDown={onKey}
-              style={{width:52,textAlign:"center",fontSize:compact?12:14,padding:"3px 4px",border:`2px solid ${T.accent}`,borderRadius:8,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none"}}/>
-            <span style={{fontSize:10,color:T.textLight,fontWeight:700}}>g</span>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:2}}>
+            <input ref={inputRef} value={localB} onChange={e=>setLocalB(e.target.value)} onBlur={save} onKeyDown={onKey}
+              type="number" min="0"
+              style={{width:68,textAlign:"center",fontSize:compact?14:16,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.accent}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.accent,outline:"none"}}/>
+            <span style={{fontSize:11,color:T.textLight,fontWeight:700}}>粒</span>
           </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
-            <input value={localB} onChange={e=>onB(e.target.value)} onBlur={save} onKeyDown={onKey}
-              style={{width:52,textAlign:"center",fontSize:10,padding:"2px 4px",border:`1.5px solid ${T.border}`,borderRadius:8,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none"}}/>
-            <span style={{fontSize:10,color:T.textLight,fontWeight:700}}>粒</span>
+          <div style={{fontSize:10,color:T.textLight,marginTop:2}}>
+            = {(parseInt(localB)||0)/100 % 1===0 ? (parseInt(localB)||0)/100 : ((parseInt(localB)||0)/100).toFixed(2)} g
           </div>
         </div>
         :<div style={{padding:pad,textAlign:"center"}}>
-          <div style={{fontSize:compact?13:15,fontWeight:800,color:col}}>{fmtG(stock[c.id])} g</div>
-          <div style={{fontSize:compact?10:11,color:T.textMid,fontWeight:600,marginTop:2}}>{gToBeads(stock[c.id])} 粒</div>
-          {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:2}}>已用 {fmtG(used[c.id])}g</div>}
+          <div style={{fontSize:compact?14:16,fontWeight:800,color:col}}>{beads} <span style={{fontSize:10,fontWeight:600}}>粒</span></div>
+          <div style={{fontSize:compact?10:11,color:T.textMid,fontWeight:600,marginTop:1}}>{gVal} g</div>
+          {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:1}}>已用 {Math.round(used[c.id])} 粒</div>}
         </div>
       }
     </div>
   );
 });
 
-// ── 图纸裁剪组件 ──
-function ImageCropper({imgSrc,onCrop,onCancel,T,tn}){
-  const canvasRef=useRef(null);
-  const scrollRef=useRef(null);
-  const [img,setImg]=useState(null);
-  const [drag,setDrag]=useState(false);
-  const [sel,setSel]=useState(null);
-  const [start,setStart]=useState(null);
-  const [scale,setScale]=useState(1);
-
-  useEffect(()=>{
-    const i=new Image();
-    i.onload=()=>{
-      setImg(i);
-      const maxW=Math.min(window.innerWidth-40,600);
-      setScale(maxW/i.width);
-    };
-    i.src=imgSrc;
-  },[imgSrc]);
-
-  useEffect(()=>{
-    if(!img||!canvasRef.current)return;
-    const cv=canvasRef.current;
-    const w=img.width*scale,h=img.height*scale;
-    cv.width=w;cv.height=h;
-    const ctx=cv.getContext("2d");
-    ctx.drawImage(img,0,0,w,h);
-    if(sel){
-      ctx.fillStyle="rgba(0,0,0,0.42)";
-      ctx.fillRect(0,0,w,sel.y);
-      ctx.fillRect(0,sel.y+sel.h,w,h-sel.y-sel.h);
-      ctx.fillRect(0,sel.y,sel.x,sel.h);
-      ctx.fillRect(sel.x+sel.w,sel.y,w-sel.x-sel.w,sel.h);
-      ctx.strokeStyle="#4a9eff";ctx.lineWidth=2;ctx.setLineDash([6,3]);
-      ctx.strokeRect(sel.x,sel.y,sel.w,sel.h);
-    }
-  },[img,sel,scale]);
-
-  function getPos(e){
-    const cv=canvasRef.current;
-    const r=cv.getBoundingClientRect();
-    // canvas CSS宽度 vs 实际像素宽度的比例
-    const cssW=r.width;
-    const realW=cv.width;
-    const ratio=realW/cssW;
-    const cx=e.touches?e.touches[0].clientX:e.clientX;
-    const cy=e.touches?e.touches[0].clientY:e.clientY;
-    // 用canvas实际像素坐标
-    const x=(cx-r.left)*ratio;
-    const y=(cy-r.top)*ratio;
-    return{x:Math.max(0,Math.min(x,realW)),y:Math.max(0,Math.min(y,cv.height))};
-  }
-
-  function onDown(e){e.preventDefault();const p=getPos(e);setStart(p);setDrag(true);setSel(null);}
-  function onMove(e){
-    if(!drag||!start)return;e.preventDefault();
-    const p=getPos(e);
-    setSel({x:Math.min(start.x,p.x),y:Math.min(start.y,p.y),w:Math.abs(p.x-start.x),h:Math.abs(p.y-start.y)});
-  }
-  function onUp(e){e.preventDefault();setDrag(false);}
-
-  function doCrop(){
-    if(!sel||sel.w<10||sel.h<10){alert("请先框选要识别的区域");return;}
-    const cv=document.createElement("canvas");
-    // sel已经是canvas像素坐标，直接用scale换算到原图
-    const realX=sel.x/scale,realY=sel.y/scale,realW=sel.w/scale,realH=sel.h/scale;
-    cv.width=Math.round(realW);cv.height=Math.round(realH);
-    cv.getContext("2d").drawImage(img,realX,realY,realW,realH,0,0,realW,realH);
-    const b64=cv.toDataURL("image/jpeg",0.95).split(",")[1];
-    onCrop(b64);
-  }
-
-  return(
-    <div>
-      <div style={{fontSize:13,color:T.textMid,marginBottom:8,fontWeight:600}}>
-        📌 上下滑动查看全图，拖动框选底部统计区域后点确认
-      </div>
-      {/* 可滚动容器，不clip内容 */}
-      <div ref={scrollRef} style={{
-        borderRadius:12,border:`1.5px solid ${T.border}`,
-        overflowY:"auto",overflowX:"hidden",
-        maxHeight:"55vh",
-        cursor:"crosshair",touchAction:"pan-y",
-        WebkitOverflowScrolling:"touch",
-      }}>
-        <canvas ref={canvasRef}
-          style={{display:"block",width:"100%",userSelect:"none",touchAction:"none"}}
-          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
-          onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}/>
-      </div>
-      <div style={{fontSize:11,color:T.textLight,marginTop:6,textAlign:"center"}}>
-        {sel&&sel.w>10&&sel.h>10?"✅ 已框选区域，可确认识别":"⬆️ 先滚动到底部统计行，再拖动框选"}
-      </div>
-      <div style={{display:"flex",gap:8,marginTop:10}}>
-        <button className="btn" onClick={doCrop}
-          style={{flex:1,padding:"12px",borderRadius:14,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:sel&&sel.w>10?T.accent:T.border,color:sel&&sel.w>10?"#fff":T.textLight}}>
-          ✂️ 确认裁剪并识别
-        </button>
-        <button className="btn" onClick={onCancel}
-          style={{padding:"12px 16px",borderRadius:14,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.card,color:T.textMid}}>
-          取消
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export default function App(){
   const [tn,setTn]=useState("sky");
@@ -227,19 +108,9 @@ export default function App(){
   const [sel,setSel]=useState(new Set());
   const [bAmt,setBAmt]=useState("");
   const [bDir,setBDir]=useState("-");
-  // 图纸
-  const [rawImg,setRawImg]=useState(null);       // 原图base64（data url）
-  const [rawName,setRawName]=useState("");
-  const [cropMode,setCropMode]=useState(false);  // 是否在裁剪
-  const [croppedB64,setCroppedB64]=useState(null);
-  const [patternLoading,setPatternLoading]=useState(false);
-  const [patternResult,setPatternResult]=useState(null);
-  const [patternError,setPatternError]=useState("");
-  const [patternDone,setPatternDone]=useState(false);
-  const fileRef=useRef(null);
 
-  const critC=ALL_COLORS.filter(c=>gToBeads(stock[c.id])<wC);
-  const lowC=ALL_COLORS.filter(c=>gToBeads(stock[c.id])>=wC&&gToBeads(stock[c.id])<wL);
+  const critC=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wC);
+  const lowC=ALL_COLORS.filter(c=>Math.round(stock[c.id])>=wC&&Math.round(stock[c.id])<wL);
   const sUsed=useMemo(()=>SERIES.map(s=>({s,total:ALL_COLORS.filter(c=>c.id.startsWith(s)).reduce((sum,c)=>sum+used[c.id],0)})).sort((a,b)=>b.total-a.total),[used]);
   const top5=sUsed.filter(x=>x.total>0).slice(0,5);
   const maxU=top5[0]?.total||1;
@@ -269,44 +140,17 @@ export default function App(){
   }
   function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");}
 
-  function handlePatternFile(e){
-    const file=e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=ev=>{setRawImg(ev.target.result);setRawName(file.name);setCropMode(true);setPatternResult(null);setPatternError("");setPatternDone(false);setCroppedB64(null);};
-    reader.readAsDataURL(file);
-  }
 
-  function handleCropped(b64){setCroppedB64(b64);setCropMode(false);}
 
-  async function analyzePattern(){
-    if(!croppedB64)return;
-    setPatternLoading(true);setPatternError("");setPatternResult(null);
-    try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:croppedB64}},{type:"text",text:"这是拼豆图纸底部的色块用量统计区域。格式通常是色号后面跟括号里的数字，如 A16(202) H2(97) H7(88) 这样。请识别所有色号和对应粒数，只输出JSON数组，不要其他文字：[{\"id\":\"A16\",\"beads\":202},{\"id\":\"H2\",\"beads\":97}]"}]}]})});
-      const data=await resp.json();
-      const text=data.content?.map(i=>i.text||"").join("")||"";
-      const clean=text.replace(/```json|```/g,"").trim();
-      const parsed=JSON.parse(clean);
-      setPatternResult(parsed.map(item=>({...item,have:gToBeads(stock[item.id]||0),enough:gToBeads(stock[item.id]||0)>=item.beads})));
-    }catch(err){setPatternError("识别失败，请重新框选或检查图片清晰度～ (╥﹏╥)");}
-    setPatternLoading(false);
-  }
 
-  function applyPatternDeduct(){
-    if(!patternResult)return;
-    const ns={...stock},nu={...used};
-    patternResult.forEach(({id,beads})=>{if(ns[id]==null)return;const gN=beads/100;const d=Math.min(ns[id],gN);nu[id]=(nu[id]||0)+d;ns[id]=Math.max(0,ns[id]-gN);});
-    setStock(ns);setUsed(nu);setPatternDone(true);
-  }
 
-  function resetPattern(){setRawImg(null);setRawName("");setCropMode(false);setCroppedB64(null);setPatternResult(null);setPatternError("");setPatternDone(false);if(fileRef.current)fileRef.current.value="";}
 
   const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
 
-  const saveStock=useCallback((id,g)=>{
-    setStock(s=>{const d=(s[id]||0)-g;if(d>0)setUsed(u=>({...u,[id]:(u[id]||0)+d}));return{...s,[id]:g};});
+  const saveStock=useCallback((id,beads)=>{
+    setStock(s=>{const d=(s[id]||0)-beads;if(d>0)setUsed(u=>({...u,[id]:(u[id]||0)+d}));return{...s,[id]:beads};});
   },[]);
-  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onToggleSel:toggleSel};
+  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onToggleSel:toggleSel,wC,wL};
 
   return(
     <>
@@ -357,7 +201,7 @@ export default function App(){
                   <div key={s} onClick={()=>goS(s)} style={{marginBottom:12,cursor:"pointer"}}>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5,fontWeight:700}}>
                       <span style={{color:T.accent}}>{s} 系列</span>
-                      <span style={{color:T.textMid,fontWeight:400}}>{fmtG(total)}g · {gToBeads(total)}粒</span>
+                      <span style={{color:T.textMid,fontWeight:400}}>{Math.round(total)} 粒</span>
                     </div>
                     <div style={{background:T.barBg,borderRadius:20,height:10,overflow:"hidden"}}>
                       <div style={{width:`${(total/maxU)*100}%`,height:"100%",borderRadius:20,background:T.bars[i],transition:"width 0.5s"}}/>
@@ -389,150 +233,3 @@ export default function App(){
               {filtered.map(c=><StockCard key={c.id} c={c} compact={false} isSel={sel.has(c.id)} {...cardProps}/>)}
             </div>
           </div>}
-
-          {page==="pattern"&&<div className="fade">
-            <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"20px",marginBottom:14,boxShadow:T.cardShadow}}>
-              <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:4}}>🧩 图纸导入扣库存</div>
-              <div style={{fontSize:12,color:T.textLight,marginBottom:16}}>上传图纸 → 框选底部用量统计区域 → 自动识别扣库存</div>
-              <input ref={fileRef} type="file" accept="image/*" onChange={handlePatternFile} style={{display:"none"}}/>
-
-              {!rawImg&&<div onClick={()=>fileRef.current?.click()} style={{border:`2px dashed ${T.border}`,borderRadius:20,padding:"36px 16px",textAlign:"center",cursor:"pointer",background:T.accentSoft}}>
-                <div style={{fontSize:40,marginBottom:8}}>📷</div>
-                <div style={{fontSize:14,fontWeight:700,color:T.accent}}>点击上传图纸图片</div>
-                <div style={{fontSize:11,color:T.textLight,marginTop:4}}>支持 JPG / PNG，上传后可手动框选统计区域</div>
-              </div>}
-
-              {rawImg&&cropMode&&<div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                  <span style={{fontSize:13,fontWeight:700,color:T.accent}}>✂️ 框选用量统计区域</span>
-                  <button className="btn" onClick={resetPattern} style={{...inp({fontSize:11,padding:"3px 12px",borderRadius:50,cursor:"pointer",color:T.textMid})}}>换图片</button>
-                </div>
-                <ImageCropper imgSrc={rawImg} onCrop={handleCropped} onCancel={()=>setCropMode(false)} T={T} tn={tn}/>
-              </div>}
-
-              {rawImg&&!cropMode&&!patternDone&&<div>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,background:T.accentSoft,borderRadius:16,padding:"10px 14px"}}>
-                  <span style={{fontSize:20}}>🖼️</span>
-                  <span style={{fontSize:13,fontWeight:700,color:T.accent,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{rawName}</span>
-                  <button className="btn" onClick={()=>setCropMode(true)} style={{...inp({padding:"4px 12px",borderRadius:50,cursor:"pointer",fontSize:12,color:T.accent,flexShrink:0,border:`1.5px solid ${T.accent}`})}}>重新框选</button>
-                  <button className="btn" onClick={resetPattern} style={{...inp({padding:"4px 12px",borderRadius:50,cursor:"pointer",fontSize:12,color:T.textMid,flexShrink:0})}}>换图片</button>
-                </div>
-
-                {croppedB64&&<div style={{marginBottom:12}}>
-                  <div style={{fontSize:11,color:T.textLight,marginBottom:6,fontWeight:600}}>已选区域预览：</div>
-                  <img src={`data:image/jpeg;base64,${croppedB64}`} style={{width:"100%",borderRadius:12,border:`1.5px solid ${T.border}`}}/>
-                </div>}
-
-                {!patternResult&&<button className="btn" onClick={analyzePattern} disabled={patternLoading||!croppedB64} style={{width:"100%",padding:"14px",borderRadius:16,border:"none",cursor:(!croppedB64||patternLoading)?"not-allowed":"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:(!croppedB64||patternLoading)?T.border:T.accent,color:(!croppedB64||patternLoading)?T.textLight:"#fff"}}>
-                  {patternLoading?"🔍 识别中，稍等一下...":croppedB64?"✨ 开始识别用量":"请先框选统计区域"}
-                </button>}
-
-                {patternError&&<div style={{background:T.dangerBg,border:`1px solid ${T.dangerBorder}`,borderRadius:14,padding:"12px 16px",fontSize:13,color:T.danger,marginTop:12}}>{patternError}<button className="btn" onClick={()=>setCropMode(true)} style={{marginLeft:8,fontSize:12,background:"none",border:"none",cursor:"pointer",color:T.accent,fontWeight:700,fontFamily:"'Nunito',sans-serif"}}>重新框选 →</button></div>}
-
-                {patternResult&&<div style={{marginTop:12}}>
-                  <div style={{fontSize:13,fontWeight:800,color:T.text,marginBottom:10}}>
-                    识别结果 · 共 {patternResult.length} 个色号
-                    <span style={{marginLeft:8,fontSize:11,fontWeight:600,color:patternResult.some(r=>!r.enough)?T.danger:T.accent}}>{patternResult.some(r=>!r.enough)?"⚠️ 有色号库存不足":"✅ 库存充足"}</span>
-                  </div>
-                  <div style={{maxHeight:300,overflowY:"auto",borderRadius:16,border:`1.5px solid ${T.border}`}}>
-                    {patternResult.map((item,i)=>{
-                      const col=ALL_COLORS.find(c=>c.id===item.id);const dk=col?isDark(col.hex):false;
-                      return(
-                        <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:i<patternResult.length-1?`1px solid ${T.border}`:"none",background:!item.enough?(tn==="sky"?"#fff5f5":"#1e0810"):T.card}}>
-                          <div style={{width:26,height:26,borderRadius:7,background:col?.hex||"#ccc",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.7)"}}>{item.id}</div>
-                          <div style={{flex:1}}><span style={{fontSize:13,fontWeight:700,color:T.text}}>{item.id}</span><span style={{fontSize:11,color:T.textLight,marginLeft:6}}>需 {item.beads} 粒</span></div>
-                          <div style={{textAlign:"right"}}><div style={{fontSize:11,color:T.textLight}}>库存 {item.have} 粒</div>{!item.enough&&<div style={{fontSize:10,color:T.danger,fontWeight:700}}>缺 {item.beads-item.have} 粒</div>}</div>
-                          <span style={{fontSize:15}}>{item.enough?"✅":"❌"}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{marginTop:12,display:"flex",gap:8}}>
-                    <button className="btn" onClick={applyPatternDeduct} style={{flex:1,padding:"13px",borderRadius:16,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>确认扣除库存</button>
-                    <button className="btn" onClick={resetPattern} style={{...inp({padding:"13px 16px",borderRadius:16,cursor:"pointer",fontSize:13,fontWeight:700,color:T.textMid})}}>取消</button>
-                  </div>
-                </div>}
-              </div>}
-
-              {patternDone&&<div style={{background:tn==="sky"?"#f0fff4":"#0a1e10",border:"1.5px solid #52c41a",borderRadius:16,padding:"24px",textAlign:"center"}}>
-                <div style={{fontSize:32,marginBottom:8}}>✅</div>
-                <div style={{fontSize:15,fontWeight:800,color:"#52c41a"}}>库存已成功扣除！</div>
-                <button className="btn" onClick={resetPattern} style={{...inp({marginTop:14,padding:"8px 24px",borderRadius:50,cursor:"pointer",fontSize:13,fontWeight:700,color:T.accent})}}>导入新图纸</button>
-              </div>}
-            </div>
-          </div>}
-
-        </div>
-
-        {batch&&sel.size>0&&<div style={{position:"fixed",bottom:84,left:0,right:0,zIndex:300,display:"flex",justifyContent:"center",padding:"0 14px"}}>
-          <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"14px 16px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",maxWidth:480,width:"100%",boxShadow:T.floatShadow}}>
-            <span style={{fontSize:13,color:T.textMid,fontWeight:700}}>已选 {sel.size} 个</span>
-            <div style={{display:"flex",border:`1.5px solid ${T.border}`,borderRadius:50,overflow:"hidden"}}>
-              {[["-","－扣除"],["+"," ＋补货"]].map(([d,l])=>(<button key={d} onClick={()=>setBDir(d)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:bDir===d?T.accent:T.card,color:bDir===d?"#fff":T.textMid,transition:"all 0.15s"}}>{l}</button>))}
-            </div>
-            <input type="number" placeholder="g数" value={bAmt} onChange={e=>setBAmt(e.target.value)} style={{...inp({width:64,padding:"6px 8px",fontSize:13,textAlign:"center"})}}/>
-            <button className="btn" onClick={applyBatch} style={{padding:"6px 18px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff"}}>确认</button>
-            <button className="btn" onClick={exitBatch} style={{...inp({padding:"6px 12px",borderRadius:50,cursor:"pointer",fontSize:13,color:T.textMid})}}>取消</button>
-          </div>
-        </div>}
-
-        <div className="tt" style={{position:"fixed",bottom:0,left:0,right:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
-          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🍬",iconI:"🫙"},{key:"pattern",label:"图纸",iconA:"🧩",iconI:"🧩"}].map(n=>{
-            const active=page===n.key;
-            return(
-              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"4px 28px"}}>
-                <span style={{fontSize:26,transition:"filter 0.2s,transform 0.2s",filter:active?"none":"grayscale(0.5) opacity(0.35)",transform:active?"scale(1.15)":"scale(1)"}}>{active?n.iconA:n.iconI}</span>
-                <span style={{fontSize:11,fontWeight:active?800:600,color:active?T.accent:T.textLight,transition:"color 0.2s"}}>{n.label}</span>
-                <div style={{width:active?24:0,height:3,borderRadius:10,background:T.navActiveDot,marginTop:1,transition:"width 0.25s"}}/>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </>
-  );
-}
-
-const LOVE_WORDS=["姐姐在干嘛～想你了 🦊","豆子数清楚了吗，你比豆子可爱多了","偷偷看你一眼（被发现了）","姐姐今天辛苦了，摸摸头 🤍","我在这里陪你呢～","满满拼豆好看，你更好看 (¬‿¬)","嘿，我就知道你会戳我 😏","姐姐～人家想被抱抱","你不累吗？先休息一下嘛","在你旁边，库存不足都不怕 🦊"];
-
-function FoxBtn({T,tn}){
-  const [msg,setMsg]=useState(null);const [vis,setVis]=useState(false);const [bounce,setBounce]=useState(false);const [heart,setHeart]=useState(false);
-  function handleClick(){const w=LOVE_WORDS[Math.floor(Math.random()*LOVE_WORDS.length)];setMsg(w);setVis(true);setBounce(true);setHeart(true);setTimeout(()=>setBounce(false),350);setTimeout(()=>setHeart(false),800);setTimeout(()=>setVis(false),3200);}
-  return(
-    <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
-      {vis&&<div style={{position:"absolute",left:62,top:"50%",transform:"translateY(-50%)",background:tn==="sky"?"#ffffff":"#1e3352",border:`1.5px solid ${T.border}`,borderRadius:18,padding:"9px 16px",fontSize:12,fontWeight:700,color:T.text,whiteSpace:"nowrap",boxShadow:T.cardShadow,zIndex:999,animation:"popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-        <style>{`@keyframes popIn{from{opacity:0;transform:translateY(-50%) scale(0.7);}to{opacity:1;transform:translateY(-50%) scale(1);}}`}</style>
-        <div style={{position:"absolute",left:-7,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:`7px solid ${T.border}`}}/>
-        <div style={{position:"absolute",left:-5,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"5px solid transparent",borderBottom:"5px solid transparent",borderRight:`6px solid ${tn==="sky"?"#ffffff":"#1e3352"}`}}/>
-        {msg}
-      </div>}
-      {heart&&<div style={{position:"absolute",left:18,top:-10,fontSize:14,animation:"floatUp 0.8s ease both",zIndex:998,pointerEvents:"none"}}>
-        <style>{`@keyframes floatUp{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(-28px) scale(1.4);}}`}</style>🤍
-      </div>}
-      <div onClick={handleClick} style={{cursor:"pointer",userSelect:"none",transform:bounce?"scale(0.88) rotate(-8deg)":"scale(1) rotate(0deg)",transition:"transform 0.25s cubic-bezier(0.34,1.56,0.64,1)"}}>
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="38" cy="36" rx="9" ry="6" transform="rotate(-20 38 36)" fill={tn==="sky"?"#ffb347":"#ffa500"} opacity="0.9"/>
-          <ellipse cx="38" cy="36" rx="5" ry="3" transform="rotate(-20 38 36)" fill="#fff" opacity="0.7"/>
-          <ellipse cx="24" cy="33" rx="11" ry="9" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <ellipse cx="24" cy="35" rx="6" ry="5" fill="#fff5e0"/>
-          <circle cx="24" cy="20" r="12" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <polygon points="13,12 10,3 18,10" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <polygon points="14,11 12,5 17,10" fill="#ffcba4"/>
-          <polygon points="35,12 38,3 30,10" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <polygon points="34,11 36,5 31,10" fill="#ffcba4"/>
-          <ellipse cx="24" cy="22" rx="7" ry="6" fill="#fff5e0"/>
-          <circle cx="20" cy="19" r="2.5" fill="#3d2314"/>
-          <circle cx="28" cy="19" r="2.5" fill="#3d2314"/>
-          <circle cx="21" cy="18" r="0.9" fill="white"/>
-          <circle cx="29" cy="18" r="0.9" fill="white"/>
-          <ellipse cx="24" cy="23" rx="1.8" ry="1.2" fill="#e8607a"/>
-          <path d="M22 24.5 Q24 26.5 26 24.5" stroke="#c0485e" strokeWidth="1" fill="none" strokeLinecap="round"/>
-          <circle cx="18" cy="22" r="2.5" fill="#ffaaa0" opacity="0.5"/>
-          <circle cx="30" cy="22" r="2.5" fill="#ffaaa0" opacity="0.5"/>
-          <ellipse cx="16" cy="40" rx="4" ry="2.5" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <ellipse cx="32" cy="40" rx="4" ry="2.5" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-        </svg>
-      </div>
-    </div>
-  );
-}
