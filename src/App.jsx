@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 
 const ALL_COLORS = [
   {id:"A1",hex:"#faf5cd"},{id:"A2",hex:"#fcfed6"},{id:"A3",hex:"#fcff92"},{id:"A4",hex:"#f7ec5c"},{id:"A5",hex:"#f0d83a"},{id:"A6",hex:"#fda951"},{id:"A7",hex:"#fa8c4f"},{id:"A8",hex:"#fdbda4"},{id:"A9",hex:"#f79d5f"},{id:"A10",hex:"#f47e38"},{id:"A11",hex:"#fedb99"},{id:"A12",hex:"#fda276"},{id:"A13",hex:"#fec667"},{id:"A14",hex:"#f75842"},{id:"A15",hex:"#fbf65e"},{id:"A16",hex:"#feff97"},{id:"A17",hex:"#fde173"},{id:"A18",hex:"#fcbf80"},{id:"A19",hex:"#fd7e77"},{id:"A20",hex:"#f9d66e"},{id:"A21",hex:"#fae393"},{id:"A22",hex:"#b38c9f"},{id:"A23",hex:"#e4c8ba"},{id:"A24",hex:"#f3f6a9"},{id:"A25",hex:"#ffd785"},{id:"A26",hex:"#ffc734"},
@@ -17,11 +17,11 @@ const INIT_STOCK=ALL_COLORS.reduce((a,c)=>({...a,[c.id]:10}),{});
 const INIT_USED=ALL_COLORS.reduce((a,c)=>({...a,[c.id]:0}),{});
 function isDark(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return(r*299+g*587+b*114)/1000<128;}
 function gToBeads(g){return Math.round(g*100);}
-function fmtG(g){const n=Math.round(g*100)/100;return Number.isInteger(n)?String(n):n.toFixed(2).replace(/\.?0+$/, "");}
+function fmtG(g){const n=Math.round(g*100)/100;return Number.isInteger(n)?String(n):n.toFixed(2).replace(/\.?0+$/,"");}
 
 const THEMES={
-  sky:{bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],titleIcon:"🫧",switchBtn:"夜空 🌙",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff"},
-  night:{bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],titleIcon:"⭐",switchBtn:"晴天 ☀️",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166"}
+  sky:{bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"夜空 🌙",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff"},
+  night:{bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"晴天 ☀️",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166"}
 };
 
 const G=`
@@ -36,6 +36,148 @@ const G=`
 .btn{transition:all 0.18s;}
 .btn:active{transform:scale(0.95);}
 `;
+
+// ── 独立的色卡编辑组件（放在App外，避免re-mount问题）──
+function StockCard({c,tn,T,stock,used,editId,editG,editBeads,onStartEdit,onEditG,onEditBeads,onSaveEdit,compact,batch,isSel,onToggleSel}){
+  const st=gToBeads(stock[c.id])<200?"c":gToBeads(stock[c.id])<500?"l":"ok";
+  const col=st==="c"?T.danger:st==="l"?T.warn:T.text;
+  const dk=isDark(c.hex);
+  const isEditing=editId===c.id;
+  const pad=compact?"6px 8px":"10px 10px 8px";
+
+  function handleClick(e){
+    if(batch){onToggleSel(c.id);}
+    else{onStartEdit(c.id);}
+  }
+
+  return(
+    <div className="cc tt" onClick={handleClick}
+      style={{background:T.card,borderRadius:compact?16:20,overflow:"hidden",cursor:"pointer",
+        border:isSel?`2.5px solid ${T.accent}`:st==="c"?`2px solid ${T.danger}`:st==="l"?`2px solid ${T.warn}`:`1.5px solid ${T.border}`,
+        boxShadow:isSel?`0 0 0 3px ${T.accent}30`:T.cardShadow,
+        transform:isSel?"scale(0.97)":"none"}}>
+      <div style={{background:c.hex,height:compact?40:50,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+        {tn==="night"&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/>}
+        <span style={{fontSize:compact?12:13,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.65)",position:"relative"}}>{c.id}</span>
+        {batch&&<div style={{position:"absolute",right:8,width:20,height:20,borderRadius:"50%",background:isSel?T.accent:"rgba(255,255,255,0.8)",border:`2px solid ${isSel?T.accent:"rgba(200,200,200,0.9)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:800}}>{isSel?"✓":""}</div>}
+      </div>
+      {batch
+        ?<div style={{padding:pad,textAlign:"center"}}><div style={{fontSize:14,fontWeight:800,color:T.text}}>{fmtG(stock[c.id])}g</div><div style={{fontSize:10,color:T.textLight,marginTop:2}}>{gToBeads(stock[c.id])}粒</div></div>
+        :isEditing
+          ?<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3,marginBottom:3}}>
+              <input autoFocus value={editG}
+                onChange={e=>onEditG(e.target.value)}
+                onBlur={()=>onSaveEdit(c.id)}
+                onKeyDown={e=>{if(e.key==="Enter")onSaveEdit(c.id);}}
+                style={{width:52,textAlign:"center",fontSize:compact?12:14,padding:"3px",border:`2px solid ${T.accent}`,borderRadius:8,fontFamily:"'Nunito',sans-serif",background:"transparent",color:T.text,outline:"none"}}/>
+              <span style={{fontSize:10,color:T.textLight,fontWeight:700}}>g</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
+              <input value={editBeads}
+                onChange={e=>onEditBeads(e.target.value)}
+                onBlur={()=>onSaveEdit(c.id)}
+                onKeyDown={e=>{if(e.key==="Enter")onSaveEdit(c.id);}}
+                style={{width:52,textAlign:"center",fontSize:10,padding:"2px",border:`1.5px solid ${T.border}`,borderRadius:8,fontFamily:"'Nunito',sans-serif",background:"transparent",color:T.text,outline:"none"}}/>
+              <span style={{fontSize:10,color:T.textLight,fontWeight:700}}>粒</span>
+            </div>
+          </div>
+          :<div style={{padding:pad,textAlign:"center"}}>
+            <div style={{fontSize:compact?13:15,fontWeight:800,color:col}}>{fmtG(stock[c.id])}g</div>
+            <div style={{fontSize:10,color:T.textLight,marginTop:2}}>{gToBeads(stock[c.id])}粒</div>
+            {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:1}}>已用 {fmtG(used[c.id])}g</div>}
+          </div>
+      }
+    </div>
+  );
+}
+
+// ── 图纸裁剪组件 ──
+function ImageCropper({imgSrc,onCrop,onCancel,T,tn}){
+  const canvasRef=useRef(null);
+  const [img,setImg]=useState(null);
+  const [drag,setDrag]=useState(false);
+  const [sel,setSel]=useState(null);
+  const [start,setStart]=useState(null);
+  const [scale,setScale]=useState(1);
+
+  useEffect(()=>{
+    const i=new Image();
+    i.onload=()=>{
+      setImg(i);
+      const maxW=Math.min(window.innerWidth-40,600);
+      setScale(maxW/i.width);
+    };
+    i.src=imgSrc;
+  },[imgSrc]);
+
+  useEffect(()=>{
+    if(!img||!canvasRef.current)return;
+    const cv=canvasRef.current;
+    const w=img.width*scale,h=img.height*scale;
+    cv.width=w;cv.height=h;
+    const ctx=cv.getContext("2d");
+    ctx.drawImage(img,0,0,w,h);
+    if(sel){
+      ctx.fillStyle="rgba(0,0,0,0.45)";
+      ctx.fillRect(0,0,w,sel.y);
+      ctx.fillRect(0,sel.y+sel.h,w,h-sel.y-sel.h);
+      ctx.fillRect(0,sel.y,sel.x,sel.h);
+      ctx.fillRect(sel.x+sel.w,sel.y,w-sel.x-sel.w,sel.h);
+      ctx.strokeStyle="#4a9eff";ctx.lineWidth=2;ctx.setLineDash([6,3]);
+      ctx.strokeRect(sel.x,sel.y,sel.w,sel.h);
+    }
+  },[img,sel,scale]);
+
+  function getPos(e){
+    const r=canvasRef.current.getBoundingClientRect();
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return{x:Math.max(0,Math.min(cx-r.left,r.width)),y:Math.max(0,Math.min(cy-r.top,r.height))};
+  }
+
+  function onDown(e){e.preventDefault();const p=getPos(e);setStart(p);setDrag(true);setSel(null);}
+  function onMove(e){
+    if(!drag||!start)return;e.preventDefault();
+    const p=getPos(e);
+    setSel({x:Math.min(start.x,p.x),y:Math.min(start.y,p.y),w:Math.abs(p.x-start.x),h:Math.abs(p.y-start.y)});
+  }
+  function onUp(e){e.preventDefault();setDrag(false);}
+
+  function doCrop(){
+    if(!sel||sel.w<10||sel.h<10){alert("请先框选要识别的区域");return;}
+    const cv=document.createElement("canvas");
+    const realX=sel.x/scale,realY=sel.y/scale,realW=sel.w/scale,realH=sel.h/scale;
+    cv.width=realW;cv.height=realH;
+    cv.getContext("2d").drawImage(img,realX,realY,realW,realH,0,0,realW,realH);
+    const b64=cv.toDataURL("image/jpeg",0.92).split(",")[1];
+    onCrop(b64);
+  }
+
+  return(
+    <div>
+      <div style={{fontSize:13,color:T.textMid,marginBottom:10,fontWeight:600}}>
+        拖动选择底部用量统计区域，然后点击确认识别 ✂️
+      </div>
+      <div style={{position:"relative",borderRadius:12,overflow:"hidden",border:`1.5px solid ${T.border}`,cursor:"crosshair",touchAction:"none"}}>
+        <canvas ref={canvasRef}
+          style={{display:"block",width:"100%",userSelect:"none"}}
+          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
+          onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}/>
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:12}}>
+        <button className="btn" onClick={doCrop}
+          style={{flex:1,padding:"12px",borderRadius:14,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>
+          ✂️ 确认裁剪并识别
+        </button>
+        <button className="btn" onClick={onCancel}
+          style={{padding:"12px 16px",borderRadius:14,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.card,color:T.textMid}}>
+          取消
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function App(){
   const [tn,setTn]=useState("sky");
@@ -55,7 +197,11 @@ export default function App(){
   const [sel,setSel]=useState(new Set());
   const [bAmt,setBAmt]=useState("");
   const [bDir,setBDir]=useState("-");
-  const [pattern,setPattern]=useState(null);
+  // 图纸
+  const [rawImg,setRawImg]=useState(null);       // 原图base64（data url）
+  const [rawName,setRawName]=useState("");
+  const [cropMode,setCropMode]=useState(false);  // 是否在裁剪
+  const [croppedB64,setCroppedB64]=useState(null);
   const [patternLoading,setPatternLoading]=useState(false);
   const [patternResult,setPatternResult]=useState(null);
   const [patternError,setPatternError]=useState("");
@@ -80,10 +226,14 @@ export default function App(){
     return l;
   },[search,sort,stock,used,fSeries]);
 
-  function startEdit(id){if(batch)return;setEditId(id);setEditG(fmtG(stock[id]));setEditBeads(String(gToBeads(stock[id])));}
-  function handleEditG(v){setEditG(v);const n=parseFloat(v);if(!isNaN(n)&&n>=0)setEditBeads(String(Math.round(n*100)));}
-  function handleEditBeads(v){setEditBeads(v);const n=parseInt(v);if(!isNaN(n)&&n>=0)setEditG(fmtG(n/100));}
-  function saveEdit(id){const g=parseFloat(editG);if(!isNaN(g)&&g>=0){const d=stock[id]-g;if(d>0)setUsed(u=>({...u,[id]:u[id]+d}));setStock(s=>({...s,[id]:g}));}setEditId(null);}
+  const startEdit=useCallback((id)=>{setEditId(id);setEditG(fmtG(stock[id]));setEditBeads(String(gToBeads(stock[id])));},[stock]);
+  const handleEditG=useCallback((v)=>{setEditG(v);const n=parseFloat(v);if(!isNaN(n)&&n>=0)setEditBeads(String(Math.round(n*100)));},[]);
+  const handleEditBeads=useCallback((v)=>{setEditBeads(v);const n=parseInt(v);if(!isNaN(n)&&n>=0)setEditG(fmtG(n/100));},[]);
+  const saveEdit=useCallback((id)=>{
+    setStock(s=>{const g=parseFloat(editG);if(!isNaN(g)&&g>=0){const d=(s[id]||0)-g;if(d>0)setUsed(u=>({...u,[id]:(u[id]||0)+d}));return{...s,[id]:g};}return s;});
+    setEditId(null);
+  },[editG]);
+
   function getStatus(id){if(gToBeads(stock[id])<wC)return"c";if(gToBeads(stock[id])<wL)return"l";return"ok";}
   function goS(s){setFSeries(s);setSort("used-desc");setSearch("");setPage("stock");}
   function toggleSel(id){setSel(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});}
@@ -97,23 +247,24 @@ export default function App(){
 
   function handlePatternFile(e){
     const file=e.target.files[0];if(!file)return;
-    setPatternResult(null);setPatternError("");setPatternDone(false);
     const reader=new FileReader();
-    reader.onload=ev=>{const b64=ev.target.result.split(",")[1];setPattern({name:file.name,imageBase64:b64,mediaType:file.type||"image/jpeg"});};
+    reader.onload=ev=>{setRawImg(ev.target.result);setRawName(file.name);setCropMode(true);setPatternResult(null);setPatternError("");setPatternDone(false);setCroppedB64(null);};
     reader.readAsDataURL(file);
   }
 
+  function handleCropped(b64){setCroppedB64(b64);setCropMode(false);}
+
   async function analyzePattern(){
-    if(!pattern)return;
+    if(!croppedB64)return;
     setPatternLoading(true);setPatternError("");setPatternResult(null);
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:pattern.mediaType,data:pattern.imageBase64}},{type:"text",text:"这是一张拼豆图纸。请识别图片底部的色块用量统计表（格式类似 A1(71) A2(27) A6(149)）。只输出JSON数组，不要其他文字：[{\"id\":\"A1\",\"beads\":71},...] 只包含出现的色号和对应粒数。"}]}]})});
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:croppedB64}},{type:"text",text:"这是拼豆图纸底部的色块用量统计区域。格式通常是色号后面跟括号里的数字，如 A16(202) H2(97) H7(88) 这样。请识别所有色号和对应粒数，只输出JSON数组，不要其他文字：[{\"id\":\"A16\",\"beads\":202},{\"id\":\"H2\",\"beads\":97}]"}]}]})});
       const data=await resp.json();
       const text=data.content?.map(i=>i.text||"").join("")||"";
       const clean=text.replace(/```json|```/g,"").trim();
       const parsed=JSON.parse(clean);
       setPatternResult(parsed.map(item=>({...item,have:gToBeads(stock[item.id]||0),enough:gToBeads(stock[item.id]||0)>=item.beads})));
-    }catch(err){setPatternError("识别失败，请检查图片是否清晰，或重试～ (╥﹏╥)");}
+    }catch(err){setPatternError("识别失败，请重新框选或检查图片清晰度～ (╥﹏╥)");}
     setPatternLoading(false);
   }
 
@@ -124,33 +275,11 @@ export default function App(){
     setStock(ns);setUsed(nu);setPatternDone(true);
   }
 
-  function resetPattern(){setPattern(null);setPatternResult(null);setPatternError("");setPatternDone(false);if(fileRef.current)fileRef.current.value="";}
+  function resetPattern(){setRawImg(null);setRawName("");setCropMode(false);setCroppedB64(null);setPatternResult(null);setPatternError("");setPatternDone(false);if(fileRef.current)fileRef.current.value="";}
 
   const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
 
-  function StockDisplay({c,compact}){
-    const st=getStatus(c.id);const col=st==="c"?T.danger:st==="l"?T.warn:T.text;
-    const pad=compact?"6px 8px":"10px 10px 8px";
-    if(editId===c.id) return(
-      <div style={{padding:pad,textAlign:"center"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3,marginBottom:3}}>
-          <input autoFocus value={editG} onChange={e=>handleEditG(e.target.value)} onBlur={()=>saveEdit(c.id)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(c.id);}} onClick={e=>e.stopPropagation()} style={{...inp({width:50,textAlign:"center",fontSize:compact?12:14,padding:"3px",border:`2px solid ${T.accent}`,borderRadius:8})}}/>
-          <span style={{fontSize:10,color:T.textLight}}>g</span>
-        </div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
-          <input value={editBeads} onChange={e=>handleEditBeads(e.target.value)} onBlur={()=>saveEdit(c.id)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(c.id);}} onClick={e=>e.stopPropagation()} style={{...inp({width:50,textAlign:"center",fontSize:10,padding:"2px",border:`1.5px solid ${T.border}`,borderRadius:8})}}/>
-          <span style={{fontSize:10,color:T.textLight}}>粒</span>
-        </div>
-      </div>
-    );
-    return(
-      <div style={{padding:pad,textAlign:"center"}}>
-        <div style={{fontSize:compact?13:15,fontWeight:800,color:col}}>{fmtG(stock[c.id])}g</div>
-        <div style={{fontSize:10,color:T.textLight,marginTop:2}}>{gToBeads(stock[c.id])}粒</div>
-        {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:1}}>已用 {fmtG(used[c.id])}g</div>}
-      </div>
-    );
-  }
+  const cardProps={tn,T,stock,used,editId,editG,editBeads,onStartEdit:startEdit,onEditG:handleEditG,onEditBeads:handleEditBeads,onSaveEdit:saveEdit,batch,sel};
 
   return(
     <>
@@ -182,22 +311,14 @@ export default function App(){
                 ))}
               </div>
             </div>
-            {[["🟡 即将不足",lowC,T.warnBg,T.warnBorder,T.warn],["🔴 不足",critC,T.dangerBg,T.dangerBorder,T.danger]].map(([title,colors,bg,bd,col])=>(
+            {[["🟡 即将不足",lowC,T.warnBg,T.warnBorder,T.warn],["🔴 不足",critC,T.dangerBg,T.dangerBorder,T.danger]].map(([title,colors,bg,bd])=>(
               <div key={title} className="tt" style={{background:bg,border:`1.5px solid ${bd}`,borderRadius:24,padding:"16px",marginBottom:14}}>
                 <div style={{fontSize:13,fontWeight:800,marginBottom:10,display:"flex",alignItems:"center",gap:8,color:T.text}}>
                   {title}<span style={{background:tn==="night"?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.85)",borderRadius:50,padding:"2px 12px",fontSize:11,color:T.textMid,fontWeight:600}}>{colors.length} 个</span>
                 </div>
                 {colors.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"10px 0"}}>暂无 ✨</div>
                   :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                    {colors.map(c=>{const dk=isDark(c.hex);return(
-                      <div key={c.id} className="cc" onClick={()=>startEdit(c.id)} style={{background:tn==="night"?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.9)",borderRadius:16,overflow:"hidden",cursor:"pointer",border:`1px solid ${T.border}`}}>
-                        <div style={{background:c.hex,height:40,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                          {tn==="night"&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/>}
-                          <span style={{fontSize:12,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.65)",position:"relative"}}>{c.id}</span>
-                        </div>
-                        <StockDisplay c={c} compact={true}/>
-                      </div>
-                    );})}
+                    {colors.map(c=><StockCard key={c.id} c={c} compact={true} isSel={sel.has(c.id)} onToggleSel={toggleSel} {...cardProps}/>)}
                   </div>
                 }
               </div>
@@ -236,74 +357,81 @@ export default function App(){
               <button onClick={()=>setFSeries(null)} style={{...inp({fontSize:11,padding:"3px 12px",borderRadius:50,cursor:"pointer",color:T.textMid})}}>清除 ×</button>
             </div>}
             {batch&&<div style={{background:T.accentSoft,border:`1px solid ${T.border}`,borderRadius:14,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.accent,fontWeight:700}}>🫧 点击色卡勾选{sel.size>0&&<span style={{marginLeft:8}}>· 已选 {sel.size} 个</span>}</div>}
-            <div style={{fontSize:12,color:T.textLight,marginBottom:10,fontWeight:600}}>共 {filtered.length} 个色号 · 点击色卡可直接编辑克/粒</div>
+            <div style={{fontSize:12,color:T.textLight,marginBottom:10,fontWeight:600}}>共 {filtered.length} 个色号 · 点击色卡编辑克/粒数</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              {filtered.map(c=>{
-                const st=getStatus(c.id);const dk=isDark(c.hex);const isSel=sel.has(c.id);
-                return(
-                  <div key={c.id} className="cc tt" onClick={()=>batch?toggleSel(c.id):startEdit(c.id)}
-                    style={{background:T.card,borderRadius:20,overflow:"hidden",cursor:"pointer",border:isSel?`2.5px solid ${T.accent}`:st==="c"?`2px solid ${T.danger}`:st==="l"?`2px solid ${T.warn}`:`1.5px solid ${T.border}`,boxShadow:isSel?`0 0 0 3px ${T.accent}30`:T.cardShadow,transform:isSel?"scale(0.97)":"none"}}>
-                    <div style={{background:c.hex,height:50,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                      {tn==="night"&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/>}
-                      <span style={{fontSize:13,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.6)",position:"relative"}}>{c.id}</span>
-                      {batch&&<div style={{position:"absolute",right:8,width:20,height:20,borderRadius:"50%",background:isSel?T.accent:"rgba(255,255,255,0.8)",border:`2px solid ${isSel?T.accent:"rgba(200,200,200,0.9)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:800}}>{isSel?"✓":""}</div>}
-                    </div>
-                    {!batch?<StockDisplay c={c}/>:<div style={{padding:"8px",textAlign:"center"}}><div style={{fontSize:14,fontWeight:800,color:T.text}}>{fmtG(stock[c.id])}g</div><div style={{fontSize:10,color:T.textLight,marginTop:2}}>{gToBeads(stock[c.id])}粒</div></div>}
-                  </div>
-                );
-              })}
+              {filtered.map(c=><StockCard key={c.id} c={c} compact={false} isSel={sel.has(c.id)} onToggleSel={toggleSel} {...cardProps}/>)}
             </div>
           </div>}
 
           {page==="pattern"&&<div className="fade">
             <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"20px",marginBottom:14,boxShadow:T.cardShadow}}>
               <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:4}}>🧩 图纸导入扣库存</div>
-              <div style={{fontSize:12,color:T.textLight,marginBottom:16}}>上传图纸图片，自动识别用量并从库存扣除</div>
+              <div style={{fontSize:12,color:T.textLight,marginBottom:16}}>上传图纸 → 框选底部用量统计区域 → 自动识别扣库存</div>
               <input ref={fileRef} type="file" accept="image/*" onChange={handlePatternFile} style={{display:"none"}}/>
-              {!pattern
-                ?<div onClick={()=>fileRef.current?.click()} style={{border:`2px dashed ${T.border}`,borderRadius:20,padding:"36px 16px",textAlign:"center",cursor:"pointer",background:T.accentSoft}}>
-                  <div style={{fontSize:40,marginBottom:8}}>📷</div>
-                  <div style={{fontSize:14,fontWeight:700,color:T.accent}}>点击上传图纸图片</div>
-                  <div style={{fontSize:11,color:T.textLight,marginTop:4}}>支持 JPG / PNG，需包含底部用量统计表</div>
+
+              {!rawImg&&<div onClick={()=>fileRef.current?.click()} style={{border:`2px dashed ${T.border}`,borderRadius:20,padding:"36px 16px",textAlign:"center",cursor:"pointer",background:T.accentSoft}}>
+                <div style={{fontSize:40,marginBottom:8}}>📷</div>
+                <div style={{fontSize:14,fontWeight:700,color:T.accent}}>点击上传图纸图片</div>
+                <div style={{fontSize:11,color:T.textLight,marginTop:4}}>支持 JPG / PNG，上传后可手动框选统计区域</div>
+              </div>}
+
+              {rawImg&&cropMode&&<div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <span style={{fontSize:13,fontWeight:700,color:T.accent}}>✂️ 框选用量统计区域</span>
+                  <button className="btn" onClick={resetPattern} style={{...inp({fontSize:11,padding:"3px 12px",borderRadius:50,cursor:"pointer",color:T.textMid})}}>换图片</button>
                 </div>
-                :<div>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,background:T.accentSoft,borderRadius:16,padding:"10px 14px"}}>
-                    <span style={{fontSize:20}}>🖼️</span>
-                    <span style={{fontSize:13,fontWeight:700,color:T.accent,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{pattern.name}</span>
-                    <button className="btn" onClick={resetPattern} style={{...inp({padding:"4px 12px",borderRadius:50,cursor:"pointer",fontSize:12,color:T.textMid,flexShrink:0})}}>换一张</button>
+                <ImageCropper imgSrc={rawImg} onCrop={handleCropped} onCancel={()=>setCropMode(false)} T={T} tn={tn}/>
+              </div>}
+
+              {rawImg&&!cropMode&&!patternDone&&<div>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,background:T.accentSoft,borderRadius:16,padding:"10px 14px"}}>
+                  <span style={{fontSize:20}}>🖼️</span>
+                  <span style={{fontSize:13,fontWeight:700,color:T.accent,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{rawName}</span>
+                  <button className="btn" onClick={()=>setCropMode(true)} style={{...inp({padding:"4px 12px",borderRadius:50,cursor:"pointer",fontSize:12,color:T.accent,flexShrink:0,border:`1.5px solid ${T.accent}`})}}>重新框选</button>
+                  <button className="btn" onClick={resetPattern} style={{...inp({padding:"4px 12px",borderRadius:50,cursor:"pointer",fontSize:12,color:T.textMid,flexShrink:0})}}>换图片</button>
+                </div>
+
+                {croppedB64&&<div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,color:T.textLight,marginBottom:6,fontWeight:600}}>已选区域预览：</div>
+                  <img src={`data:image/jpeg;base64,${croppedB64}`} style={{width:"100%",borderRadius:12,border:`1.5px solid ${T.border}`}}/>
+                </div>}
+
+                {!patternResult&&<button className="btn" onClick={analyzePattern} disabled={patternLoading||!croppedB64} style={{width:"100%",padding:"14px",borderRadius:16,border:"none",cursor:(!croppedB64||patternLoading)?"not-allowed":"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:(!croppedB64||patternLoading)?T.border:T.accent,color:(!croppedB64||patternLoading)?T.textLight:"#fff"}}>
+                  {patternLoading?"🔍 识别中，稍等一下...":croppedB64?"✨ 开始识别用量":"请先框选统计区域"}
+                </button>}
+
+                {patternError&&<div style={{background:T.dangerBg,border:`1px solid ${T.dangerBorder}`,borderRadius:14,padding:"12px 16px",fontSize:13,color:T.danger,marginTop:12}}>{patternError}<button className="btn" onClick={()=>setCropMode(true)} style={{marginLeft:8,fontSize:12,background:"none",border:"none",cursor:"pointer",color:T.accent,fontWeight:700,fontFamily:"'Nunito',sans-serif"}}>重新框选 →</button></div>}
+
+                {patternResult&&<div style={{marginTop:12}}>
+                  <div style={{fontSize:13,fontWeight:800,color:T.text,marginBottom:10}}>
+                    识别结果 · 共 {patternResult.length} 个色号
+                    <span style={{marginLeft:8,fontSize:11,fontWeight:600,color:patternResult.some(r=>!r.enough)?T.danger:T.accent}}>{patternResult.some(r=>!r.enough)?"⚠️ 有色号库存不足":"✅ 库存充足"}</span>
                   </div>
-                  {!patternResult&&!patternDone&&<button className="btn" onClick={analyzePattern} disabled={patternLoading} style={{width:"100%",padding:"14px",borderRadius:16,border:"none",cursor:patternLoading?"wait":"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:patternLoading?T.border:T.accent,color:patternLoading?T.textLight:"#fff"}}>{patternLoading?"🔍 识别中，稍等一下...":"✨ 开始识别用量"}</button>}
-                  {patternError&&<div style={{background:T.dangerBg,border:`1px solid ${T.dangerBorder}`,borderRadius:14,padding:"12px 16px",fontSize:13,color:T.danger,marginTop:12}}>{patternError}</div>}
-                  {patternDone&&<div style={{background:tn==="sky"?"#f0fff4":"#0a1e10",border:"1.5px solid #52c41a",borderRadius:16,padding:"20px",textAlign:"center",marginTop:12}}>
-                    <div style={{fontSize:28,marginBottom:6}}>✅</div>
-                    <div style={{fontSize:14,fontWeight:800,color:"#52c41a"}}>库存已成功扣除！</div>
-                    <button className="btn" onClick={resetPattern} style={{...inp({marginTop:14,padding:"8px 24px",borderRadius:50,cursor:"pointer",fontSize:13,fontWeight:700,color:T.accent})}}>导入新图纸</button>
-                  </div>}
-                  {patternResult&&!patternDone&&<div style={{marginTop:12}}>
-                    <div style={{fontSize:13,fontWeight:800,color:T.text,marginBottom:10}}>
-                      识别结果 · 共 {patternResult.length} 个色号
-                      <span style={{marginLeft:8,fontSize:11,fontWeight:600,color:patternResult.some(r=>!r.enough)?T.danger:T.accent}}>{patternResult.some(r=>!r.enough)?"⚠️ 有色号库存不足":"✅ 库存充足"}</span>
-                    </div>
-                    <div style={{maxHeight:300,overflowY:"auto",borderRadius:16,border:`1.5px solid ${T.border}`}}>
-                      {patternResult.map((item,i)=>{
-                        const col=ALL_COLORS.find(c=>c.id===item.id);const dk=col?isDark(col.hex):false;
-                        return(
-                          <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:i<patternResult.length-1?`1px solid ${T.border}`:"none",background:!item.enough?(tn==="sky"?"#fff5f5":"#1e0810"):T.card}}>
-                            <div style={{width:26,height:26,borderRadius:7,background:col?.hex||"#ccc",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.7)"}}>{item.id}</div>
-                            <div style={{flex:1}}><span style={{fontSize:13,fontWeight:700,color:T.text}}>{item.id}</span><span style={{fontSize:11,color:T.textLight,marginLeft:6}}>需 {item.beads} 粒</span></div>
-                            <div style={{textAlign:"right"}}><div style={{fontSize:11,color:T.textLight}}>库存 {item.have} 粒</div>{!item.enough&&<div style={{fontSize:10,color:T.danger,fontWeight:700}}>缺 {item.beads-item.have} 粒</div>}</div>
-                            <span style={{fontSize:15}}>{item.enough?"✅":"❌"}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div style={{marginTop:12,display:"flex",gap:8}}>
-                      <button className="btn" onClick={applyPatternDeduct} style={{flex:1,padding:"13px",borderRadius:16,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>确认扣除库存</button>
-                      <button className="btn" onClick={resetPattern} style={{...inp({padding:"13px 16px",borderRadius:16,cursor:"pointer",fontSize:13,fontWeight:700,color:T.textMid})}}>取消</button>
-                    </div>
-                  </div>}
-                </div>
-              }
+                  <div style={{maxHeight:300,overflowY:"auto",borderRadius:16,border:`1.5px solid ${T.border}`}}>
+                    {patternResult.map((item,i)=>{
+                      const col=ALL_COLORS.find(c=>c.id===item.id);const dk=col?isDark(col.hex):false;
+                      return(
+                        <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:i<patternResult.length-1?`1px solid ${T.border}`:"none",background:!item.enough?(tn==="sky"?"#fff5f5":"#1e0810"):T.card}}>
+                          <div style={{width:26,height:26,borderRadius:7,background:col?.hex||"#ccc",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.7)"}}>{item.id}</div>
+                          <div style={{flex:1}}><span style={{fontSize:13,fontWeight:700,color:T.text}}>{item.id}</span><span style={{fontSize:11,color:T.textLight,marginLeft:6}}>需 {item.beads} 粒</span></div>
+                          <div style={{textAlign:"right"}}><div style={{fontSize:11,color:T.textLight}}>库存 {item.have} 粒</div>{!item.enough&&<div style={{fontSize:10,color:T.danger,fontWeight:700}}>缺 {item.beads-item.have} 粒</div>}</div>
+                          <span style={{fontSize:15}}>{item.enough?"✅":"❌"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{marginTop:12,display:"flex",gap:8}}>
+                    <button className="btn" onClick={applyPatternDeduct} style={{flex:1,padding:"13px",borderRadius:16,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>确认扣除库存</button>
+                    <button className="btn" onClick={resetPattern} style={{...inp({padding:"13px 16px",borderRadius:16,cursor:"pointer",fontSize:13,fontWeight:700,color:T.textMid})}}>取消</button>
+                  </div>
+                </div>}
+              </div>}
+
+              {patternDone&&<div style={{background:tn==="sky"?"#f0fff4":"#0a1e10",border:"1.5px solid #52c41a",borderRadius:16,padding:"24px",textAlign:"center"}}>
+                <div style={{fontSize:32,marginBottom:8}}>✅</div>
+                <div style={{fontSize:15,fontWeight:800,color:"#52c41a"}}>库存已成功扣除！</div>
+                <button className="btn" onClick={resetPattern} style={{...inp({marginTop:14,padding:"8px 24px",borderRadius:50,cursor:"pointer",fontSize:13,fontWeight:700,color:T.accent})}}>导入新图纸</button>
+              </div>}
             </div>
           </div>}
 
@@ -313,9 +441,7 @@ export default function App(){
           <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"14px 16px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",maxWidth:480,width:"100%",boxShadow:T.floatShadow}}>
             <span style={{fontSize:13,color:T.textMid,fontWeight:700}}>已选 {sel.size} 个</span>
             <div style={{display:"flex",border:`1.5px solid ${T.border}`,borderRadius:50,overflow:"hidden"}}>
-              {[["-","－扣除"],["+"," ＋补货"]].map(([d,l])=>(
-                <button key={d} onClick={()=>setBDir(d)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:bDir===d?T.accent:T.card,color:bDir===d?"#fff":T.textMid,transition:"all 0.15s"}}>{l}</button>
-              ))}
+              {[["-","－扣除"],["+"," ＋补货"]].map(([d,l])=>(<button key={d} onClick={()=>setBDir(d)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:bDir===d?T.accent:T.card,color:bDir===d?"#fff":T.textMid,transition:"all 0.15s"}}>{l}</button>))}
             </div>
             <input type="number" placeholder="g数" value={bAmt} onChange={e=>setBAmt(e.target.value)} style={{...inp({width:64,padding:"6px 8px",fontSize:13,textAlign:"center"})}}/>
             <button className="btn" onClick={applyBatch} style={{padding:"6px 18px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff"}}>确认</button>
