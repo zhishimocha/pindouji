@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 
 const ALL_COLORS = [
   {id:"A1",hex:"#faf5cd"},{id:"A2",hex:"#fcfed6"},{id:"A3",hex:"#fcff92"},{id:"A4",hex:"#f7ec5c"},{id:"A5",hex:"#f0d83a"},{id:"A6",hex:"#fda951"},{id:"A7",hex:"#fa8c4f"},{id:"A8",hex:"#fdbda4"},{id:"A9",hex:"#f79d5f"},{id:"A10",hex:"#f47e38"},{id:"A11",hex:"#fedb99"},{id:"A12",hex:"#fda276"},{id:"A13",hex:"#fec667"},{id:"A14",hex:"#f75842"},{id:"A15",hex:"#fbf65e"},{id:"A16",hex:"#feff97"},{id:"A17",hex:"#fde173"},{id:"A18",hex:"#fcbf80"},{id:"A19",hex:"#fd7e77"},{id:"A20",hex:"#f9d66e"},{id:"A21",hex:"#fae393"},{id:"A22",hex:"#b38c9f"},{id:"A23",hex:"#e4c8ba"},{id:"A24",hex:"#f3f6a9"},{id:"A25",hex:"#ffd785"},{id:"A26",hex:"#ffc734"},
@@ -37,21 +37,41 @@ const G=`
 .btn:active{transform:scale(0.95);}
 `;
 
-// ── 独立的色卡编辑组件（放在App外，避免re-mount问题）──
-function StockCard({c,tn,T,stock,used,editId,editG,editBeads,onStartEdit,onEditG,onEditBeads,onSaveEdit,compact,batch,isSel,onToggleSel}){
-  const st=gToBeads(stock[c.id])<200?"c":gToBeads(stock[c.id])<500?"l":"ok";
+// ── 色卡组件（memo + 内部local state，焦点稳定）──
+const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch,isSel,onToggleSel,onSave}){
+  const wC=200,wL=500;
+  const beads=gToBeads(stock[c.id]);
+  const st=beads<wC?"c":beads<wL?"l":"ok";
   const col=st==="c"?T.danger:st==="l"?T.warn:T.text;
   const dk=isDark(c.hex);
-  const isEditing=editId===c.id;
-  const pad=compact?"6px 8px":"10px 10px 8px";
+  const [editing,setEditing]=useState(false);
+  const [localG,setLocalG]=useState("");
+  const [localB,setLocalB]=useState("");
+  const gRef=useRef(null);
 
-  function handleClick(e){
-    if(batch){onToggleSel(c.id);}
-    else{onStartEdit(c.id);}
+  function startEdit(e){
+    if(batch)return;
+    e.stopPropagation();
+    setLocalG(fmtG(stock[c.id]));
+    setLocalB(String(gToBeads(stock[c.id])));
+    setEditing(true);
   }
+  useEffect(()=>{if(editing&&gRef.current)gRef.current.focus();},[editing]);
+
+  function onG(v){setLocalG(v);const n=parseFloat(v);if(!isNaN(n)&&n>=0)setLocalB(String(Math.round(n*100)));}
+  function onB(v){setLocalB(v);const n=parseInt(v);if(!isNaN(n)&&n>=0)setLocalG(fmtG(n/100));}
+  function save(){
+    const g=parseFloat(localG);
+    if(!isNaN(g)&&g>=0)onSave(c.id,g);
+    setEditing(false);
+  }
+  function onKey(e){if(e.key==="Enter")save();if(e.key==="Escape"){setEditing(false);}}
+
+  const pad=compact?"6px 8px":"10px 10px 10px";
 
   return(
-    <div className="cc tt" onClick={handleClick}
+    <div className="cc tt"
+      onClick={batch?()=>onToggleSel(c.id):startEdit}
       style={{background:T.card,borderRadius:compact?16:20,overflow:"hidden",cursor:"pointer",
         border:isSel?`2.5px solid ${T.accent}`:st==="c"?`2px solid ${T.danger}`:st==="l"?`2px solid ${T.warn}`:`1.5px solid ${T.border}`,
         boxShadow:isSel?`0 0 0 3px ${T.accent}30`:T.cardShadow,
@@ -61,40 +81,33 @@ function StockCard({c,tn,T,stock,used,editId,editG,editBeads,onStartEdit,onEditG
         <span style={{fontSize:compact?12:13,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.65)",position:"relative"}}>{c.id}</span>
         {batch&&<div style={{position:"absolute",right:8,width:20,height:20,borderRadius:"50%",background:isSel?T.accent:"rgba(255,255,255,0.8)",border:`2px solid ${isSel?T.accent:"rgba(200,200,200,0.9)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:800}}>{isSel?"✓":""}</div>}
       </div>
-      {batch
-        ?<div style={{padding:pad,textAlign:"center"}}><div style={{fontSize:14,fontWeight:800,color:T.text}}>{fmtG(stock[c.id])}g</div><div style={{fontSize:10,color:T.textLight,marginTop:2}}>{gToBeads(stock[c.id])}粒</div></div>
-        :isEditing
-          ?<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3,marginBottom:3}}>
-              <input autoFocus value={editG}
-                onChange={e=>onEditG(e.target.value)}
-                onBlur={()=>onSaveEdit(c.id)}
-                onKeyDown={e=>{if(e.key==="Enter")onSaveEdit(c.id);}}
-                style={{width:52,textAlign:"center",fontSize:compact?12:14,padding:"3px",border:`2px solid ${T.accent}`,borderRadius:8,fontFamily:"'Nunito',sans-serif",background:"transparent",color:T.text,outline:"none"}}/>
-              <span style={{fontSize:10,color:T.textLight,fontWeight:700}}>g</span>
-            </div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
-              <input value={editBeads}
-                onChange={e=>onEditBeads(e.target.value)}
-                onBlur={()=>onSaveEdit(c.id)}
-                onKeyDown={e=>{if(e.key==="Enter")onSaveEdit(c.id);}}
-                style={{width:52,textAlign:"center",fontSize:10,padding:"2px",border:`1.5px solid ${T.border}`,borderRadius:8,fontFamily:"'Nunito',sans-serif",background:"transparent",color:T.text,outline:"none"}}/>
-              <span style={{fontSize:10,color:T.textLight,fontWeight:700}}>粒</span>
-            </div>
+      {editing&&!batch
+        ?<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3,marginBottom:4}}>
+            <input ref={gRef} value={localG} onChange={e=>onG(e.target.value)} onBlur={save} onKeyDown={onKey}
+              style={{width:52,textAlign:"center",fontSize:compact?12:14,padding:"3px 4px",border:`2px solid ${T.accent}`,borderRadius:8,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none"}}/>
+            <span style={{fontSize:10,color:T.textLight,fontWeight:700}}>g</span>
           </div>
-          :<div style={{padding:pad,textAlign:"center"}}>
-            <div style={{fontSize:compact?13:15,fontWeight:800,color:col}}>{fmtG(stock[c.id])}g</div>
-            <div style={{fontSize:10,color:T.textLight,marginTop:2}}>{gToBeads(stock[c.id])}粒</div>
-            {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:1}}>已用 {fmtG(used[c.id])}g</div>}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>
+            <input value={localB} onChange={e=>onB(e.target.value)} onBlur={save} onKeyDown={onKey}
+              style={{width:52,textAlign:"center",fontSize:10,padding:"2px 4px",border:`1.5px solid ${T.border}`,borderRadius:8,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none"}}/>
+            <span style={{fontSize:10,color:T.textLight,fontWeight:700}}>粒</span>
           </div>
+        </div>
+        :<div style={{padding:pad,textAlign:"center"}}>
+          <div style={{fontSize:compact?13:15,fontWeight:800,color:col}}>{fmtG(stock[c.id])} g</div>
+          <div style={{fontSize:compact?10:11,color:T.textMid,fontWeight:600,marginTop:2}}>{gToBeads(stock[c.id])} 粒</div>
+          {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:2}}>已用 {fmtG(used[c.id])}g</div>}
+        </div>
       }
     </div>
   );
-}
+});
 
 // ── 图纸裁剪组件 ──
 function ImageCropper({imgSrc,onCrop,onCancel,T,tn}){
   const canvasRef=useRef(null);
+  const scrollRef=useRef(null);
   const [img,setImg]=useState(null);
   const [drag,setDrag]=useState(false);
   const [sel,setSel]=useState(null);
@@ -119,7 +132,7 @@ function ImageCropper({imgSrc,onCrop,onCancel,T,tn}){
     const ctx=cv.getContext("2d");
     ctx.drawImage(img,0,0,w,h);
     if(sel){
-      ctx.fillStyle="rgba(0,0,0,0.45)";
+      ctx.fillStyle="rgba(0,0,0,0.42)";
       ctx.fillRect(0,0,w,sel.y);
       ctx.fillRect(0,sel.y+sel.h,w,h-sel.y-sel.h);
       ctx.fillRect(0,sel.y,sel.x,sel.h);
@@ -130,10 +143,18 @@ function ImageCropper({imgSrc,onCrop,onCancel,T,tn}){
   },[img,sel,scale]);
 
   function getPos(e){
-    const r=canvasRef.current.getBoundingClientRect();
+    const cv=canvasRef.current;
+    const r=cv.getBoundingClientRect();
+    // canvas CSS宽度 vs 实际像素宽度的比例
+    const cssW=r.width;
+    const realW=cv.width;
+    const ratio=realW/cssW;
     const cx=e.touches?e.touches[0].clientX:e.clientX;
     const cy=e.touches?e.touches[0].clientY:e.clientY;
-    return{x:Math.max(0,Math.min(cx-r.left,r.width)),y:Math.max(0,Math.min(cy-r.top,r.height))};
+    // 用canvas实际像素坐标
+    const x=(cx-r.left)*ratio;
+    const y=(cy-r.top)*ratio;
+    return{x:Math.max(0,Math.min(x,realW)),y:Math.max(0,Math.min(y,cv.height))};
   }
 
   function onDown(e){e.preventDefault();const p=getPos(e);setStart(p);setDrag(true);setSel(null);}
@@ -147,27 +168,38 @@ function ImageCropper({imgSrc,onCrop,onCancel,T,tn}){
   function doCrop(){
     if(!sel||sel.w<10||sel.h<10){alert("请先框选要识别的区域");return;}
     const cv=document.createElement("canvas");
+    // sel已经是canvas像素坐标，直接用scale换算到原图
     const realX=sel.x/scale,realY=sel.y/scale,realW=sel.w/scale,realH=sel.h/scale;
-    cv.width=realW;cv.height=realH;
+    cv.width=Math.round(realW);cv.height=Math.round(realH);
     cv.getContext("2d").drawImage(img,realX,realY,realW,realH,0,0,realW,realH);
-    const b64=cv.toDataURL("image/jpeg",0.92).split(",")[1];
+    const b64=cv.toDataURL("image/jpeg",0.95).split(",")[1];
     onCrop(b64);
   }
 
   return(
     <div>
-      <div style={{fontSize:13,color:T.textMid,marginBottom:10,fontWeight:600}}>
-        拖动选择底部用量统计区域，然后点击确认识别 ✂️
+      <div style={{fontSize:13,color:T.textMid,marginBottom:8,fontWeight:600}}>
+        📌 上下滑动查看全图，拖动框选底部统计区域后点确认
       </div>
-      <div style={{position:"relative",borderRadius:12,overflow:"hidden",border:`1.5px solid ${T.border}`,cursor:"crosshair",touchAction:"none"}}>
+      {/* 可滚动容器，不clip内容 */}
+      <div ref={scrollRef} style={{
+        borderRadius:12,border:`1.5px solid ${T.border}`,
+        overflowY:"auto",overflowX:"hidden",
+        maxHeight:"55vh",
+        cursor:"crosshair",touchAction:"pan-y",
+        WebkitOverflowScrolling:"touch",
+      }}>
         <canvas ref={canvasRef}
-          style={{display:"block",width:"100%",userSelect:"none"}}
+          style={{display:"block",width:"100%",userSelect:"none",touchAction:"none"}}
           onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
           onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}/>
       </div>
-      <div style={{display:"flex",gap:8,marginTop:12}}>
+      <div style={{fontSize:11,color:T.textLight,marginTop:6,textAlign:"center"}}>
+        {sel&&sel.w>10&&sel.h>10?"✅ 已框选区域，可确认识别":"⬆️ 先滚动到底部统计行，再拖动框选"}
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:10}}>
         <button className="btn" onClick={doCrop}
-          style={{flex:1,padding:"12px",borderRadius:14,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>
+          style={{flex:1,padding:"12px",borderRadius:14,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:sel&&sel.w>10?T.accent:T.border,color:sel&&sel.w>10?"#fff":T.textLight}}>
           ✂️ 确认裁剪并识别
         </button>
         <button className="btn" onClick={onCancel}
@@ -188,9 +220,7 @@ export default function App(){
   const [search,setSearch]=useState("");
   const [sort,setSort]=useState("id-asc");
   const [fSeries,setFSeries]=useState(null);
-  const [editId,setEditId]=useState(null);
-  const [editG,setEditG]=useState("");
-  const [editBeads,setEditBeads]=useState("");
+
   const [wL,setWL]=useState(500);
   const [wC,setWC]=useState(200);
   const [batch,setBatch]=useState(false);
@@ -226,13 +256,7 @@ export default function App(){
     return l;
   },[search,sort,stock,used,fSeries]);
 
-  const startEdit=useCallback((id)=>{setEditId(id);setEditG(fmtG(stock[id]));setEditBeads(String(gToBeads(stock[id])));},[stock]);
-  const handleEditG=useCallback((v)=>{setEditG(v);const n=parseFloat(v);if(!isNaN(n)&&n>=0)setEditBeads(String(Math.round(n*100)));},[]);
-  const handleEditBeads=useCallback((v)=>{setEditBeads(v);const n=parseInt(v);if(!isNaN(n)&&n>=0)setEditG(fmtG(n/100));},[]);
-  const saveEdit=useCallback((id)=>{
-    setStock(s=>{const g=parseFloat(editG);if(!isNaN(g)&&g>=0){const d=(s[id]||0)-g;if(d>0)setUsed(u=>({...u,[id]:(u[id]||0)+d}));return{...s,[id]:g};}return s;});
-    setEditId(null);
-  },[editG]);
+
 
   function getStatus(id){if(gToBeads(stock[id])<wC)return"c";if(gToBeads(stock[id])<wL)return"l";return"ok";}
   function goS(s){setFSeries(s);setSort("used-desc");setSearch("");setPage("stock");}
@@ -279,7 +303,10 @@ export default function App(){
 
   const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
 
-  const cardProps={tn,T,stock,used,editId,editG,editBeads,onStartEdit:startEdit,onEditG:handleEditG,onEditBeads:handleEditBeads,onSaveEdit:saveEdit,batch,sel};
+  const saveStock=useCallback((id,g)=>{
+    setStock(s=>{const d=(s[id]||0)-g;if(d>0)setUsed(u=>({...u,[id]:(u[id]||0)+d}));return{...s,[id]:g};});
+  },[]);
+  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onToggleSel:toggleSel};
 
   return(
     <>
@@ -318,7 +345,7 @@ export default function App(){
                 </div>
                 {colors.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"10px 0"}}>暂无 ✨</div>
                   :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                    {colors.map(c=><StockCard key={c.id} c={c} compact={true} isSel={sel.has(c.id)} onToggleSel={toggleSel} {...cardProps}/>)}
+                    {colors.map(c=><StockCard key={c.id} c={c} compact={true} isSel={sel.has(c.id)} {...cardProps}/>)}
                   </div>
                 }
               </div>
@@ -359,7 +386,7 @@ export default function App(){
             {batch&&<div style={{background:T.accentSoft,border:`1px solid ${T.border}`,borderRadius:14,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.accent,fontWeight:700}}>🫧 点击色卡勾选{sel.size>0&&<span style={{marginLeft:8}}>· 已选 {sel.size} 个</span>}</div>}
             <div style={{fontSize:12,color:T.textLight,marginBottom:10,fontWeight:600}}>共 {filtered.length} 个色号 · 点击色卡编辑克/粒数</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              {filtered.map(c=><StockCard key={c.id} c={c} compact={false} isSel={sel.has(c.id)} onToggleSel={toggleSel} {...cardProps}/>)}
+              {filtered.map(c=><StockCard key={c.id} c={c} compact={false} isSel={sel.has(c.id)} {...cardProps}/>)}
             </div>
           </div>}
 
