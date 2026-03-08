@@ -37,56 +37,77 @@ const G=`
 .btn:active{transform:scale(0.95);}
 `;
 
-// ── 色卡组件（粒为主单位）──
-const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch,isSel,onToggleSel,onSave,wC,wL}){
+// ── 色卡组件（点击弹菜单：改库存 / 扣用量）──
+const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch,isSel,onToggleSel,onSave,onDeduct,wC,wL}){
   const beads=Math.round(stock[c.id]);
   const st=beads<wC?"c":beads<wL?"l":"ok";
   const col=st==="c"?T.danger:st==="l"?T.warn:T.text;
   const dk=isDark(c.hex);
-  const [localB,setLocalB]=useState(String(beads));
+  // mode: null | "menu" | "edit" | "deduct"
+  const [mode,setMode]=useState(null);
+  const [localB,setLocalB]=useState("");
   const inputRef=useRef(null);
 
-  // 每次stock变化时同步localB（未在编辑时）
-  const [editing,setEditing]=useState(false);
-  useEffect(()=>{if(!editing)setLocalB(String(Math.round(stock[c.id])));},[stock[c.id],editing]);
+  useEffect(()=>{if(mode==="edit"||mode==="deduct")setTimeout(()=>inputRef.current&&inputRef.current.focus(),0);},[mode]);
+  useEffect(()=>{if(mode===null)setLocalB("");},[mode]);
 
-  function startEdit(e){if(batch)return;e.stopPropagation();setLocalB(String(Math.round(stock[c.id])));setEditing(true);setTimeout(()=>inputRef.current&&inputRef.current.focus(),0);}
-  function save(){const n=parseInt(localB);if(!isNaN(n)&&n>=0)onSave(c.id,n);setEditing(false);}
-  function onKey(e){if(e.key==="Enter")save();if(e.key==="Escape")setEditing(false);}
+  function handleClick(e){if(batch){onToggleSel(c.id);return;}e.stopPropagation();setMode(m=>m===null?"menu":null);}
+  function startEdit(e){e.stopPropagation();setLocalB(String(beads));setMode("edit");}
+  function startDeduct(e){e.stopPropagation();setLocalB("");setMode("deduct");}
+  function saveEdit(e){e&&e.stopPropagation();const n=parseInt(localB);if(!isNaN(n)&&n>=0)onSave(c.id,n);setMode(null);}
+  function saveDeduct(e){e&&e.stopPropagation();const n=parseInt(localB);if(!isNaN(n)&&n>0)onDeduct(c.id,n);setMode(null);}
+  function onKeyEdit(e){if(e.key==="Enter")saveEdit();if(e.key==="Escape")setMode(null);}
+  function onKeyDeduct(e){if(e.key==="Enter")saveDeduct();if(e.key==="Escape")setMode(null);}
 
-  const gVal=(Math.round(stock[c.id])/100).toFixed(1).replace(/\.0$/,"");
+  const gVal=(beads/100).toFixed(1).replace(/\.0$/,"");
   const pad=compact?"6px 8px":"10px 10px 10px";
 
   return(
-    <div className="cc tt"
-      onClick={batch?()=>onToggleSel(c.id):startEdit}
-      style={{background:T.card,borderRadius:compact?16:20,overflow:"hidden",cursor:"pointer",
+    <div className="cc tt" onClick={handleClick}
+      style={{background:T.card,borderRadius:compact?16:20,overflow:"hidden",cursor:"pointer",position:"relative",
         border:isSel?`2.5px solid ${T.accent}`:st==="c"?`2px solid ${T.danger}`:st==="l"?`2px solid ${T.warn}`:`1.5px solid ${T.border}`,
-        boxShadow:isSel?`0 0 0 3px ${T.accent}30`:T.cardShadow,
+        boxShadow:isSel?`0 0 0 3px ${T.accent}30`:mode==="menu"?`0 0 0 3px ${T.accent}40`:T.cardShadow,
         transform:isSel?"scale(0.97)":"none"}}>
       <div style={{background:c.hex,height:compact?40:50,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
         {tn==="night"&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/>}
         <span style={{fontSize:compact?12:13,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.65)",position:"relative"}}>{c.id}</span>
         {batch&&<div style={{position:"absolute",right:8,width:20,height:20,borderRadius:"50%",background:isSel?T.accent:"rgba(255,255,255,0.8)",border:`2px solid ${isSel?T.accent:"rgba(200,200,200,0.9)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:800}}>{isSel?"✓":""}</div>}
       </div>
-      {editing&&!batch
-        ?<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:2}}>
-            <input ref={inputRef} value={localB} onChange={e=>setLocalB(e.target.value)} onBlur={save} onKeyDown={onKey}
-              type="number" min="0"
-              style={{width:68,textAlign:"center",fontSize:compact?14:16,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.accent}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.accent,outline:"none"}}/>
-            <span style={{fontSize:11,color:T.textLight,fontWeight:700}}>粒</span>
-          </div>
-          <div style={{fontSize:10,color:T.textLight,marginTop:2}}>
-            = {(parseInt(localB)||0)/100 % 1===0 ? (parseInt(localB)||0)/100 : ((parseInt(localB)||0)/100).toFixed(2)} g
-          </div>
+
+      {/* 默认显示 */}
+      {mode===null&&<div style={{padding:pad,textAlign:"center"}}>
+        <div style={{fontSize:compact?14:16,fontWeight:800,color:col}}>{beads} <span style={{fontSize:10,fontWeight:600}}>粒</span></div>
+        <div style={{fontSize:compact?10:11,color:T.textMid,fontWeight:600,marginTop:1}}>{gVal} g</div>
+        {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:1}}>已用 {Math.round(used[c.id])} 粒</div>}
+      </div>}
+
+      {/* 菜单 */}
+      {mode==="menu"&&<div style={{padding:"8px 6px",display:"flex",gap:5}} onClick={e=>e.stopPropagation()}>
+        <button onClick={startEdit} style={{flex:1,padding:"7px 4px",borderRadius:10,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.accentLight,color:T.accent}}>✏️ 改库存</button>
+        <button onClick={startDeduct} style={{flex:1,padding:"7px 4px",borderRadius:10,border:`1.5px solid ${T.warn}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.warnBg,color:T.warn}}>📦 扣用量</button>
+      </div>}
+
+      {/* 改库存 */}
+      {mode==="edit"&&<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:10,color:T.textLight,marginBottom:4,fontWeight:600}}>改库存</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:3}}>
+          <input ref={inputRef} value={localB} onChange={e=>setLocalB(e.target.value)} onBlur={saveEdit} onKeyDown={onKeyEdit} type="number" min="0"
+            style={{width:68,textAlign:"center",fontSize:15,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.accent}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.accent,outline:"none"}}/>
+          <span style={{fontSize:11,color:T.textLight,fontWeight:700}}>粒</span>
         </div>
-        :<div style={{padding:pad,textAlign:"center"}}>
-          <div style={{fontSize:compact?14:16,fontWeight:800,color:col}}>{beads} <span style={{fontSize:10,fontWeight:600}}>粒</span></div>
-          <div style={{fontSize:compact?10:11,color:T.textMid,fontWeight:600,marginTop:1}}>{gVal} g</div>
-          {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:1}}>已用 {Math.round(used[c.id])} 粒</div>}
+        <div style={{fontSize:10,color:T.textLight}}>= {((parseInt(localB)||0)/100).toFixed(1).replace(/\.0$/,"")} g</div>
+      </div>}
+
+      {/* 扣用量 */}
+      {mode==="deduct"&&<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:10,color:T.warn,marginBottom:4,fontWeight:600}}>扣用量</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:3}}>
+          <input ref={inputRef} value={localB} onChange={e=>setLocalB(e.target.value)} onBlur={saveDeduct} onKeyDown={onKeyDeduct} type="number" min="0"
+            style={{width:68,textAlign:"center",fontSize:15,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.warn}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.warn,outline:"none"}}/>
+          <span style={{fontSize:11,color:T.textLight,fontWeight:700}}>粒</span>
         </div>
-      }
+        <div style={{fontSize:10,color:T.textLight}}>库存 {beads} → {Math.max(0,beads-(parseInt(localB)||0))} 粒</div>
+      </div>}
     </div>
   );
 });
@@ -148,9 +169,13 @@ export default function App(){
   const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
 
   const saveStock=useCallback((id,beads)=>{
-    setStock(s=>{const d=(s[id]||0)-beads;if(d>0)setUsed(u=>({...u,[id]:(u[id]||0)+d}));return{...s,[id]:beads};});
+    setStock(s=>({...s,[id]:beads}));
   },[]);
-  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onToggleSel:toggleSel,wC,wL};
+  const deductStock=useCallback((id,beads)=>{
+    setStock(s=>({...s,[id]:Math.max(0,(s[id]||0)-beads)}));
+    setUsed(u=>({...u,[id]:(u[id]||0)+beads}));
+  },[]);
+  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL};
 
   return(
     <>
