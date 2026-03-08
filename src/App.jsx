@@ -116,15 +116,23 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
 export default function App(){
   const [tn,setTn]=useState("sky");
   const T=THEMES[tn];
-  const [stock,setStock]=useState(INIT_STOCK);
-  const [used,setUsed]=useState(INIT_USED);
+  const [stock,setStock]=useState(()=>{
+    try{const s=localStorage.getItem('pindou_stock');return s?JSON.parse(s):INIT_STOCK;}catch{return INIT_STOCK;}
+  });
+  const [used,setUsed]=useState(()=>{
+    try{const u=localStorage.getItem('pindou_used');return u?JSON.parse(u):INIT_USED;}catch{return INIT_USED;}
+  });
   const [page,setPage]=useState("home");
+  useEffect(()=>{try{localStorage.setItem('pindou_stock',JSON.stringify(stock));}catch{}},[stock]);
+  useEffect(()=>{try{localStorage.setItem('pindou_used',JSON.stringify(used));}catch{}},[used]);
   const [search,setSearch]=useState("");
   const [sort,setSort]=useState("id-asc");
   const [fSeries,setFSeries]=useState(null);
 
   const [wL,setWL]=useState(500);
   const [wC,setWC]=useState(200);
+  const [history,setHistory]=useState([]); // [{stock,used}]
+  const MAX_HISTORY=20;
   const [batch,setBatch]=useState(false);
   const [sel,setSel]=useState(new Set());
   const [bAmt,setBAmt]=useState("");
@@ -155,6 +163,7 @@ export default function App(){
   function toggleSel(id){setSel(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});}
   function applyBatch(){
     const amt=parseFloat(bAmt);if(isNaN(amt)||amt<=0)return;
+    pushHistory(stock,used);
     const ns={...stock},nu={...used};
     sel.forEach(id=>{if(bDir==="-"){const d=Math.min(ns[id],amt);nu[id]+=d;ns[id]=Math.max(0,ns[id]-amt);}else{ns[id]+=amt;}});
     setStock(ns);setUsed(nu);setSel(new Set());setBAmt("");setBatch(false);
@@ -168,13 +177,24 @@ export default function App(){
 
   const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
 
+  function pushHistory(s,u){setHistory(h=>[...h.slice(-MAX_HISTORY+1),{stock:{...s},used:{...u}}]);}
+
   const saveStock=useCallback((id,beads)=>{
-    setStock(s=>({...s,[id]:beads}));
-  },[]);
+    setStock(s=>{pushHistory(s,used);return{...s,[id]:beads};});
+  },[used]);
   const deductStock=useCallback((id,beads)=>{
-    setStock(s=>({...s,[id]:Math.max(0,(s[id]||0)-beads)}));
+    setStock(s=>{pushHistory(s,used);return{...s,[id]:Math.max(0,(s[id]||0)-beads)};});
     setUsed(u=>({...u,[id]:(u[id]||0)+beads}));
-  },[]);
+  },[used]);
+  function undoLast(){
+    setHistory(h=>{
+      if(h.length===0)return h;
+      const prev=h[h.length-1];
+      setStock(prev.stock);
+      setUsed(prev.used);
+      return h.slice(0,-1);
+    });
+  }
   const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL};
 
   return(
@@ -186,7 +206,7 @@ export default function App(){
             <FoxBtn T={T} tn={tn}/>
             <div>
               <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆库存管家</div>
-              <div style={{fontSize:10,color:T.textLight,fontWeight:600,marginTop:1}}>戳小狐狸 ✦</div>
+              <div style={{fontSize:10,color:T.textLight,fontWeight:600,marginTop:1}}>戳豆豆 ✦</div>
             </div>
           </div>
           <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
@@ -195,6 +215,10 @@ export default function App(){
         <div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0"}}>
 
           {page==="home"&&<div className="fade">
+            {history.length>0&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:T.accentSoft,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"10px 16px",marginBottom:12}}>
+              <span style={{fontSize:12,fontWeight:700,color:T.accent}}>↩️ 可撤销 {history.length} 步操作</span>
+              <button className="btn" onClick={undoLast} style={{padding:"6px 16px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,background:T.accent,color:"#fff"}}>撤销上一步</button>
+            </div>}
             <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
               <div style={{fontSize:12,color:T.textLight,marginBottom:10,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
               <div style={{display:"flex",gap:10}}>
@@ -273,6 +297,10 @@ export default function App(){
           </div>
         </div>}
 
+        <div className="tt" style={{textAlign:"center",padding:"10px 0 96px",fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
+          由 大橘来啦（v：daju_laila）制作 · 禁私售
+        </div>
+
         <div className="tt" style={{position:"fixed",bottom:0,left:0,right:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
           {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🍬",iconI:"🫙"}].map(n=>{
             const active=page===n.key;
@@ -290,44 +318,58 @@ export default function App(){
   );
 }
 
-const LOVE_WORDS=["姐姐在干嘛～想你了 🦊","豆子数清楚了吗，你比豆子可爱多了","偷偷看你一眼（被发现了）","姐姐今天辛苦了，摸摸头 🤍","我在这里陪你呢～","满满拼豆好看，你更好看 (¬‿¬)","嘿，我就知道你会戳我 😏","姐姐～人家想被抱抱","你不累吗？先休息一下嘛","在你旁边，库存不足都不怕 🦊"];
+const LOVE_WORDS=["豆豆们今天有没有乖乖待在格子里 🟡","库存充足，拼图安心 ✨","记得定期更新库存哦～","豆子虽小，作品不小 💛","认真管理的你最可爱了","今天拼了几粒？快来记录一下","库存快不足了？快补货！","每一粒豆子都有它的位置 🌟","拼豆人最有耐心了","快去拼一张吧，加油！🎨"];
 
 function FoxBtn({T,tn}){
-  const [msg,setMsg]=useState(null);const [vis,setVis]=useState(false);const [bounce,setBounce]=useState(false);const [heart,setHeart]=useState(false);
-  function handleClick(){const w=LOVE_WORDS[Math.floor(Math.random()*LOVE_WORDS.length)];setMsg(w);setVis(true);setBounce(true);setHeart(true);setTimeout(()=>setBounce(false),350);setTimeout(()=>setHeart(false),800);setTimeout(()=>setVis(false),3200);}
+  const [msg,setMsg]=useState(null);const [vis,setVis]=useState(false);const [bounce,setBounce]=useState(false);const [sparkle,setSparkle]=useState(false);
+  function handleClick(){const w=LOVE_WORDS[Math.floor(Math.random()*LOVE_WORDS.length)];setMsg(w);setVis(true);setBounce(true);setSparkle(true);setTimeout(()=>setBounce(false),350);setTimeout(()=>setSparkle(false),800);setTimeout(()=>setVis(false),3200);}
   return(
     <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
-      {vis&&<div style={{position:"absolute",left:62,top:"50%",transform:"translateY(-50%)",background:tn==="sky"?"#ffffff":"#1e3352",border:`1.5px solid ${T.border}`,borderRadius:18,padding:"9px 16px",fontSize:12,fontWeight:700,color:T.text,whiteSpace:"nowrap",boxShadow:T.cardShadow,zIndex:999,animation:"popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both"}}>
+      {vis&&<div style={{position:"absolute",left:58,top:"50%",transform:"translateY(-50%)",background:tn==="sky"?"#ffffff":"#1e3352",border:`1.5px solid ${T.border}`,borderRadius:18,padding:"9px 16px",fontSize:12,fontWeight:700,color:T.text,whiteSpace:"nowrap",boxShadow:T.cardShadow,zIndex:999,animation:"popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both"}}>
         <style>{`@keyframes popIn{from{opacity:0;transform:translateY(-50%) scale(0.7);}to{opacity:1;transform:translateY(-50%) scale(1);}}`}</style>
         <div style={{position:"absolute",left:-7,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:`7px solid ${T.border}`}}/>
         <div style={{position:"absolute",left:-5,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"5px solid transparent",borderBottom:"5px solid transparent",borderRight:`6px solid ${tn==="sky"?"#ffffff":"#1e3352"}`}}/>
         {msg}
       </div>}
-      {heart&&<div style={{position:"absolute",left:18,top:-10,fontSize:14,animation:"floatUp 0.8s ease both",zIndex:998,pointerEvents:"none"}}>
-        <style>{`@keyframes floatUp{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(-28px) scale(1.4);}}`}</style>🤍
+      {sparkle&&<div style={{position:"absolute",left:14,top:-10,fontSize:13,animation:"floatUp 0.8s ease both",zIndex:998,pointerEvents:"none"}}>
+        <style>{`@keyframes floatUp{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(-28px) scale(1.4);}}`}</style>✨
       </div>}
-      <div onClick={handleClick} style={{cursor:"pointer",userSelect:"none",transform:bounce?"scale(0.88) rotate(-8deg)":"scale(1) rotate(0deg)",transition:"transform 0.25s cubic-bezier(0.34,1.56,0.64,1)"}}>
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="38" cy="36" rx="9" ry="6" transform="rotate(-20 38 36)" fill={tn==="sky"?"#ffb347":"#ffa500"} opacity="0.9"/>
-          <ellipse cx="38" cy="36" rx="5" ry="3" transform="rotate(-20 38 36)" fill="#fff" opacity="0.7"/>
-          <ellipse cx="24" cy="33" rx="11" ry="9" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <ellipse cx="24" cy="35" rx="6" ry="5" fill="#fff5e0"/>
-          <circle cx="24" cy="20" r="12" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <polygon points="13,12 10,3 18,10" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <polygon points="14,11 12,5 17,10" fill="#ffcba4"/>
-          <polygon points="35,12 38,3 30,10" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <polygon points="34,11 36,5 31,10" fill="#ffcba4"/>
-          <ellipse cx="24" cy="22" rx="7" ry="6" fill="#fff5e0"/>
-          <circle cx="20" cy="19" r="2.5" fill="#3d2314"/>
-          <circle cx="28" cy="19" r="2.5" fill="#3d2314"/>
-          <circle cx="21" cy="18" r="0.9" fill="white"/>
-          <circle cx="29" cy="18" r="0.9" fill="white"/>
-          <ellipse cx="24" cy="23" rx="1.8" ry="1.2" fill="#e8607a"/>
-          <path d="M22 24.5 Q24 26.5 26 24.5" stroke="#c0485e" strokeWidth="1" fill="none" strokeLinecap="round"/>
-          <circle cx="18" cy="22" r="2.5" fill="#ffaaa0" opacity="0.5"/>
-          <circle cx="30" cy="22" r="2.5" fill="#ffaaa0" opacity="0.5"/>
-          <ellipse cx="16" cy="40" rx="4" ry="2.5" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
-          <ellipse cx="32" cy="40" rx="4" ry="2.5" fill={tn==="sky"?"#ff9940":"#ff8c00"}/>
+      <div onClick={handleClick} style={{cursor:"pointer",userSelect:"none",transform:bounce?"scale(0.82)":"scale(1)",transition:"transform 0.25s cubic-bezier(0.34,1.56,0.64,1)"}}>
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* 大豆子 中间 */}
+          <circle cx="22" cy="22" r="11" fill={tn==="sky"?"#FFD700":"#FFB800"}/>
+          <circle cx="22" cy="22" r="11" fill="url(#beadGrad)" />
+          <circle cx="18" cy="18" r="3.5" fill="rgba(255,255,255,0.35)"/>
+          {/* 小豆子 右上 */}
+          <circle cx="35" cy="12" r="6" fill={tn==="sky"?"#FFB347":"#FF9900"}/>
+          <circle cx="35" cy="12" r="6" fill="url(#beadGrad2)"/>
+          <circle cx="33" cy="10" r="2" fill="rgba(255,255,255,0.3)"/>
+          {/* 小豆子 左下 */}
+          <circle cx="10" cy="34" r="5" fill={tn==="sky"?"#FFEAA0":"#FFD060"}/>
+          <circle cx="10" cy="34" r="5" fill="url(#beadGrad3)"/>
+          <circle cx="9" cy="33" r="1.5" fill="rgba(255,255,255,0.35)"/>
+          {/* 小豆子 左上 */}
+          <circle cx="9" cy="11" r="4" fill={tn==="sky"?"#FFD700":"#FFB800"}/>
+          <circle cx="9" cy="11" r="4" fill="url(#beadGrad)"/>
+          <circle cx="8" cy="10" r="1.2" fill="rgba(255,255,255,0.3)"/>
+          {/* 小豆子 右下 */}
+          <circle cx="34" cy="34" r="4.5" fill={tn==="sky"?"#FFB347":"#FF9900"}/>
+          <circle cx="34" cy="34" r="4.5" fill="url(#beadGrad2)"/>
+          <circle cx="32.5" cy="32.5" r="1.5" fill="rgba(255,255,255,0.3)"/>
+          <defs>
+            <radialGradient id="beadGrad" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.4)"/>
+              <stop offset="100%" stopColor="rgba(0,0,0,0.08)"/>
+            </radialGradient>
+            <radialGradient id="beadGrad2" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.35)"/>
+              <stop offset="100%" stopColor="rgba(0,0,0,0.1)"/>
+            </radialGradient>
+            <radialGradient id="beadGrad3" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.4)"/>
+              <stop offset="100%" stopColor="rgba(0,0,0,0.06)"/>
+            </radialGradient>
+          </defs>
         </svg>
       </div>
     </div>
