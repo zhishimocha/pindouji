@@ -175,36 +175,57 @@ export default function App(){
   }
   function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");}
 
+  const [cropImg,setCropImg]=useState(null); // 裁剪用的原图base64
+  const [cropBox,setCropBox]=useState(null); // {x,y,w,h} 相对于显示尺寸
+  const [cropDrag,setCropDrag]=useState(null); // 拖拽状态
+  const cropCanvasRef=useRef(null);
+  const cropImgRef=useRef(null);
+
   async function handleImg(e){
     const file=e.target.files[0];
     if(!file)return;
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const max=1600;let w=img.width,h=img.height;
+      if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      setCropImg(canvas.toDataURL('image/jpeg',0.9));
+      setCropBox(null);
+    };
+    img.src=url;
+    e.target.value="";
+  }
+
+  async function confirmCrop(){
+    if(!cropImg)return;
     setImgLoading(true);setImgErr("");
     try{
-      const base64=await new Promise((res,rej)=>{
-        const r=new FileReader();
-        r.onload=()=>res(r.result);
-        r.onerror=rej;
-        r.readAsDataURL(file);
-      });
-      const resp=await fetch('/api/qwen',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({image:base64})
-      });
+      let finalB64=cropImg;
+      if(cropBox&&cropImgRef.current){
+        const el=cropImgRef.current;
+        const scaleX=el.naturalWidth/el.clientWidth;
+        const scaleY=el.naturalHeight/el.clientHeight;
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.round(cropBox.w*scaleX);
+        canvas.height=Math.round(cropBox.h*scaleY);
+        const ctx=canvas.getContext('2d');
+        const imgEl=new Image();
+        await new Promise(res=>{imgEl.onload=res;imgEl.src=cropImg;});
+        ctx.drawImage(imgEl,Math.round(cropBox.x*scaleX),Math.round(cropBox.y*scaleY),canvas.width,canvas.height,0,0,canvas.width,canvas.height);
+        finalB64=canvas.toDataURL('image/jpeg',0.92);
+      }
+      setCropImg(null);setCropBox(null);
+      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:finalB64})});
       const data=await resp.json();
       if(data.result&&data.result!=='无法识别'){
-        // 把A1-200,B3-150格式转成A1-200, B3-150填入指令框
-        setCmdText(data.result.replace(/,/g,', '));
-        setCmdErr("");
-      } else {
-        setImgErr("识别失败，请换张更清晰的图片试试～");
-      }
-    }catch(err){
-      setImgErr("请求出错："+err.message);
-    }finally{
-      setImgLoading(false);
-      e.target.value="";
-    }
+        setCmdText(data.result.replace(/,/g,', '));setCmdErr("");
+      }else{setImgErr("识别失败，试试框选统计表区域再识别～");}
+    }catch(err){setImgErr("请求出错："+err.message);}
+    finally{setImgLoading(false);}
   }
 
   function applyCmd(){
@@ -273,6 +294,37 @@ export default function App(){
     <>
       <style>{G}</style>
       <div className="tt" style={{minHeight:"100vh",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text,paddingBottom:page==="diary"?0:88}}>
+
+        {/* 裁剪弹窗 */}
+        {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10}}>拖拽框选统计表区域 · 不框选则识别整图</div>
+          <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:12,cursor:"crosshair"}}
+            onPointerDown={ev=>{
+              const el=ev.currentTarget.getBoundingClientRect();
+              const x=ev.clientX-el.left,y=ev.clientY-el.top;
+              setCropDrag({startX:x,startY:y});
+              setCropBox({x,y,w:0,h:0});
+              ev.currentTarget.setPointerCapture(ev.pointerId);
+            }}
+            onPointerMove={ev=>{
+              if(!cropDrag)return;
+              const el=ev.currentTarget.getBoundingClientRect();
+              const cx=ev.clientX-el.left,cy=ev.clientY-el.top;
+              setCropBox({x:Math.min(cropDrag.startX,cx),y:Math.min(cropDrag.startY,cy),w:Math.abs(cx-cropDrag.startX),h:Math.abs(cy-cropDrag.startY)});
+            }}
+            onPointerUp={()=>setCropDrag(null)}
+          >
+            <img ref={cropImgRef} src={cropImg} style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none",pointerEvents:"none"}}/>
+            {cropBox&&cropBox.w>5&&cropBox.h>5&&<div style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",background:"rgba(96,212,240,0.15)",pointerEvents:"none"}}/>}
+          </div>
+          <div style={{display:"flex",gap:12,marginTop:14}}>
+            <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
+            <button onClick={confirmCrop} disabled={imgLoading} style={{padding:"8px 28px",borderRadius:50,border:"none",background:"#60d4f0",color:"#1a2a3a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+              {imgLoading?"识别中…":"✓ 确认识别"}
+            </button>
+          </div>
+          {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
+        </div>}
         {/* 顶部header在日记页隐藏 */}
         {page!=="diary"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"12px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
