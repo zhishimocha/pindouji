@@ -520,16 +520,15 @@ export default function App(){
                     <div key={i} style={{borderRadius:12,overflow:"hidden",border:`1.5px solid ${T.border}`,position:"relative"}}>
                       {/* 色号行 */}
                       <div style={{background:T.accentSoft,padding:"3px 6px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                        <span style={{fontSize:11,fontWeight:800,color:T.accent}}>{tag.id}</span>
+                        <span style={{flex:1,fontSize:11,fontWeight:800,color:T.accent,textAlign:"center"}}>{tag.id}</span>
                         <button onClick={()=>setCmdTags(ts=>ts.filter((_,j)=>j!==i))}
-                          style={{background:"none",border:"none",cursor:"pointer",color:T.textLight,fontSize:12,lineHeight:1,padding:0,fontWeight:900}}>×</button>
+                          style={{background:"none",border:"none",cursor:"pointer",color:T.textLight,fontSize:12,lineHeight:1,padding:0,fontWeight:900,flexShrink:0}}>×</button>
                       </div>
                       {/* 色块+数字 */}
-                      <div style={{background:bg,padding:"8px 4px",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                        <span style={{fontSize:10,color:txt,fontWeight:700,opacity:0.8}}>{tag.dir==="-"?"扣除":"补货"}</span>
+                      <div style={{background:bg,padding:"8px 6px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:56}}>
                         <input type="number" value={tag.amt}
                           onChange={e=>setCmdTags(ts=>ts.map((t,j)=>j===i?{...t,amt:e.target.value}:t))}
-                          style={{width:"100%",background:"rgba(255,255,255,0.25)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:"3px 4px",fontSize:13,fontWeight:900,color:txt,textAlign:"center",fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+                          style={{width:"72%",background:"rgba(255,255,255,0.25)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:"6px 4px",fontSize:13,fontWeight:900,color:txt,textAlign:"center",fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box",aspectRatio:"1/1.4",display:"flex",alignItems:"center"}}/>
                       </div>
                     </div>
                   );
