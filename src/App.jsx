@@ -297,25 +297,72 @@ export default function App(){
 
         {/* 裁剪弹窗 */}
         {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10}}>拖拽框选统计表区域 · 不框选则识别整图</div>
-          <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:12,cursor:"crosshair"}}
-            onPointerDown={ev=>{
-              const el=ev.currentTarget.getBoundingClientRect();
-              const x=ev.clientX-el.left,y=ev.clientY-el.top;
-              setCropDrag({startX:x,startY:y});
-              setCropBox({x,y,w:0,h:0});
-              ev.currentTarget.setPointerCapture(ev.pointerId);
-            }}
+          <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10}}>拖拽边框调整选区 · 框选统计表区域</div>
+          <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:12}}
             onPointerMove={ev=>{
-              if(!cropDrag)return;
-              const el=ev.currentTarget.getBoundingClientRect();
-              const cx=ev.clientX-el.left,cy=ev.clientY-el.top;
-              setCropBox({x:Math.min(cropDrag.startX,cx),y:Math.min(cropDrag.startY,cy),w:Math.abs(cx-cropDrag.startX),h:Math.abs(cy-cropDrag.startY)});
+              if(!cropDrag||!cropImgRef.current)return;
+              const el=cropImgRef.current.getBoundingClientRect();
+              const cx=Math.max(0,Math.min(ev.clientX-el.left,el.width));
+              const cy=Math.max(0,Math.min(ev.clientY-el.top,el.height));
+              const dx=cx-cropDrag.lastX, dy=cy-cropDrag.lastY;
+              setCropBox(b=>{
+                if(!b)return b;
+                let {x,y,w,h}=b;
+                const minS=30;
+                if(cropDrag.type==="move"){
+                  x=Math.max(0,Math.min(x+dx,el.width-w));
+                  y=Math.max(0,Math.min(y+dy,el.height-h));
+                }else{
+                  if(cropDrag.type.includes("l")){const nx=Math.min(x+dx,x+w-minS);w=w-(nx-x);x=nx;}
+                  if(cropDrag.type.includes("r")){w=Math.max(minS,Math.min(w+dx,el.width-x));}
+                  if(cropDrag.type.includes("t")){const ny=Math.min(y+dy,y+h-minS);h=h-(ny-y);y=ny;}
+                  if(cropDrag.type.includes("b")){h=Math.max(minS,Math.min(h+dy,el.height-y));}
+                }
+                return {x,y,w,h};
+              });
+              setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
             }}
             onPointerUp={()=>setCropDrag(null)}
           >
-            <img ref={cropImgRef} src={cropImg} style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none",pointerEvents:"none"}}/>
-            {cropBox&&cropBox.w>5&&cropBox.h>5&&<div style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",background:"rgba(96,212,240,0.15)",pointerEvents:"none"}}/>}
+            <img ref={cropImgRef} src={cropImg}
+              onLoad={ev=>{
+                const {clientWidth:w,clientHeight:h}=ev.target;
+                // 默认框选下半部分（统计表通常在下方）
+                setCropBox({x:w*0.05,y:h*0.65,w:w*0.9,h:h*0.32});
+              }}
+              style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none"}}/>
+            {cropBox&&<>
+              {/* 暗色遮罩四周 */}
+              <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`
+                linear-gradient(to bottom,
+                  rgba(0,0,0,0.45) ${cropBox.y}px,
+                  transparent ${cropBox.y}px,
+                  transparent ${cropBox.y+cropBox.h}px,
+                  rgba(0,0,0,0.45) ${cropBox.y+cropBox.h}px
+                )`}}/>
+              {/* 选框本体——中间拖动 */}
+              <div onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
+                style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
+                {/* 三等分辅助线 */}
+                {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.4)"}}/>)}
+                {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.4)"}}/>)}
+                {/* 8个控制点 */}
+                {[
+                  {type:"tl",style:{top:-8,left:-8,cursor:"nw-resize"}},
+                  {type:"t", style:{top:-8,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
+                  {type:"tr",style:{top:-8,right:-8,cursor:"ne-resize"}},
+                  {type:"r", style:{top:"50%",right:-8,transform:"translateY(-50%)",cursor:"e-resize"}},
+                  {type:"br",style:{bottom:-8,right:-8,cursor:"se-resize"}},
+                  {type:"b", style:{bottom:-8,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
+                  {type:"bl",style:{bottom:-8,left:-8,cursor:"sw-resize"}},
+                  {type:"l", style:{top:"50%",left:-8,transform:"translateY(-50%)",cursor:"w-resize"}},
+                ].map(({type,style})=>(
+                  <div key={type}
+                    onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
+                    style={{position:"absolute",width:18,height:18,background:"#60d4f0",borderRadius:3,touchAction:"none",...style}}/>
+                ))}
+              </div>
+            </>}
           </div>
           <div style={{display:"flex",gap:12,marginTop:14}}>
             <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
