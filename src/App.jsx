@@ -139,6 +139,9 @@ export default function App(){
   const [bDir,setBDir]=useState("-");
   const [cmdText,setCmdText]=useState("");
   const [cmdErr,setCmdErr]=useState("");
+  const [imgLoading,setImgLoading]=useState(false);
+  const [imgErr,setImgErr]=useState("");
+  const imgRef=useRef(null);
 
   const critC=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wC);
   const lowC=ALL_COLORS.filter(c=>Math.round(stock[c.id])>=wC&&Math.round(stock[c.id])<wL);
@@ -171,6 +174,38 @@ export default function App(){
     setStock(ns);setUsed(nu);setSel(new Set());setBAmt("");setBatch(false);
   }
   function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");}
+
+  async function handleImg(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    setImgLoading(true);setImgErr("");
+    try{
+      const base64=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(r.result);
+        r.onerror=rej;
+        r.readAsDataURL(file);
+      });
+      const resp=await fetch('/api/qwen',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({image:base64})
+      });
+      const data=await resp.json();
+      if(data.result&&data.result!=='无法识别'){
+        // 把A1-200,B3-150格式转成A1-200, B3-150填入指令框
+        setCmdText(data.result.replace(/,/g,', '));
+        setCmdErr("");
+      } else {
+        setImgErr("识别失败，请换张更清晰的图片试试～");
+      }
+    }catch(err){
+      setImgErr("请求出错："+err.message);
+    }finally{
+      setImgLoading(false);
+      e.target.value="";
+    }
+  }
 
   function applyCmd(){
     const raw=cmdText.trim();
@@ -342,7 +377,14 @@ export default function App(){
             {sel.size>0&&<div style={{height:1,background:T.border,margin:"0 -4px"}}/>}
             {/* 文字指令行 */}
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              <div style={{fontSize:11,color:T.textLight,fontWeight:600}}>✏️ 指令输入：A15-200、全部+100（逗号分隔多条）</div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 指令输入：A15-200、全部+100（逗号分隔多条）</div>
+                <button className="btn" onClick={()=>imgRef.current?.click()} disabled={imgLoading}
+                  style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap"}}>
+                  {imgLoading?"识别中…":"📷 识图"}
+                </button>
+                <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
+              </div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <input value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
                   placeholder="例：A15-200, B3+500, 全部-100"
@@ -350,6 +392,7 @@ export default function App(){
                 <button className="btn" onClick={applyCmd} style={{padding:"7px 16px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff",whiteSpace:"nowrap"}}>执行</button>
               </div>
               {cmdErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{cmdErr}</div>}
+              {imgErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{imgErr}</div>}
             </div>
             {/* 取消 */}
             <button className="btn" onClick={exitBatch} style={{...inp({padding:"6px 12px",borderRadius:50,cursor:"pointer",fontSize:13,color:T.textMid,alignSelf:"flex-end"})}}>取消</button>
