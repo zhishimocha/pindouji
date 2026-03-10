@@ -484,11 +484,12 @@ export default function App(){
                 </button>
                 <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
               </div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <input value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
-                  placeholder="例：A15-200, B3+500, 全部-100"
-                  style={{...inp({flex:1,padding:"7px 12px",fontSize:12})}}/>
-                <button className="btn" onClick={applyCmd} style={{padding:"7px 16px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff",whiteSpace:"nowrap"}}>执行</button>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <textarea value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
+                  placeholder={"手动输入：A15-200, B3+500\n识图后结果自动填入这里"}
+                  rows={cmdText.length>30?4:2}
+                  style={{...inp({width:"100%",padding:"8px 12px",fontSize:12,resize:"none",lineHeight:1.6,boxSizing:"border-box"})}}/>
+                <button className="btn" onClick={applyCmd} style={{padding:"7px 0",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff",width:"100%"}}>执行</button>
               </div>
               {cmdErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{cmdErr}</div>}
               {imgErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{imgErr}</div>}
