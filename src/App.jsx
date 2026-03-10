@@ -139,6 +139,7 @@ export default function App(){
   const [bDir,setBDir]=useState("-");
   const [cmdText,setCmdText]=useState("");
   const [cmdErr,setCmdErr]=useState("");
+  const [cmdTags,setCmdTags]=useState([]); // [{id,dir,amt}] 识图结果tag模式
   const [imgLoading,setImgLoading]=useState(false);
   const [imgErr,setImgErr]=useState("");
   const imgRef=useRef(null);
@@ -173,7 +174,24 @@ export default function App(){
     sel.forEach(id=>{if(bDir==="-"){const d=Math.min(ns[id],amt);nu[id]+=d;ns[id]=Math.max(0,ns[id]-amt);}else{ns[id]+=amt;}});
     setStock(ns);setUsed(nu);setSel(new Set());setBAmt("");setBatch(false);
   }
-  function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");}
+  function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");setCmdTags([]);}
+
+  function applyTags(){
+    if(cmdTags.length===0)return;
+    const ns={...stock},nu={...used};
+    cmdTags.forEach(({id,dir,amt})=>{
+      const a=parseFloat(amt);
+      if(isNaN(a)||a<=0)return;
+      const ids=id==="全部"?ALL_COLORS.map(c=>c.id):[id].filter(i=>ALL_COLORS.find(c=>c.id===i));
+      ids.forEach(i=>{
+        if(dir==="-"){const d=Math.min(ns[i]||0,a);nu[i]=(nu[i]||0)+d;ns[i]=Math.max(0,(ns[i]||0)-a);}
+        else{ns[i]=(ns[i]||0)+a;}
+      });
+    });
+    pushHistory(stock,used);
+    setStock(ns);setUsed(nu);
+    setCmdTags([]);setBatch(false);setSel(new Set());
+  }
 
   const [cropImg,setCropImg]=useState(null); // 裁剪用的原图base64
   const [cropBox,setCropBox]=useState(null); // {x,y,w,h} 相对于显示尺寸
@@ -222,7 +240,14 @@ export default function App(){
       const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:finalB64})});
       const data=await resp.json();
       if(data.result&&data.result!=='无法识别'){
-        setCmdText(data.result.replace(/,/g,', '));setCmdErr("");
+        // 解析成tags
+        const tags=data.result.split(/[,，]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
+          const m=s.match(/^([A-Za-z]+\d+|全部)\s*([+-])\s*(\d+)$/i);
+          if(!m)return null;
+          return {id:m[1].toUpperCase(),dir:m[2],amt:m[3]};
+        }).filter(Boolean);
+        if(tags.length>0){setCmdTags(tags);setCmdText("");setCmdErr("");}
+        else{setImgErr("识别失败，试试框选统计表区域再识别～");}
       }else{setImgErr("识别失败，试试框选统计表区域再识别～");}
     }catch(err){setImgErr("请求出错："+err.message);}
     finally{setImgLoading(false);}
@@ -474,23 +499,53 @@ export default function App(){
             </div>}
             {/* 分割线 */}
             {sel.size>0&&<div style={{height:1,background:T.border,margin:"0 -4px"}}/>}
-            {/* 文字指令行 */}
+            {/* 文字指令 / 识图tag区 */}
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 指令输入：A15-200、全部+100（逗号分隔多条）</div>
+                <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>
+                  {cmdTags.length>0?"📷 识图结果 · 点数字可编辑 · 点×删除":"✏️ 指令输入：A15-200、全部+100"}
+                </div>
                 <button className="btn" onClick={()=>imgRef.current?.click()} disabled={imgLoading}
                   style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap"}}>
                   {imgLoading?"识别中…":"📷 识图"}
                 </button>
                 <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
               </div>
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+
+              {/* tag模式 */}
+              {cmdTags.length>0&&<>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:160,overflowY:"auto",padding:"6px 2px"}}>
+                  {cmdTags.map((tag,i)=>{
+                    const color=ALL_COLORS.find(c=>c.id===tag.id);
+                    return(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:4,background:T.accentSoft,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"4px 8px",fontSize:12,fontWeight:700}}>
+                        {color&&<div style={{width:12,height:12,borderRadius:"50%",background:color.hex,border:"1px solid rgba(0,0,0,0.1)",flexShrink:0}}/>}
+                        <span style={{color:T.accent}}>{tag.id}</span>
+                        <span style={{color:tag.dir==="-"?T.danger:"#22a86e",fontWeight:800}}>{tag.dir}</span>
+                        <input type="number" value={tag.amt}
+                          onChange={e=>setCmdTags(ts=>ts.map((t,j)=>j===i?{...t,amt:e.target.value}:t))}
+                          style={{...inp({width:44,padding:"1px 4px",fontSize:12,textAlign:"center",borderRadius:8,fontWeight:700})}}/>
+                        <button onClick={()=>setCmdTags(ts=>ts.filter((_,j)=>j!==i))}
+                          style={{background:"none",border:"none",cursor:"pointer",color:T.textLight,fontSize:13,lineHeight:1,padding:"0 2px",fontWeight:800}}>×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button className="btn" onClick={()=>setCmdTags([])} style={{...inp({flex:1,padding:"7px 0",borderRadius:50,cursor:"pointer",fontSize:12,color:T.textMid,fontWeight:700})}}>清空重来</button>
+                  <button className="btn" onClick={applyTags} style={{flex:2,padding:"7px 0",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff"}}>✓ 确认执行</button>
+                </div>
+              </>}
+
+              {/* 手动文字输入模式 */}
+              {cmdTags.length===0&&<div style={{display:"flex",flexDirection:"column",gap:6}}>
                 <textarea value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
                   placeholder={"手动输入：A15-200, B3+500\n识图后结果自动填入这里"}
                   rows={cmdText.length>30?4:2}
                   style={{...inp({width:"100%",padding:"8px 12px",fontSize:12,resize:"none",lineHeight:1.6,boxSizing:"border-box"})}}/>
                 <button className="btn" onClick={applyCmd} style={{padding:"7px 0",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff",width:"100%"}}>执行</button>
-              </div>
+              </div>}
+
               {cmdErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{cmdErr}</div>}
               {imgErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{imgErr}</div>}
             </div>
