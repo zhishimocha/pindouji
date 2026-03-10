@@ -502,25 +502,35 @@ export default function App(){
               <div style={{height:1,background:T.border}}/>
             </>}
 
-            {/* 识图tag区（有才显示，在文本框上方） */}
+            {/* 识图tag货架区（有才显示） */}
             {cmdTags.length>0&&<>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div style={{fontSize:11,color:T.accent,fontWeight:700}}>📷 识图结果 · 点数字可改 · ×删除</div>
                 <button onClick={()=>setCmdTags([])} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:T.textLight,fontWeight:700,padding:0}}>清空</button>
               </div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
                 {cmdTags.map((tag,i)=>{
                   const color=ALL_COLORS.find(c=>c.id===tag.id);
+                  const bg=color?color.hex:"#e0e0e0";
+                  // 根据背景色决定文字颜色
+                  const rgb=color?[parseInt(bg.slice(1,3),16),parseInt(bg.slice(3,5),16),parseInt(bg.slice(5,7),16)]:[180,180,180];
+                  const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000;
+                  const txt=bright>140?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.95)";
                   return(
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:T.accentSoft,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"6px 12px",fontSize:13,fontWeight:700}}>
-                      {color&&<div style={{width:16,height:16,borderRadius:"50%",background:color.hex,border:"1px solid rgba(0,0,0,0.12)",flexShrink:0}}/>}
-                      <span style={{color:T.accent}}>{tag.id}</span>
-                      <span style={{color:tag.dir==="-"?T.danger:"#22a86e",fontWeight:900,fontSize:14}}>{tag.dir}</span>
-                      <input type="number" value={tag.amt}
-                        onChange={e=>setCmdTags(ts=>ts.map((t,j)=>j===i?{...t,amt:e.target.value}:t))}
-                        style={{...inp({width:52,padding:"3px 6px",fontSize:13,textAlign:"center",borderRadius:10,fontWeight:700})}}/>
-                      <button onClick={()=>setCmdTags(ts=>ts.filter((_,j)=>j!==i))}
-                        style={{background:"none",border:"none",cursor:"pointer",color:T.textLight,fontSize:15,lineHeight:1,padding:"0 2px",fontWeight:800}}>×</button>
+                    <div key={i} style={{borderRadius:12,overflow:"hidden",border:`1.5px solid ${T.border}`,position:"relative"}}>
+                      {/* 色号行 */}
+                      <div style={{background:T.accentSoft,padding:"3px 6px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <span style={{fontSize:11,fontWeight:800,color:T.accent}}>{tag.id}</span>
+                        <button onClick={()=>setCmdTags(ts=>ts.filter((_,j)=>j!==i))}
+                          style={{background:"none",border:"none",cursor:"pointer",color:T.textLight,fontSize:12,lineHeight:1,padding:0,fontWeight:900}}>×</button>
+                      </div>
+                      {/* 色块+数字 */}
+                      <div style={{background:bg,padding:"8px 4px",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                        <span style={{fontSize:10,color:txt,fontWeight:700,opacity:0.8}}>{tag.dir==="-"?"扣除":"补货"}</span>
+                        <input type="number" value={tag.amt}
+                          onChange={e=>setCmdTags(ts=>ts.map((t,j)=>j===i?{...t,amt:e.target.value}:t))}
+                          style={{width:"100%",background:"rgba(255,255,255,0.25)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:"3px 4px",fontSize:13,fontWeight:900,color:txt,textAlign:"center",fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+                      </div>
                     </div>
                   );
                 })}
