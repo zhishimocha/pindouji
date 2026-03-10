@@ -525,10 +525,10 @@ export default function App(){
                           style={{background:"none",border:"none",cursor:"pointer",color:T.textLight,fontSize:12,lineHeight:1,padding:0,fontWeight:900,flexShrink:0}}>×</button>
                       </div>
                       {/* 色块+数字 */}
-                      <div style={{background:bg,padding:"8px 6px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:56}}>
+                      <div style={{background:bg,padding:"6px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",aspectRatio:"1/1"}}>
                         <input type="number" value={tag.amt}
                           onChange={e=>setCmdTags(ts=>ts.map((t,j)=>j===i?{...t,amt:e.target.value}:t))}
-                          style={{width:"72%",background:"rgba(255,255,255,0.25)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:"6px 4px",fontSize:13,fontWeight:900,color:txt,textAlign:"center",fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box",aspectRatio:"1/1.4",display:"flex",alignItems:"center"}}/>
+                          style={{width:"70%",aspectRatio:"1/1",background:"rgba(255,255,255,0.25)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:0,fontSize:13,fontWeight:900,color:txt,textAlign:"center",fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
                       </div>
                     </div>
                   );
