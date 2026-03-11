@@ -623,7 +623,7 @@ export default function App(){
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <JarLogo accent={T.accent} size={44}/>
             <div style={{display:"flex",alignItems:"center",gap:5}}>
-              <div style={{fontSize:32,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:"44px"}}>拼豆记</div>
+              <div style={{fontSize:18,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:"44px"}}>拼豆记</div>
               {syncLoading&&<div style={{fontSize:9,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
               {!syncLoading&&syncStatus==="err"&&<div style={{fontSize:9,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
               {!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:9,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
