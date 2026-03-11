@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   "https://xqteklgmxdslndswaftn.supabase.co",
-  "sb_publishable_FFxfIZn_lbYyA2ZUTNBlOw_NB-MFhyP"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxdGVrbGdteGRzbG5kc3dhZnRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMDU4NTgsImV4cCI6MjA4ODc4MTg1OH0.K8UxL6SwxIoZ1EvUmYGUO0pxtCB3fFK66slVcUgL3WM"
 );
 
 // ══════════════ 登录/注册页 ══════════════
