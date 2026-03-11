@@ -822,6 +822,275 @@ export default function App(){
 // ══════════════════════════════════
 //  WorksPage（作品页）
 // ══════════════════════════════════
+// ══════════════════════════════════
+//  颜色相近度计算（hex→Lab近似比较）
+// ══════════════════════════════════
+function hexToRgb(hex){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+function colorDistance(h1,h2){
+  const [r1,g1,b1]=hexToRgb(h1),[r2,g2,b2]=hexToRgb(h2);
+  return Math.sqrt((r1-r2)**2+(g1-g2)**2+(b1-b2)**2);
+}
+function getSimilarColors(targetId,stock,count=5){
+  const target=ALL_COLORS.find(c=>c.id===targetId);
+  if(!target)return[];
+  return ALL_COLORS
+    .filter(c=>c.id!==targetId)
+    .map(c=>({...c,dist:colorDistance(target.hex,c.hex),qty:stock[c.id]||0}))
+    .sort((a,b)=>a.dist-b.dist)
+    .slice(0,count);
+}
+
+// ══════════════════════════════════
+//  MissingColorPage（缺色替换）
+// ══════════════════════════════════
+function MissingColorPage({T,stock,onBack}){
+  const [step,setStep]=useState("upload"); // upload → result → replace
+  const [imgSrc,setImgSrc]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState("");
+  // parsed: [{id,need}]
+  const [parsed,setParsed]=useState([]);
+  // replaces: {colorId: replacementId|null}
+  const [replaces,setReplaces]=useState({});
+  // 展开推荐的色号
+  const [expanded,setExpanded]=useState({});
+  const fileRef=useRef(null);
+
+  function handleFile(e){
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>setImgSrc(ev.target.result);
+    r.readAsDataURL(f);
+    e.target.value="";
+  }
+
+  async function recognize(){
+    if(!imgSrc)return;
+    setLoading(true);setErr("");
+    try{
+      const resp=await fetch('/api/qwen',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          image:imgSrc,
+          prompt:`请识别图纸下方色块统计区域，提取每个色号和对应的颗数，格式为：色号 颗数，每行一个，例如：\nA1 200\nB3 150\n只输出色号和数字，不要其他内容。`
+        })
+      });
+      const data=await resp.json();
+      if(data.result){
+        const lines=data.result.split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
+        const items=lines.map(line=>{
+          const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);
+          return m?{id:m[1].toUpperCase(),need:parseInt(m[2])}:null;
+        }).filter(Boolean);
+        if(items.length>0){
+          // 只保留库存不足的
+          const missing=items.filter(i=>(stock[i.id]||0)<i.need);
+          if(missing.length>0){setParsed(missing);setStep("result");}
+          else{
+            // 全部库存足够
+            setParsed(items);setStep("result");
+          }
+        }else{setErr("识别失败，建议截图只保留色块统计区再试～");}
+      }else{setErr("识别失败，建议截图只保留色块统计区再试～");}
+    }catch(e){setErr("请求失败："+e.message);}
+    finally{setLoading(false);}
+  }
+
+  // 选择替代色
+  function pickReplace(originalId,replaceId){
+    setReplaces(prev=>({...prev,[originalId]:replaceId}));
+    setExpanded(prev=>({...prev,[originalId]:false}));
+  }
+
+  const missingItems=parsed.filter(i=>(stock[i.id]||0)<i.need);
+  const okItems=parsed.filter(i=>(stock[i.id]||0)>=i.need);
+
+  return(
+    <div className="fade" style={{padding:"18px 16px",fontFamily:"'Nunito',sans-serif"}}>
+      {/* 顶部 */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+        <button onClick={onBack} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
+        <div style={{fontSize:15,fontWeight:800,color:T.text}}>🔍 缺色替换</div>
+      </div>
+
+      {/* Step1：上传 */}
+      {step==="upload"&&(
+        <div>
+          {!imgSrc?(
+            <div onClick={()=>fileRef.current?.click()} style={{background:T.accentSoft,border:`2px dashed ${T.accent}`,borderRadius:22,padding:"36px 20px",textAlign:"center",cursor:"pointer",marginBottom:16}}>
+              <div style={{fontSize:40,marginBottom:10}}>📷</div>
+              <div style={{fontSize:14,fontWeight:800,color:T.accent}}>点击上传图纸</div>
+              <div style={{fontSize:11,color:T.textMid,marginTop:6,lineHeight:1.7}}>建议截取图纸下方<br/>「色块统计区」识别更准确</div>
+            </div>
+          ):(
+            <div style={{marginBottom:16}}>
+              <img src={imgSrc} style={{width:"100%",borderRadius:16,marginBottom:12,maxHeight:300,objectFit:"contain",background:"#f0f0f0"}} alt=""/>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setImgSrc(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新选图</button>
+                <button onClick={recognize} disabled={loading} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:loading?0.7:1}}>
+                  {loading?"🔍 识别中…":"✓ 开始识别"}
+                </button>
+              </div>
+            </div>
+          )}
+          {err&&<div style={{background:"#fff0f0",border:"1px solid #ffb3b3",borderRadius:12,padding:"10px 14px",fontSize:12,color:"#e05050",fontWeight:600}}>{err}</div>}
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFile}/>
+          <div style={{background:T.accentSoft,borderRadius:14,padding:"10px 14px",fontSize:11,color:T.textMid,lineHeight:1.7,marginTop:8}}>
+            💡 识别原理：读取图纸统计区色号+颗数，对比你的库存，标出缺货色号并推荐相近替代色
+          </div>
+        </div>
+      )}
+
+      {/* Step2：结果+替换 */}
+      {step==="result"&&(
+        <div>
+          {/* 缺货项 */}
+          {missingItems.length>0&&(
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:T.warn,marginBottom:10,letterSpacing:0.5}}>⚠️ 库存不足 · {missingItems.length}个色号</div>
+              {missingItems.map(item=>{
+                const have=stock[item.id]||0;
+                const short=item.need-have;
+                const replaced=replaces[item.id];
+                const replacedColor=replaced?ALL_COLORS.find(c=>c.id===replaced):null;
+                const replacedHave=replaced?stock[replaced]||0:0;
+                const replacedOk=replacedHave>=item.need;
+                const similar=getSimilarColors(item.id,stock,6);
+                const isExpanded=expanded[item.id];
+                const origColor=ALL_COLORS.find(c=>c.id===item.id);
+
+                return(
+                  <div key={item.id} style={{background:T.card,border:`1.5px solid ${replaced?(replacedOk?"#b6eab6":"#fde5b0"):T.warn+"44"}`,borderRadius:18,padding:"14px",marginBottom:10,boxShadow:T.cardShadow}}>
+                    {/* 原色行 */}
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                      <div style={{width:36,height:36,borderRadius:10,background:origColor?.hex,border:"1.5px solid rgba(0,0,0,0.1)",flexShrink:0}}/>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:14,fontWeight:800,color:T.text}}>{item.id}</div>
+                        <div style={{fontSize:11,color:T.warn,fontWeight:600}}>需要{item.need}粒 · 库存{have}粒 · 差{short}粒</div>
+                      </div>
+                      {!replaced&&<div style={{fontSize:10,background:T.warn,color:"#fff",borderRadius:6,padding:"2px 8px",fontWeight:700}}>缺货</div>}
+                    </div>
+
+                    {/* 已选替代色 */}
+                    {replaced&&replacedColor&&(
+                      <div style={{background:replacedOk?"#f0faf0":"#fff8ed",borderRadius:12,padding:"10px 12px",marginBottom:8}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{fontSize:12,color:T.textMid,fontWeight:600}}>→ 替换为</div>
+                          <div style={{width:24,height:24,borderRadius:7,background:replacedColor.hex,border:"1.5px solid rgba(0,0,0,0.1)"}}/>
+                          <div style={{flex:1,fontSize:13,fontWeight:800,color:T.text}}>{replaced}</div>
+                          <div style={{fontSize:11,fontWeight:700,color:replacedOk?"#4caf50":"#f5a623"}}>
+                            {replacedOk?`✅ 库存${replacedHave}粒够用`:`⚠️ 库存${replacedHave}粒 差${item.need-replacedHave}粒`}
+                          </div>
+                        </div>
+                        <button onClick={()=>setReplaces(prev=>{const n={...prev};delete n[item.id];return n;})}
+                          style={{marginTop:8,background:"none",border:"none",fontSize:11,color:T.textLight,cursor:"pointer",padding:0,fontFamily:"'Nunito',sans-serif"}}>✕ 取消选择</button>
+                      </div>
+                    )}
+
+                    {/* 推荐相近色 */}
+                    {!replaced&&(
+                      <div>
+                        <div style={{fontSize:11,color:T.textMid,fontWeight:600,marginBottom:8}}>推荐相近色：</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                          {(isExpanded?similar:similar.slice(0,3)).map(c=>{
+                            const enough=c.qty>=item.need;
+                            return(
+                              <div key={c.id} onClick={()=>pickReplace(item.id,c.id)}
+                                style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:12,border:`1.5px solid ${enough?"#b6eab6":"#fde5b0"}`,background:enough?"#f0faf0":"#fff8ed",cursor:"pointer"}}>
+                                <div style={{width:20,height:20,borderRadius:6,background:c.hex,border:"1px solid rgba(0,0,0,0.1)",flexShrink:0}}/>
+                                <div>
+                                  <div style={{fontSize:12,fontWeight:800,color:T.text}}>{c.id}</div>
+                                  <div style={{fontSize:10,color:enough?"#4caf50":"#f5a623",fontWeight:600}}>{enough?`${c.qty}粒✓`:`差${item.need-c.qty}粒`}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {similar.length>3&&(
+                            <div onClick={()=>setExpanded(prev=>({...prev,[item.id]:!prev[item.id]}))}
+                              style={{display:"flex",alignItems:"center",padding:"6px 10px",borderRadius:12,border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer",fontSize:11,color:T.textMid,fontWeight:700}}>
+                              {isExpanded?"收起":"更多"}{isExpanded?"↑":"↓"}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 库存充足项 */}
+          {okItems.length>0&&(
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:800,color:"#4caf50",marginBottom:10,letterSpacing:0.5}}>✅ 库存充足 · {okItems.length}个色号</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {okItems.map(item=>{
+                  const c=ALL_COLORS.find(x=>x.id===item.id);
+                  return(
+                    <div key={item.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:12,border:"1.5px solid #d4f0d4",background:"#f0faf0"}}>
+                      <div style={{width:18,height:18,borderRadius:5,background:c?.hex,border:"1px solid rgba(0,0,0,0.1)"}}/>
+                      <div style={{fontSize:12,fontWeight:700,color:T.text}}>{item.id}</div>
+                      <div style={{fontSize:10,color:"#4caf50",fontWeight:600}}>{stock[item.id]}粒</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 底部按钮 */}
+          <div style={{display:"flex",gap:10,marginTop:8}}>
+            <button onClick={()=>{setStep("upload");setImgSrc(null);setParsed([]);setReplaces({});setExpanded({});setErr("");}}
+              style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新识别</button>
+            {missingItems.length>0&&(
+              <button onClick={()=>setStep("summary")}
+                style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>查看替换方案 →</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Step3：最终方案 */}
+      {step==="summary"&&(
+        <div>
+          <div style={{fontSize:13,fontWeight:800,color:T.text,marginBottom:14}}>📋 替换方案汇总</div>
+          {missingItems.map(item=>{
+            const replaced=replaces[item.id];
+            const origColor=ALL_COLORS.find(c=>c.id===item.id);
+            const repColor=replaced?ALL_COLORS.find(c=>c.id===replaced):null;
+            return(
+              <div key={item.id} style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:16,padding:"12px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:12,boxShadow:T.cardShadow}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:30,height:30,borderRadius:9,background:origColor?.hex,border:"1.5px solid rgba(0,0,0,0.1)"}}/>
+                  <div style={{fontSize:13,fontWeight:800,color:T.text}}>{item.id}</div>
+                </div>
+                <div style={{fontSize:16,color:T.textLight}}>→</div>
+                {replaced&&repColor?(
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:30,height:30,borderRadius:9,background:repColor.hex,border:"1.5px solid rgba(0,0,0,0.1)"}}/>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:800,color:T.text}}>{replaced}</div>
+                      <div style={{fontSize:10,color:"#4caf50",fontWeight:600}}>{item.need}粒</div>
+                    </div>
+                  </div>
+                ):(
+                  <div style={{fontSize:12,color:T.textLight,fontStyle:"italic"}}>未选替代色</div>
+                )}
+              </div>
+            );
+          })}
+          <button onClick={()=>setStep("result")}
+            style={{width:"100%",padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:8}}>← 返回修改</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WorksPage({T,tn,user,stock,used}){
   const [tab,setTab]=useState("color");
   const [colorView,setColorView]=useState("home");
@@ -1013,20 +1282,7 @@ function WorksPage({T,tn,user,stock,used}){
 
       {/* 缺色替换 */}
       {tab==="color"&&colorView==="missing"&&(
-        <div className="fade" style={{padding:"18px 16px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-            <button onClick={()=>setColorView("home")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
-            <div style={{fontSize:15,fontWeight:800,color:T.text}}>🔍 缺色替换</div>
-          </div>
-          <div style={{background:T.accentSoft,border:`2px dashed ${T.accent}`,borderRadius:22,padding:36,textAlign:"center",marginBottom:16}}>
-            <div style={{fontSize:40,marginBottom:10}}>📷</div>
-            <div style={{fontSize:14,fontWeight:800,color:T.accent}}>上传图纸</div>
-            <div style={{fontSize:11,color:T.textMid,marginTop:6,lineHeight:1.6}}>建议框选图纸下方<br/>「色块统计区」识别更准确</div>
-          </div>
-          <div style={{background:T.warnBg,border:`1px solid #fde5b0`,borderRadius:16,padding:"12px 14px",fontSize:11,color:T.warn,fontWeight:600,lineHeight:1.7}}>
-            💡 开发中，即将上线～
-          </div>
-        </div>
+        <MissingColorPage T={T} stock={stock} onBack={()=>setColorView("home")}/>
       )}
 
       {/* 重新配色 */}
