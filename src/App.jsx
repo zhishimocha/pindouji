@@ -1087,7 +1087,7 @@ function MinePage({T,tn,user,onLogout,onExport,onImport,onReset,resetConfirm,set
   );
 }
 
-
+function YearScroller({curYear,setCurYear,T}){
   const ref=useRef(null);
   const years=Array.from({length:30},(_,i)=>2015+i);
   useEffect(()=>{
