@@ -613,14 +613,14 @@ export default function App(){
           {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
         </div>}
         {/* 顶部header在作品页和我的页隐藏 */}
-        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"6px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"8px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <JarLogo accent={T.accent} size={56}/>
+            <JarLogo accent={T.accent} size={44}/>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{fontSize:30,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
-              {syncLoading&&<div style={{fontSize:10,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
-              {!syncLoading&&syncStatus==="err"&&<div style={{fontSize:10,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
-              {!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:10,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
+              <div style={{fontSize:22,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:1}}>拼豆记</div>
+              {syncLoading&&<div style={{fontSize:9,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
+              {!syncLoading&&syncStatus==="err"&&<div style={{fontSize:9,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
+              {!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:9,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
             </div>
           </div>
           <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
@@ -805,10 +805,10 @@ export default function App(){
           {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🫘",iconI:"🫙"},{key:"works",label:"作品",iconA:"🎨",iconI:"🖼️"},{key:"mine",label:"我的",iconA:"👤",iconI:"👤"}].map(n=>{
             const active=page===n.key;
             return(
-              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"4px 20px"}}>
-                <span style={{fontSize:26,transition:"filter 0.2s,transform 0.2s",filter:active?"none":"grayscale(0.5) opacity(0.35)",transform:active?"scale(1.15)":"scale(1)"}}>{active?n.iconA:n.iconI}</span>
-                <span style={{fontSize:11,fontWeight:active?800:600,color:active?T.accent:T.textLight,transition:"color 0.2s"}}>{n.label}</span>
-                <div style={{width:active?24:0,height:3,borderRadius:10,background:T.navActiveDot,marginTop:1,transition:"width 0.25s"}}/>
+              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"3px 14px"}}>
+                <span style={{fontSize:20,transition:"filter 0.2s,transform 0.2s",filter:active?"none":"grayscale(0.5) opacity(0.35)",transform:active?"scale(1.1)":"scale(1)"}}>{active?n.iconA:n.iconI}</span>
+                <span style={{fontSize:9,fontWeight:active?800:600,color:active?T.accent:T.textLight,transition:"color 0.2s"}}>{n.label}</span>
+                <div style={{width:active?18:0,height:2,borderRadius:10,background:T.navActiveDot,marginTop:1,transition:"width 0.25s"}}/>
               </button>
             );
           })}
@@ -1151,7 +1151,6 @@ function WorksPage({T,tn,user,stock,used}){
   function doneTask(id){
     const doneDate=new Date().toISOString();
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate}:t));
-    setTab("diary");
   }
   function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));}
   function setTaskImg(id,src){setTasks(prev=>prev.map(t=>t.id===id?{...t,img:src}:t));}
