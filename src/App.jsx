@@ -484,13 +484,18 @@ export default function App(){
     });
   }
   const [resetConfirm,setResetConfirm]=useState(false);
+  const [resetKey,setResetKey]=useState(0);
   async function resetData(){
     if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
     setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
     localStorage.removeItem('pindou_stock');localStorage.removeItem('pindou_used');
-    if(user)await supabase.from('stock').delete().eq('user_id',user.id);
+    localStorage.removeItem('pindou_tasks');
+    if(user){
+      await supabase.from('stock').delete().eq('user_id',user.id);
+      await supabase.from('profiles').update({tasks:[]}).eq('id',user.id);
+    }
     setResetConfirm(false);
-  }
+    setResetKey(k=>k+1);
 
   function exportData(){
     const data={stock,used,exportedAt:new Date().toISOString()};
@@ -613,11 +618,11 @@ export default function App(){
           {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
         </div>}
         {/* 顶部header在作品页和我的页隐藏 */}
-        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"8px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
+        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"6px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
             <JarLogo accent={T.accent} size={44}/>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{fontSize:22,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:1}}>拼豆记</div>
+            <div style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{fontSize:32,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:"44px"}}>拼豆记</div>
               {syncLoading&&<div style={{fontSize:9,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
               {!syncLoading&&syncStatus==="err"&&<div style={{fontSize:9,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
               {!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:9,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
@@ -793,7 +798,7 @@ export default function App(){
 
         {/* 作品页：fixed全屏覆盖 */}
         {page==="works"&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:64,background:T.bg,zIndex:100,overflowY:"auto"}}>
-          <WorksPage T={T} tn={tn} user={user} stock={stock} used={used}/>
+          <WorksPage T={T} tn={tn} user={user} stock={stock} used={used} resetKey={resetKey}/>
         </div>}
 
         {/* 我的页：fixed全屏覆盖 */}
@@ -1091,7 +1096,7 @@ function MissingColorPage({T,stock,onBack}){
   );
 }
 
-function WorksPage({T,tn,user,stock,used}){
+function WorksPage({T,tn,user,stock,used,resetKey}){
   const [tab,setTab]=useState("color");
   const [colorView,setColorView]=useState("home");
   const [tasks,setTasks]=useState([]);
@@ -1135,7 +1140,11 @@ function WorksPage({T,tn,user,stock,used}){
     },1500);
   },[tasks,tasksLoaded]);
 
-  useEffect(()=>{try{localStorage.setItem('pindou_month_goal',String(monthGoal));}catch{}},[monthGoal]);
+  // resetKey变化时清空tasks
+  useEffect(()=>{
+    if(resetKey===0)return;
+    setTasks([]);
+  },[resetKey]);
 
   const now=new Date();
   const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -1239,7 +1248,7 @@ function WorksPage({T,tn,user,stock,used}){
               style={{background:T.card,borderRadius:22,padding:"18px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`}}>
               <div style={{width:48,height:48,borderRadius:16,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}>🔍</div>
               <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:5}}>缺色替换</div>
-              <div style={{fontSize:11,color:T.textMid,lineHeight:1.5}}>上传图纸，对比库存，找替代色</div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.5}}>上传图纸，找替代色</div>
               <div style={{marginTop:12,display:"flex",alignItems:"center",gap:4}}>
                 <div style={{flex:1,height:3,borderRadius:10,background:T.accentLight}}/>
                 <div style={{flex:2,height:3,borderRadius:10,background:T.accent}}/>
