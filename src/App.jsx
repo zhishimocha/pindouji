@@ -1,4 +1,81 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  "https://xqteklgmxdslndswaftn.supabase.co",
+  "sb_publishable_FFxfIZn_lbYyA2ZUTNBlOw_NB-MFhyP"
+);
+
+// ══════════════ 登录/注册页 ══════════════
+function AuthPage({ T, tn, onLogin }) {
+  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const inp = (ex = {}) => ({
+    fontFamily: "'Nunito',sans-serif",
+    border: `1.5px solid ${T.border}`,
+    borderRadius: 12,
+    background: tn === "sky" ? "#f8fbff" : T.card,
+    color: T.text,
+    outline: "none",
+    padding: "12px 16px",
+    fontSize: 14,
+    width: "100%",
+    boxSizing: "border-box",
+    ...ex,
+  });
+
+  async function handleSubmit() {
+    setErr(""); setMsg("");
+    if (!email || !password) { setErr("请填写邮箱和密码～"); return; }
+    setLoading(true);
+    if (mode === "signup") {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setErr(error.message);
+      else setMsg("注册成功！请查收验证邮件，然后回来登录～");
+    } else {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setErr("邮箱或密码错误，请重试～");
+      else onLogin(data.user);
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Nunito',sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>🫘</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: T.accent }}>拼豆库存管家</div>
+          <div style={{ fontSize: 12, color: T.textLight, marginTop: 4 }}>戳豆豆 ✦</div>
+        </div>
+        <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 24, padding: 24, boxShadow: T.cardShadow }}>
+          <div style={{ display: "flex", marginBottom: 20, background: T.accentSoft, borderRadius: 12, padding: 3, gap: 3 }}>
+            {[["login", "登录"], ["signup", "注册"]].map(([m, l]) => (
+              <button key={m} onClick={() => { setMode(m); setErr(""); setMsg(""); }}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "'Nunito',sans-serif", fontSize: 13, fontWeight: 700, background: mode === m ? T.accent : "transparent", color: mode === m ? "#fff" : T.textMid, transition: "all 0.18s" }}>{l}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="邮箱地址" type="email" style={inp()} />
+            <input value={password} onChange={e => setPassword(e.target.value)} placeholder="密码（至少6位）" type="password" style={inp()}
+              onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+          </div>
+          {err && <div style={{ marginTop: 10, fontSize: 12, color: T.danger, fontWeight: 600 }}>{err}</div>}
+          {msg && <div style={{ marginTop: 10, fontSize: 12, color: "#4caf50", fontWeight: 600 }}>{msg}</div>}
+          <button onClick={handleSubmit} disabled={loading}
+            style={{ marginTop: 16, width: "100%", padding: "12px 0", borderRadius: 50, border: "none", cursor: "pointer", fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 800, background: T.accent, color: "#fff", opacity: loading ? 0.7 : 1 }}>
+            {loading ? "处理中…" : mode === "login" ? "登录" : "注册"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const ALL_COLORS = [
   {id:"A1",hex:"#faf5cd"},{id:"A2",hex:"#fcfed6"},{id:"A3",hex:"#fcff92"},{id:"A4",hex:"#f7ec5c"},{id:"A5",hex:"#f0d83a"},{id:"A6",hex:"#fda951"},{id:"A7",hex:"#fa8c4f"},{id:"A8",hex:"#fdbda4"},{id:"A9",hex:"#f79d5f"},{id:"A10",hex:"#f47e38"},{id:"A11",hex:"#fedb99"},{id:"A12",hex:"#fda276"},{id:"A13",hex:"#fec667"},{id:"A14",hex:"#f75842"},{id:"A15",hex:"#fbf65e"},{id:"A16",hex:"#feff97"},{id:"A17",hex:"#fde173"},{id:"A18",hex:"#fcbf80"},{id:"A19",hex:"#fd7e77"},{id:"A20",hex:"#f9d66e"},{id:"A21",hex:"#fae393"},{id:"A22",hex:"#b38c9f"},{id:"A23",hex:"#e4c8ba"},{id:"A24",hex:"#f3f6a9"},{id:"A25",hex:"#ffd785"},{id:"A26",hex:"#ffc734"},
@@ -116,6 +193,31 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
 export default function App(){
   const [tn,setTn]=useState("sky");
   const T=THEMES[tn];
+  const [user,setUser]=useState(null);
+  const [authLoading,setAuthLoading]=useState(true);
+
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data:{session}})=>{
+      setUser(session?.user??null);
+      setAuthLoading(false);
+    });
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
+      setUser(session?.user??null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  if(authLoading)return(
+    <div style={{minHeight:"100vh",background:THEMES.sky.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",fontSize:16,color:THEMES.sky.textMid,fontWeight:700}}>
+      Loading… 🫘
+    </div>
+  );
+  if(!user)return <AuthPage T={T} tn={tn} onLogin={setUser}/>;
+
+  async function handleLogout(){
+    await supabase.auth.signOut();
+    setUser(null);
+  }
   const [stock,setStock]=useState(()=>{
     try{const s=localStorage.getItem('pindou_stock');return s?JSON.parse(s):INIT_STOCK;}catch{return INIT_STOCK;}
   });
@@ -137,6 +239,12 @@ export default function App(){
   const [sel,setSel]=useState(new Set());
   const [bAmt,setBAmt]=useState("");
   const [bDir,setBDir]=useState("-");
+  const [cmdText,setCmdText]=useState("");
+  const [cmdErr,setCmdErr]=useState("");
+  const [cmdTags,setCmdTags]=useState([]); // [{id,dir,amt}] 识图结果tag模式
+  const [imgLoading,setImgLoading]=useState(false);
+  const [imgErr,setImgErr]=useState("");
+  const imgRef=useRef(null);
 
   const critC=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wC);
   const lowC=ALL_COLORS.filter(c=>Math.round(stock[c.id])>=wC&&Math.round(stock[c.id])<wL);
@@ -168,7 +276,110 @@ export default function App(){
     sel.forEach(id=>{if(bDir==="-"){const d=Math.min(ns[id],amt);nu[id]+=d;ns[id]=Math.max(0,ns[id]-amt);}else{ns[id]+=amt;}});
     setStock(ns);setUsed(nu);setSel(new Set());setBAmt("");setBatch(false);
   }
-  function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");}
+  function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");setCmdTags([]);}
+
+  function applyTags(){
+    if(cmdTags.length===0)return;
+    const ns={...stock},nu={...used};
+    cmdTags.forEach(({id,dir,amt})=>{
+      const a=parseFloat(amt);
+      if(isNaN(a)||a<=0)return;
+      const ids=id==="全部"?ALL_COLORS.map(c=>c.id):[id].filter(i=>ALL_COLORS.find(c=>c.id===i));
+      ids.forEach(i=>{
+        if(dir==="-"){const d=Math.min(ns[i]||0,a);nu[i]=(nu[i]||0)+d;ns[i]=Math.max(0,(ns[i]||0)-a);}
+        else{ns[i]=(ns[i]||0)+a;}
+      });
+    });
+    pushHistory(stock,used);
+    setStock(ns);setUsed(nu);
+    setCmdTags([]);setBatch(false);setSel(new Set());
+  }
+
+  const [cropImg,setCropImg]=useState(null); // 裁剪用的原图base64
+  const [cropBox,setCropBox]=useState(null); // {x,y,w,h} 相对于显示尺寸
+  const [cropDrag,setCropDrag]=useState(null); // 拖拽状态
+  const cropCanvasRef=useRef(null);
+  const cropImgRef=useRef(null);
+
+  async function handleImg(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const max=1600;let w=img.width,h=img.height;
+      if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      setCropImg(canvas.toDataURL('image/jpeg',0.9));
+      setCropBox(null);
+    };
+    img.src=url;
+    e.target.value="";
+  }
+
+  async function confirmCrop(){
+    if(!cropImg)return;
+    setImgLoading(true);setImgErr("");
+    try{
+      let finalB64=cropImg;
+      if(cropBox&&cropImgRef.current){
+        const el=cropImgRef.current;
+        const scaleX=el.naturalWidth/el.clientWidth;
+        const scaleY=el.naturalHeight/el.clientHeight;
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.round(cropBox.w*scaleX);
+        canvas.height=Math.round(cropBox.h*scaleY);
+        const ctx=canvas.getContext('2d');
+        const imgEl=new Image();
+        await new Promise(res=>{imgEl.onload=res;imgEl.src=cropImg;});
+        ctx.drawImage(imgEl,Math.round(cropBox.x*scaleX),Math.round(cropBox.y*scaleY),canvas.width,canvas.height,0,0,canvas.width,canvas.height);
+        finalB64=canvas.toDataURL('image/jpeg',0.92);
+      }
+      setCropImg(null);setCropBox(null);
+      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:finalB64})});
+      const data=await resp.json();
+      if(data.result&&data.result!=='无法识别'){
+        // 解析成tags
+        const tags=data.result.split(/[,，]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
+          const m=s.match(/^([A-Za-z]+\d+|全部)\s*([+-])\s*(\d+)$/i);
+          if(!m)return null;
+          return {id:m[1].toUpperCase(),dir:m[2],amt:m[3]};
+        }).filter(Boolean);
+        if(tags.length>0){setCmdTags(tags);setCmdText("");setCmdErr("");}
+        else{setImgErr("识别失败，试试框选统计表区域再识别～");}
+      }else{setImgErr("识别失败，试试框选统计表区域再识别～");}
+    }catch(err){setImgErr("请求出错："+err.message);}
+    finally{setImgLoading(false);}
+  }
+
+  function applyCmd(){
+    const raw=cmdText.trim();
+    if(!raw)return;
+    // 支持多条指令用逗号/换行分隔，格式：A15-200 / B3+500 / 全部-100
+    const lines=raw.split(/[,，\n]+/).map(s=>s.trim()).filter(Boolean);
+    const ns={...stock},nu={...used};
+    let hasErr=false;
+    lines.forEach(line=>{
+      const m=line.match(/^(全部|[A-Za-z]\d+)\s*([+-])\s*(\d+)$/i);
+      if(!m){hasErr=true;return;}
+      const [,target,dir,amtStr]=m;
+      const amt=parseFloat(amtStr);
+      if(isNaN(amt)||amt<=0){hasErr=true;return;}
+      const ids=target==="全部"?ALL_COLORS.map(c=>c.id):[target.toUpperCase()].filter(id=>ALL_COLORS.find(c=>c.id===id));
+      if(ids.length===0){hasErr=true;return;}
+      ids.forEach(id=>{
+        if(dir==="-"){const d=Math.min(ns[id]||0,amt);nu[id]=(nu[id]||0)+d;ns[id]=Math.max(0,(ns[id]||0)-amt);}
+        else{ns[id]=(ns[id]||0)+amt;}
+      });
+    });
+    if(hasErr){setCmdErr("部分指令格式有误，请检查～例：A15-200 或 全部+100");return;}
+    pushHistory(stock,used);
+    setStock(ns);setUsed(nu);
+    setCmdText("");setCmdErr("");setBatch(false);setSel(new Set());
+  }
 
 
 
@@ -197,13 +408,99 @@ export default function App(){
       return h.slice(0,-1);
     });
   }
+  const [resetConfirm,setResetConfirm]=useState(false);
+  function resetData(){
+    if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
+    setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
+    localStorage.removeItem('pindou_stock');localStorage.removeItem('pindou_used');
+    setResetConfirm(false);
+  }
   const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL};
 
   return(
     <>
       <style>{G}</style>
-      <div className="tt" style={{minHeight:"100vh",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text,paddingBottom:88}}>
-        <div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"12px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div className="tt" style={{minHeight:"100vh",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text,paddingBottom:page==="diary"?0:88}}>
+
+        {/* 裁剪弹窗 */}
+        {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10}}>拖拽边框调整选区 · 框选统计表区域</div>
+          <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:12}}
+            onPointerMove={ev=>{
+              if(!cropDrag||!cropImgRef.current)return;
+              const el=cropImgRef.current.getBoundingClientRect();
+              const cx=Math.max(0,Math.min(ev.clientX-el.left,el.width));
+              const cy=Math.max(0,Math.min(ev.clientY-el.top,el.height));
+              const dx=cx-cropDrag.lastX, dy=cy-cropDrag.lastY;
+              setCropBox(b=>{
+                if(!b)return b;
+                let {x,y,w,h}=b;
+                const minS=30;
+                if(cropDrag.type==="move"){
+                  x=Math.max(0,Math.min(x+dx,el.width-w));
+                  y=Math.max(0,Math.min(y+dy,el.height-h));
+                }else{
+                  if(cropDrag.type.includes("l")){const nx=Math.min(x+dx,x+w-minS);w=w-(nx-x);x=nx;}
+                  if(cropDrag.type.includes("r")){w=Math.max(minS,Math.min(w+dx,el.width-x));}
+                  if(cropDrag.type.includes("t")){const ny=Math.min(y+dy,y+h-minS);h=h-(ny-y);y=ny;}
+                  if(cropDrag.type.includes("b")){h=Math.max(minS,Math.min(h+dy,el.height-y));}
+                }
+                return {x,y,w,h};
+              });
+              setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
+            }}
+            onPointerUp={()=>setCropDrag(null)}
+          >
+            <img ref={cropImgRef} src={cropImg}
+              onLoad={ev=>{
+                const {clientWidth:w,clientHeight:h}=ev.target;
+                // 默认框选下半部分（统计表通常在下方）
+                setCropBox({x:w*0.05,y:h*0.65,w:w*0.9,h:h*0.32});
+              }}
+              style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none"}}/>
+            {cropBox&&<>
+              {/* 暗色遮罩四周 */}
+              <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`
+                linear-gradient(to bottom,
+                  rgba(0,0,0,0.45) ${cropBox.y}px,
+                  transparent ${cropBox.y}px,
+                  transparent ${cropBox.y+cropBox.h}px,
+                  rgba(0,0,0,0.45) ${cropBox.y+cropBox.h}px
+                )`}}/>
+              {/* 选框本体——中间拖动 */}
+              <div onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
+                style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
+                {/* 三等分辅助线 */}
+                {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.4)"}}/>)}
+                {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.4)"}}/>)}
+                {/* 8个控制点 */}
+                {[
+                  {type:"tl",style:{top:-8,left:-8,cursor:"nw-resize"}},
+                  {type:"t", style:{top:-8,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
+                  {type:"tr",style:{top:-8,right:-8,cursor:"ne-resize"}},
+                  {type:"r", style:{top:"50%",right:-8,transform:"translateY(-50%)",cursor:"e-resize"}},
+                  {type:"br",style:{bottom:-8,right:-8,cursor:"se-resize"}},
+                  {type:"b", style:{bottom:-8,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
+                  {type:"bl",style:{bottom:-8,left:-8,cursor:"sw-resize"}},
+                  {type:"l", style:{top:"50%",left:-8,transform:"translateY(-50%)",cursor:"w-resize"}},
+                ].map(({type,style})=>(
+                  <div key={type}
+                    onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
+                    style={{position:"absolute",width:18,height:18,background:"#60d4f0",borderRadius:3,touchAction:"none",...style}}/>
+                ))}
+              </div>
+            </>}
+          </div>
+          <div style={{display:"flex",gap:12,marginTop:14}}>
+            <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
+            <button onClick={confirmCrop} disabled={imgLoading} style={{padding:"8px 28px",borderRadius:50,border:"none",background:"#60d4f0",color:"#1a2a3a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+              {imgLoading?"识别中…":"✓ 确认识别"}
+            </button>
+          </div>
+          {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
+        </div>}
+        {/* 顶部header在日记页隐藏 */}
+        {page!=="diary"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"12px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <FoxBtn T={T} tn={tn}/>
             <div>
@@ -211,18 +508,22 @@ export default function App(){
               <div style={{fontSize:10,color:T.textLight,fontWeight:600,marginTop:1}}>戳豆豆 ✦</div>
             </div>
           </div>
-          <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
-        </div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
+            <button className="btn" onClick={handleLogout} style={{padding:"7px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,color:T.textMid,background:T.card}} title={user?.email}>退出</button>
+          </div>
+        </div>}
 
-        <div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0"}}>
+        {page!=="diary"&&<div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0"}}>
 
           {page==="home"&&<div className="fade">
-            {history.length>0&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:T.accentSoft,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"10px 16px",marginBottom:12}}>
-              <span style={{fontSize:12,fontWeight:700,color:T.accent}}>↩️ 可撤销 {history.length} 步操作</span>
-              <button className="btn" onClick={undoLast} style={{padding:"6px 16px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,background:T.accent,color:"#fff"}}>撤销上一步</button>
-            </div>}
             <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
-              <div style={{fontSize:12,color:T.textLight,marginBottom:10,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                <div style={{fontSize:12,color:T.textLight,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
+                <button className="btn" onClick={resetData} style={{padding:"4px 12px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
+                  {resetConfirm?"⚠️ 再按确认清空":"🗑️ 重置数据"}
+                </button>
+              </div>
               <div style={{display:"flex",gap:10}}>
                 {[["🟡 即将不足",wL,setWL,T.warn,T.warnBg,T.warnBorder],[" 🔴 不足",wC,setWC,T.danger,T.dangerBg,T.dangerBorder]].map(([lbl,val,set,col,bg,bd])=>(
                   <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:1,background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
@@ -274,6 +575,9 @@ export default function App(){
               </select>
               <button className="btn" onClick={()=>{setBatch(!batch);setSel(new Set());}} style={{padding:"10px 14px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,whiteSpace:"nowrap",background:batch?T.accent:T.accentLight,color:batch?"#fff":T.accent}}>{batch?"✕ 退出":"批量"}</button>
             </div>
+            {history.length>0&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:8,marginTop:-4}}>
+              <button className="btn" onClick={undoLast} style={{padding:"6px 14px",borderRadius:50,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,background:T.accentLight,color:T.accent,display:"flex",alignItems:"center",gap:4}}>↩️ 撤销<span style={{background:T.accent,color:"#fff",borderRadius:50,fontSize:10,padding:"1px 6px",fontWeight:900}}>{history.length}</span></button>
+            </div>}
             {fSeries&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
               <span style={{fontSize:13,color:T.accent,fontWeight:800}}>{fSeries} 系列</span>
               <button onClick={()=>setFSeries(null)} style={{...inp({fontSize:11,padding:"3px 12px",borderRadius:50,cursor:"pointer",color:T.textMid})}}>清除 ×</button>
@@ -285,29 +589,104 @@ export default function App(){
             </div>
           </div>}
 
-        </div>
+        </div>}
 
-        {batch&&sel.size>0&&<div style={{position:"fixed",bottom:84,left:0,right:0,zIndex:300,display:"flex",justifyContent:"center",padding:"0 14px"}}>
-          <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"14px 16px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",maxWidth:480,width:"100%",boxShadow:T.floatShadow}}>
-            <span style={{fontSize:13,color:T.textMid,fontWeight:700}}>已选 {sel.size} 个</span>
-            <div style={{display:"flex",border:`1.5px solid ${T.border}`,borderRadius:50,overflow:"hidden"}}>
-              {[["-","－扣除"],["+"," ＋补货"]].map(([d,l])=>(<button key={d} onClick={()=>setBDir(d)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:bDir===d?T.accent:T.card,color:bDir===d?"#fff":T.textMid,transition:"all 0.15s"}}>{l}</button>))}
+        {batch&&<div style={{position:"fixed",bottom:64,left:0,right:0,zIndex:300,display:"flex",justifyContent:"center",padding:"0 14px"}}>
+          <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:"24px 24px 0 0",padding:"16px 16px 20px",display:"flex",flexDirection:"column",gap:10,maxWidth:480,width:"100%",boxShadow:T.floatShadow,maxHeight:"80vh",overflowY:"auto"}}>
+
+            {/* 勾选操作行 */}
+            {sel.size>0&&<>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span style={{fontSize:13,color:T.textMid,fontWeight:700}}>已选 {sel.size} 个</span>
+                <div style={{display:"flex",border:`1.5px solid ${T.border}`,borderRadius:50,overflow:"hidden"}}>
+                  {[["-","－扣除"],["+"," ＋补货"]].map(([d,l])=>(<button key={d} onClick={()=>setBDir(d)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:bDir===d?T.accent:T.card,color:bDir===d?"#fff":T.textMid,transition:"all 0.15s"}}>{l}</button>))}
+                </div>
+                <input type="number" placeholder="粒数" value={bAmt} onChange={e=>setBAmt(e.target.value)} style={{...inp({width:72,padding:"6px 8px",fontSize:13,textAlign:"center"})}}/>
+                <button className="btn" onClick={applyBatch} style={{padding:"6px 18px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff"}}>确认</button>
+              </div>
+              <div style={{height:1,background:T.border}}/>
+            </>}
+
+            {/* 识图tag货架区（有才显示） */}
+            {cmdTags.length>0&&<>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontSize:11,color:T.accent,fontWeight:700}}>📷 识图结果 · 点数字可改 · ×删除</div>
+                <button onClick={()=>setCmdTags([])} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:T.textLight,fontWeight:700,padding:0}}>清空</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+                {cmdTags.map((tag,i)=>{
+                  const color=ALL_COLORS.find(c=>c.id===tag.id);
+                  const bg=color?color.hex:"#e0e0e0";
+                  // 根据背景色决定文字颜色
+                  const rgb=color?[parseInt(bg.slice(1,3),16),parseInt(bg.slice(3,5),16),parseInt(bg.slice(5,7),16)]:[180,180,180];
+                  const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000;
+                  const txt=bright>140?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.95)";
+                  return(
+                    <div key={i} style={{borderRadius:12,overflow:"hidden",border:`1.5px solid ${T.border}`,position:"relative"}}>
+                      {/* 色号行 */}
+                      <div style={{background:T.accentSoft,padding:"3px 6px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <span style={{flex:1,fontSize:11,fontWeight:800,color:T.accent,textAlign:"center"}}>{tag.id}</span>
+                        <button onClick={()=>setCmdTags(ts=>ts.filter((_,j)=>j!==i))}
+                          style={{background:"none",border:"none",cursor:"pointer",color:T.textLight,fontSize:12,lineHeight:1,padding:0,fontWeight:900,flexShrink:0}}>×</button>
+                      </div>
+                      {/* 色块+数字 */}
+                      <div style={{background:bg,padding:"6px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",aspectRatio:"1/1"}}>
+                        <input type="number" value={tag.amt}
+                          onChange={e=>setCmdTags(ts=>ts.map((t,j)=>j===i?{...t,amt:e.target.value}:t))}
+                          style={{width:"70%",aspectRatio:"1/1",background:"rgba(255,255,255,0.25)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:0,fontSize:13,fontWeight:900,color:txt,textAlign:"center",fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{height:1,background:T.border}}/>
+            </>}
+
+            {/* 文本框+识图按钮 */}
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 手动输入：A15-200、全部+100</div>
+                <button className="btn" onClick={()=>imgRef.current?.click()} disabled={imgLoading}
+                  style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap"}}>
+                  {imgLoading?"识别中…":"📷 识图"}
+                </button>
+                <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
+              </div>
+              <textarea value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
+                placeholder={"A15-200, B3+500, 全部-100"}
+                rows={2}
+                style={{...inp({width:"100%",padding:"8px 12px",fontSize:13,resize:"none",lineHeight:1.6,boxSizing:"border-box"})}}/>
             </div>
-            <input type="number" placeholder="粒数" value={bAmt} onChange={e=>setBAmt(e.target.value)} style={{...inp({width:72,padding:"6px 8px",fontSize:13,textAlign:"center"})}}/>
-            <button className="btn" onClick={applyBatch} style={{padding:"6px 18px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff"}}>确认</button>
-            <button className="btn" onClick={exitBatch} style={{...inp({padding:"6px 12px",borderRadius:50,cursor:"pointer",fontSize:13,color:T.textMid})}}>取消</button>
+
+            {cmdErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{cmdErr}</div>}
+            {imgErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{imgErr}</div>}
+
+            {/* 执行+取消 */}
+            <div style={{display:"flex",gap:8,marginTop:2}}>
+              <button className="btn" onClick={exitBatch} style={{...inp({flex:1,padding:"10px 0",borderRadius:50,cursor:"pointer",fontSize:13,color:T.textMid,fontWeight:700})}}>取消</button>
+              <button className="btn" onClick={cmdTags.length>0?applyTags:applyCmd}
+                style={{flex:3,padding:"10px 0",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>
+                {cmdTags.length>0?"✓ 执行识图结果":"执行"}
+              </button>
+            </div>
+
           </div>
         </div>}
 
-        <div className="tt" style={{textAlign:"center",padding:"10px 0 96px",fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
+        {page!=="diary"&&<div className="tt" style={{textAlign:"center",padding:"10px 0 96px",fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
           由 大橘来啦（v：daju_laila）制作 · 禁私售
-        </div>
+        </div>}
+
+        {/* 日记页：fixed全屏覆盖，底部留导航栏高度 */}
+        {page==="diary"&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:64,background:T.bg,zIndex:100,overflowY:"auto"}}>
+          <DiaryPage T={T} tn={tn}/>
+        </div>}
 
         <div className="tt" style={{position:"fixed",bottom:0,left:0,right:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
-          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🍬",iconI:"🫙"}].map(n=>{
+          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🫘",iconI:"🫙"},{key:"diary",label:"日记",iconA:"📖",iconI:"📓"}].map(n=>{
             const active=page===n.key;
             return(
-              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"4px 50px"}}>
+              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"4px 32px"}}>
                 <span style={{fontSize:26,transition:"filter 0.2s,transform 0.2s",filter:active?"none":"grayscale(0.5) opacity(0.35)",transform:active?"scale(1.15)":"scale(1)"}}>{active?n.iconA:n.iconI}</span>
                 <span style={{fontSize:11,fontWeight:active?800:600,color:active?T.accent:T.textLight,transition:"color 0.2s"}}>{n.label}</span>
                 <div style={{width:active?24:0,height:3,borderRadius:10,background:T.navActiveDot,marginTop:1,transition:"width 0.25s"}}/>
@@ -317,6 +696,282 @@ export default function App(){
         </div>
       </div>
     </>
+  );
+}
+
+// 年份横滚条组件
+function YearScroller({curYear,setCurYear,T}){
+  const ref=useRef(null);
+  const years=Array.from({length:30},(_,i)=>2015+i);
+  useEffect(()=>{
+    if(!ref.current)return;
+    const el=ref.current.querySelector(`[data-year="${curYear}"]`);
+    if(el)el.scrollIntoView({inline:"center",behavior:"smooth",block:"nearest"});
+  },[curYear]);
+  return(
+    <>
+      <style>{`.yscroll::-webkit-scrollbar{display:none}`}</style>
+      <div ref={ref} className="yscroll" style={{display:"flex",gap:28,overflowX:"auto",paddingBottom:8,marginBottom:16,
+        scrollbarWidth:"none",WebkitOverflowScrolling:"touch",
+        paddingLeft:"calc(50% - 20px)",paddingRight:"calc(50% - 20px)"}}>
+        {years.map(y=>(
+          <button key={y} data-year={y} onClick={()=>setCurYear(y)}
+            style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",
+              fontSize:y===curYear?18:14,fontWeight:y===curYear?800:500,
+              color:y===curYear?T.accent:T.textLight,
+              borderBottom:y===curYear?`2.5px solid ${T.accent}`:"2.5px solid transparent",
+              paddingBottom:3,transition:"all 0.2s",whiteSpace:"nowrap"}}>
+            {y}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+// ══════════════ 日记页组件 ══════════════
+function DiaryPage({T}){
+  const [diaryPage,setDiaryPage]=useState("cal");
+  const [curYear,setCurYear]=useState(new Date().getFullYear());
+  const [curMonth,setCurMonth]=useState(new Date().getMonth()+1);
+  const [selDay,setSelDay]=useState(new Date().getDate());
+  const [db,setDb]=useState(()=>{
+    try{const s=localStorage.getItem('pindou_diary');return s?JSON.parse(s):{'2026-3-9':{text:'黄色系小熊，拼了好久终于成功！',photos:[]}};}catch{return{};}
+  });
+  const [editKey,setEditKey]=useState(null);
+  const [editText,setEditText]=useState("");
+  const [editPhotos,setEditPhotos]=useState([]);
+  const [delMode,setDelMode]=useState(false);
+  const [delSel,setDelSel]=useState(new Set());
+  const fileRef=useRef();
+
+  useEffect(()=>{try{localStorage.setItem('pindou_diary',JSON.stringify(db));}catch{}},[db]);
+
+  function rkey(y,m,d){return`${y}-${m}-${d}`;}
+  function hasRec(d){return!!db[rkey(curYear,curMonth,d)];}
+  function monthCount(y,m){return Object.keys(db).filter(k=>k.startsWith(`${y}-${m}-`)).length;}
+  function shiftMonth(dir){let m=curMonth+dir,y=curYear;if(m>12){m=1;y++;}if(m<1){m=12;y--;}setCurMonth(m);setCurYear(y);setSelDay(1);}
+  function openEdit(key){setEditKey(key);const r=db[key]||{text:"",photos:[]};setEditText(r.text||"");setEditPhotos([...(r.photos||[])]);setDiaryPage("edit");}
+  function toggleDelSel(key){setDelSel(p=>{const n=new Set(p);n.has(key)?n.delete(key):n.add(key);return n;});}
+  function confirmDelete(){
+    if(delSel.size===0)return;
+    setDb(prev=>{const n={...prev};delSel.forEach(k=>delete n[k]);return n;});
+    setDelSel(new Set());setDelMode(false);
+  }
+
+  const CandySVG=()=>(
+    <svg viewBox="0 0 100 100" style={{width:"100%",height:"100%"}}>
+      {/* 糖果包装纸左 */}
+      <ellipse cx="18" cy="50" rx="14" ry="8" fill="#e0e0e0" transform="rotate(-30 18 50)"/>
+      <ellipse cx="18" cy="50" rx="10" ry="5" fill="#cccccc" opacity="0.7" transform="rotate(-30 18 50)"/>
+      {/* 糖果包装纸右 */}
+      <ellipse cx="82" cy="50" rx="14" ry="8" fill="#e0e0e0" transform="rotate(30 82 50)"/>
+      <ellipse cx="82" cy="50" rx="10" ry="5" fill="#cccccc" opacity="0.7" transform="rotate(30 82 50)"/>
+      {/* 糖果主体 */}
+      <circle cx="50" cy="50" r="28" fill="#ff7b8a"/>
+      <circle cx="50" cy="50" r="28" fill="url(#diaryCandy)"/>
+      {/* 糖果条纹 */}
+      <path d="M 30 30 Q 50 20 70 30 Q 80 50 70 70 Q 50 80 30 70 Q 20 50 30 30Z" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="5"/>
+      <path d="M 36 24 Q 58 18 72 36" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="4" strokeLinecap="round"/>
+      {/* 高光 */}
+      <ellipse cx="38" cy="36" rx="10" ry="7" fill="rgba(255,255,255,0.4)" transform="rotate(-20 38 36)"/>
+      <ellipse cx="42" cy="33" rx="5" ry="3" fill="rgba(255,255,255,0.6)" transform="rotate(-20 42 33)"/>
+      <defs>
+        <radialGradient id="diaryCandy" cx="38%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="rgba(255,160,170,0.6)"/>
+          <stop offset="100%" stopColor="rgba(200,50,80,0.3)"/>
+        </radialGradient>
+      </defs>
+    </svg>
+  );
+
+  const todayY=new Date().getFullYear(),todayM=new Date().getMonth()+1,todayD=new Date().getDate();
+  const firstDow=new Date(curYear,curMonth-1,1).getDay();
+  const totalDays=new Date(curYear,curMonth,0).getDate();
+  const prevTotal=new Date(curYear,curMonth-1,0).getDate();
+
+  if(diaryPage==="edit"&&editKey){
+    const parts=editKey.split("-");
+    function handleFiles(e){
+      Array.from(e.target.files).forEach(f=>{
+        if(editPhotos.length>=8)return;
+        const r=new FileReader();r.onload=ev=>setEditPhotos(p=>[...p,ev.target.result]);r.readAsDataURL(f);
+      });e.target.value="";
+    }
+    function save(){
+      if(!editText.trim()&&editPhotos.length===0)return;
+      setDb(prev=>({...prev,[editKey]:{text:editText,photos:editPhotos}}));
+      setDiaryPage("cal");
+    }
+    return(
+      <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 16px 12px",borderBottom:`1px solid ${T.border}`}}>
+          <button onClick={()=>setDiaryPage("cal")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
+          <span style={{fontSize:15,fontWeight:800,color:T.text}}>{db[editKey]?"查看记录":"新建记录"}</span>
+          <button onClick={save} style={{background:T.accent,border:"none",borderRadius:10,padding:"6px 14px",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>保存</button>
+        </div>
+        <div style={{padding:"14px 16px",overflowY:"auto",flex:1}}>
+          <div style={{fontSize:12,color:T.textMid,fontWeight:700,marginBottom:14}}>📅 {parts[0]}年{parts[1]}月{parts[2]}日</div>
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>拼豆照片</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {editPhotos.map((src,i)=>(
+                <div key={i} style={{width:76,height:76,borderRadius:10,overflow:"hidden",position:"relative",border:`1.5px solid ${T.border}`}}>
+                  <img src={src} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  <button onClick={()=>setEditPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:"absolute",top:2,right:2,background:"rgba(0,0,0,0.45)",border:"none",borderRadius:"50%",width:18,height:18,color:"white",fontSize:11,cursor:"pointer"}}>×</button>
+                </div>
+              ))}
+              {editPhotos.length<8&&<div onClick={()=>fileRef.current.click()} style={{width:76,height:76,borderRadius:10,border:`2px dashed ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,color:T.textLight}}>＋</div>}
+            </div>
+            <input type="file" ref={fileRef} accept="image/*" multiple onChange={handleFiles} style={{display:"none"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>日记内容</div>
+            <textarea value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} placeholder="今天拼了什么？有什么心情～"
+              style={{width:"100%",minHeight:100,border:`1.5px solid ${T.border}`,borderRadius:12,padding:12,fontSize:13,color:T.text,lineHeight:1.7,resize:"none",fontFamily:"'Nunito',sans-serif",background:T.card,outline:"none"}}/>
+            <div style={{textAlign:"right",fontSize:11,color:T.textLight,marginTop:3}}>{editText.length}/500</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if(diaryPage==="year"){
+    return(
+      <div style={{padding:"20px 16px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <span style={{fontSize:18,fontWeight:800,color:T.text}}>豆豆日记</span>
+          <button onClick={()=>setDiaryPage("cal")} style={{background:"none",border:"none",fontSize:13,color:T.textMid,fontWeight:700,cursor:"pointer"}}>← 返回</button>
+        </div>
+        {/* 年份横滚条 */}
+        <YearScroller curYear={curYear} setCurYear={setCurYear} T={T}/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+          {Array.from({length:12},(_,i)=>{
+            const m=i+1,cnt=monthCount(curYear,m),isActive=m===curMonth;
+            return(
+              <div key={m} onClick={()=>{setCurMonth(m);setDiaryPage("cal");}} style={{background:isActive?T.accentSoft:T.card,borderRadius:14,padding:"12px 8px",textAlign:"center",cursor:"pointer",border:`2px solid ${isActive?T.accent:T.border}`}}>
+                <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:5}}>{m}月</div>
+                {cnt>0?<><div style={{fontSize:20,fontWeight:800,color:"#7bc4f0"}}>{cnt}</div><div style={{fontSize:10,color:T.textMid}}>篇记录</div></>:<div style={{fontSize:10,color:T.textLight}}>暂无记录</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // 日历页
+  const rec=db[rkey(curYear,curMonth,selDay)];
+  return(
+    <div style={{padding:"4px 16px 0"}}>
+      {/* 标题栏 */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0 8px"}}>
+        {delMode?(
+          <button onClick={()=>{setDelMode(false);setDelSel(new Set());}}
+            style={{fontSize:12,fontWeight:700,color:T.textMid,background:"none",border:"none",cursor:"pointer",padding:"4px 8px"}}>取消</button>
+        ):(
+          <button onClick={()=>setDelMode(true)}
+            style={{width:36,height:36,borderRadius:"50%",background:T.dangerBg,border:`1.5px solid ${T.dangerBorder}`,cursor:"pointer",
+              fontSize:16,color:T.danger,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑️</button>
+        )}
+        <span style={{fontSize:18,fontWeight:800,color:T.text}}>豆豆日记</span>
+        {delMode?(
+          <button onClick={confirmDelete}
+            style={{fontSize:12,fontWeight:800,color:"#fff",background:delSel.size>0?T.danger:"#ccc",border:"none",borderRadius:10,padding:"6px 12px",cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+            删除{delSel.size>0?`(${delSel.size})`:""}
+          </button>
+        ):(
+          <button onClick={()=>openEdit(rkey(curYear,curMonth,selDay))}
+            style={{width:36,height:36,borderRadius:"50%",background:T.accent,border:"none",cursor:"pointer",
+              fontSize:22,color:"white",display:"flex",alignItems:"center",justifyContent:"center",
+              boxShadow:`0 2px 8px ${T.accent}55`}}>＋</button>
+        )}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <button onClick={()=>shiftMonth(-1)} style={{background:"none",border:"none",fontSize:20,color:T.textMid,cursor:"pointer",padding:"4px 8px",borderRadius:8}}>‹</button>
+        <button onClick={()=>setDiaryPage("year")} style={{background:T.accentSoft,border:"none",borderRadius:12,padding:"6px 16px",fontSize:15,fontWeight:800,color:T.accent,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+          {curYear}年{curMonth}月
+        </button>
+        <button onClick={()=>shiftMonth(1)} style={{background:"none",border:"none",fontSize:20,color:T.textMid,cursor:"pointer",padding:"4px 8px",borderRadius:8}}>›</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",textAlign:"center",marginBottom:4}}>
+        {["日","一","二","三","四","五","六"].map(d=><span key={d} style={{fontSize:11,fontWeight:700,color:T.textLight,padding:"3px 0"}}>{d}</span>)}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+        {Array.from({length:firstDow},(_,i)=>(
+          <div key={`p${i}`} style={{height:40,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontSize:12,color:T.textLight,opacity:0.4}}>{prevTotal-firstDow+i+1}</span>
+          </div>
+        ))}
+        {Array.from({length:totalDays},(_,i)=>{
+          const d=i+1;
+          const isToday=curYear===todayY&&curMonth===todayM&&d===todayD;
+          const isSel=d===selDay;
+          const hasR=hasRec(d);
+          const key=rkey(curYear,curMonth,d);
+          const isDelSel=delSel.has(key);
+          function handleDayClick(){
+            if(delMode){if(hasR)toggleDelSel(key);}
+            else setSelDay(d);
+          }
+          return(
+            <div key={d} onClick={handleDayClick}
+              style={{height:40,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                borderRadius:10,cursor:"pointer",position:"relative",
+                background:delMode&&isDelSel?"rgba(255,100,100,0.15)":isSel&&!hasR?T.accentSoft:"transparent",
+                transition:"background 0.15s",
+                outline:delMode&&isDelSel?`2px solid ${T.danger}`:"none"}}>
+              {/* 删除模式：有记录的显示勾选圈 */}
+              {delMode&&hasR&&(
+                <div style={{position:"absolute",top:2,right:2,width:14,height:14,borderRadius:"50%",
+                  background:isDelSel?T.danger:"rgba(200,200,200,0.5)",border:`1.5px solid ${isDelSel?T.danger:"#ccc"}`,
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"white",fontWeight:800,zIndex:3}}>
+                  {isDelSel?"✓":""}
+                </div>
+              )}
+              {/* 正常模式：选中就显示🍬，有记录时覆盖数字和圆点 */}
+              {!delMode&&isSel?(
+                <span style={{fontSize:26,position:"absolute",lineHeight:1}}>🍬</span>
+              ):(
+                <>
+                  <span style={{fontSize:12,fontWeight:isToday?800:600,
+                    color:isToday?T.accent:delMode&&!hasR?T.textLight:T.text,
+                    position:"relative",zIndex:2,opacity:delMode&&!hasR?0.35:1}}>{d}</span>
+                  {/* 圆点：有记录且未被🍬覆盖时显示 */}
+                  {hasR&&<div style={{position:"absolute",bottom:3,width:5,height:5,borderRadius:"50%",background:"#7bc4f0"}}/>}
+                </>
+              )}
+            </div>
+          );
+        })}
+        {Array.from({length:(7-(firstDow+totalDays)%7)%7},(_,i)=>(
+          <div key={`n${i}`} style={{height:40,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontSize:12,color:T.textLight,opacity:0.4}}>{i+1}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:12,background:T.accentSoft,borderRadius:14,padding:13,border:`1px solid ${T.border}`}}>
+        {rec?(
+          <>
+            <div style={{fontSize:11,color:T.textMid,fontWeight:700,marginBottom:8}}>📅 {curYear}年{curMonth}月{selDay}日</div>
+            <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+              <div style={{width:52,height:52,flexShrink:0,background:T.accentLight,borderRadius:10,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>
+                {rec.photos&&rec.photos[0]?<img src={rec.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:"🐾"}
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:3}}>{rec.text?rec.text.slice(0,30)+"…":"（无文字）"}</div>
+                <div style={{fontSize:11,color:T.textMid}}>{rec.photos?rec.photos.length:0} 张照片</div>
+              </div>
+            </div>
+            <div onClick={()=>openEdit(rkey(curYear,curMonth,selDay))} style={{marginTop:8,textAlign:"right",fontSize:11,color:T.accent,fontWeight:700,cursor:"pointer"}}>查看 / 编辑 ›</div>
+          </>
+        ):(
+          <div style={{textAlign:"center",color:T.textLight,fontSize:12,padding:"8px 0"}}>
+            这天还没有记录哦 ·˖✦ <span onClick={()=>openEdit(rkey(curYear,curMonth,selDay))} style={{color:T.accent,fontWeight:700,cursor:"pointer"}}>新建记录</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
