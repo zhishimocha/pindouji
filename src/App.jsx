@@ -617,7 +617,7 @@ export default function App(){
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <JarLogo accent={T.accent} size={56}/>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
+              <div style={{fontSize:30,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
               {syncLoading&&<div style={{fontSize:10,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
               {!syncLoading&&syncStatus==="err"&&<div style={{fontSize:10,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
               {!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:10,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
@@ -802,7 +802,7 @@ export default function App(){
         </div>}
 
         <div className="tt" style={{position:"fixed",bottom:0,left:0,right:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
-          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🫘",iconI:"🫙"},{key:"works",label:"作品",iconA:"🎨",iconI:"🖼️"},{key:"mine",label:"我的",iconA:"👤",iconI:"🙂"}].map(n=>{
+          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🫘",iconI:"🫙"},{key:"works",label:"作品",iconA:"🎨",iconI:"🖼️"},{key:"mine",label:"我的",iconA:"👤",iconI:"👤"}].map(n=>{
             const active=page===n.key;
             return(
               <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"4px 20px"}}>
@@ -833,14 +833,17 @@ function colorDistance(h1,h2){
   const [r1,g1,b1]=hexToRgb(h1),[r2,g2,b2]=hexToRgb(h2);
   return Math.sqrt((r1-r2)**2+(g1-g2)**2+(b1-b2)**2);
 }
-function getSimilarColors(targetId,stock,count=5){
+function getSimilarColors(targetId,stock,count=6){
   const target=ALL_COLORS.find(c=>c.id===targetId);
   if(!target)return[];
-  return ALL_COLORS
+  const series=targetId.match(/^[A-Za-z]+/)[0].toUpperCase();
+  const withDist=ALL_COLORS
     .filter(c=>c.id!==targetId)
-    .map(c=>({...c,dist:colorDistance(target.hex,c.hex),qty:stock[c.id]||0}))
-    .sort((a,b)=>a.dist-b.dist)
-    .slice(0,count);
+    .map(c=>({...c,dist:colorDistance(target.hex,c.hex),qty:stock[c.id]||0,sameSeries:c.id.startsWith(series)}));
+  // 同色系优先，同色系内按距离排，再补跨色系
+  const same=withDist.filter(c=>c.sameSeries).sort((a,b)=>a.dist-b.dist);
+  const other=withDist.filter(c=>!c.sameSeries).sort((a,b)=>a.dist-b.dist);
+  return [...same,...other].slice(0,count);
 }
 
 // ══════════════════════════════════
@@ -938,9 +941,6 @@ function MissingColorPage({T,stock,onBack}){
           )}
           {err&&<div style={{background:"#fff0f0",border:"1px solid #ffb3b3",borderRadius:12,padding:"10px 14px",fontSize:12,color:"#e05050",fontWeight:600}}>{err}</div>}
           <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFile}/>
-          <div style={{background:T.accentSoft,borderRadius:14,padding:"10px 14px",fontSize:11,color:T.textMid,lineHeight:1.7,marginTop:8}}>
-            💡 识别原理：读取图纸统计区色号+颗数，对比你的库存，标出缺货色号并推荐相近替代色
-          </div>
         </div>
       )}
 
@@ -1094,9 +1094,8 @@ function MissingColorPage({T,stock,onBack}){
 function WorksPage({T,tn,user,stock,used}){
   const [tab,setTab]=useState("color");
   const [colorView,setColorView]=useState("home");
-  const [tasks,setTasks]=useState(()=>{
-    try{const s=localStorage.getItem('pindou_tasks');return s?JSON.parse(s):[];}catch{return[];}
-  });
+  const [tasks,setTasks]=useState([]);
+  const [tasksLoaded,setTasksLoaded]=useState(false);
   const [monthGoal,setMonthGoal]=useState(()=>{
     try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}
   });
@@ -1107,11 +1106,39 @@ function WorksPage({T,tn,user,stock,used}){
   const taskImgRef=useRef(null);
   const [addingImg,setAddingImg]=useState(null);
 
-  useEffect(()=>{try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch{}},[tasks]);
+  // 从云端或localStorage加载tasks
+  useEffect(()=>{
+    async function loadTasks(){
+      if(user){
+        const {data}=await supabase.from("profiles").select("tasks").eq("id",user.id).single();
+        if(data?.tasks){setTasks(data.tasks);}
+        else{
+          try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}
+        }
+      }else{
+        try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}
+      }
+      setTasksLoaded(true);
+    }
+    loadTasks();
+  },[user]);
+
+  // tasks变化时同步
+  const tasksTimer=useRef(null);
+  useEffect(()=>{
+    if(!tasksLoaded)return;
+    try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch{}
+    if(!user)return;
+    clearTimeout(tasksTimer.current);
+    tasksTimer.current=setTimeout(async()=>{
+      await supabase.from("profiles").update({tasks}).eq("id",user.id);
+    },1500);
+  },[tasks,tasksLoaded]);
+
   useEffect(()=>{try{localStorage.setItem('pindou_month_goal',String(monthGoal));}catch{}},[monthGoal]);
 
   const now=new Date();
-  const thisMonth=`${now.getFullYear()}-${now.getMonth()+1}`;
+  const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const doneThisMonth=tasks.filter(t=>t.status==="done"&&t.doneDate?.startsWith(thisMonth));
   const totalBeads=doneThisMonth.reduce((a,t)=>a+(t.beads||0),0);
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
