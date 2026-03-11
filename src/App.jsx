@@ -1,4 +1,81 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  "https://xqteklgmxdslndswaftn.supabase.co",
+  "sb_publishable_FFxfIZn_lbYyA2ZUTNBlOw_NB-MFhyP"
+);
+
+// ══════════════ 登录/注册页 ══════════════
+function AuthPage({ T, tn, onLogin }) {
+  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const inp = (ex = {}) => ({
+    fontFamily: "'Nunito',sans-serif",
+    border: `1.5px solid ${T.border}`,
+    borderRadius: 12,
+    background: tn === "sky" ? "#f8fbff" : T.card,
+    color: T.text,
+    outline: "none",
+    padding: "12px 16px",
+    fontSize: 14,
+    width: "100%",
+    boxSizing: "border-box",
+    ...ex,
+  });
+
+  async function handleSubmit() {
+    setErr(""); setMsg("");
+    if (!email || !password) { setErr("请填写邮箱和密码～"); return; }
+    setLoading(true);
+    if (mode === "signup") {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setErr(error.message);
+      else setMsg("注册成功！请查收验证邮件，然后回来登录～");
+    } else {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setErr("邮箱或密码错误，请重试～");
+      else onLogin(data.user);
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Nunito',sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>🫘</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: T.accent }}>拼豆库存管家</div>
+          <div style={{ fontSize: 12, color: T.textLight, marginTop: 4 }}>戳豆豆 ✦</div>
+        </div>
+        <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 24, padding: 24, boxShadow: T.cardShadow }}>
+          <div style={{ display: "flex", marginBottom: 20, background: T.accentSoft, borderRadius: 12, padding: 3, gap: 3 }}>
+            {[["login", "登录"], ["signup", "注册"]].map(([m, l]) => (
+              <button key={m} onClick={() => { setMode(m); setErr(""); setMsg(""); }}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "'Nunito',sans-serif", fontSize: 13, fontWeight: 700, background: mode === m ? T.accent : "transparent", color: mode === m ? "#fff" : T.textMid, transition: "all 0.18s" }}>{l}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="邮箱地址" type="email" style={inp()} />
+            <input value={password} onChange={e => setPassword(e.target.value)} placeholder="密码（至少6位）" type="password" style={inp()}
+              onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+          </div>
+          {err && <div style={{ marginTop: 10, fontSize: 12, color: T.danger, fontWeight: 600 }}>{err}</div>}
+          {msg && <div style={{ marginTop: 10, fontSize: 12, color: "#4caf50", fontWeight: 600 }}>{msg}</div>}
+          <button onClick={handleSubmit} disabled={loading}
+            style={{ marginTop: 16, width: "100%", padding: "12px 0", borderRadius: 50, border: "none", cursor: "pointer", fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 800, background: T.accent, color: "#fff", opacity: loading ? 0.7 : 1 }}>
+            {loading ? "处理中…" : mode === "login" ? "登录" : "注册"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const ALL_COLORS = [
   {id:"A1",hex:"#faf5cd"},{id:"A2",hex:"#fcfed6"},{id:"A3",hex:"#fcff92"},{id:"A4",hex:"#f7ec5c"},{id:"A5",hex:"#f0d83a"},{id:"A6",hex:"#fda951"},{id:"A7",hex:"#fa8c4f"},{id:"A8",hex:"#fdbda4"},{id:"A9",hex:"#f79d5f"},{id:"A10",hex:"#f47e38"},{id:"A11",hex:"#fedb99"},{id:"A12",hex:"#fda276"},{id:"A13",hex:"#fec667"},{id:"A14",hex:"#f75842"},{id:"A15",hex:"#fbf65e"},{id:"A16",hex:"#feff97"},{id:"A17",hex:"#fde173"},{id:"A18",hex:"#fcbf80"},{id:"A19",hex:"#fd7e77"},{id:"A20",hex:"#f9d66e"},{id:"A21",hex:"#fae393"},{id:"A22",hex:"#b38c9f"},{id:"A23",hex:"#e4c8ba"},{id:"A24",hex:"#f3f6a9"},{id:"A25",hex:"#ffd785"},{id:"A26",hex:"#ffc734"},
@@ -116,6 +193,31 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
 export default function App(){
   const [tn,setTn]=useState("sky");
   const T=THEMES[tn];
+  const [user,setUser]=useState(null);
+  const [authLoading,setAuthLoading]=useState(true);
+
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data:{session}})=>{
+      setUser(session?.user??null);
+      setAuthLoading(false);
+    });
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
+      setUser(session?.user??null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  if(authLoading)return(
+    <div style={{minHeight:"100vh",background:THEMES.sky.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",fontSize:16,color:THEMES.sky.textMid,fontWeight:700}}>
+      Loading… 🫘
+    </div>
+  );
+  if(!user)return <AuthPage T={T} tn={tn} onLogin={setUser}/>;
+
+  async function handleLogout(){
+    await supabase.auth.signOut();
+    setUser(null);
+  }
   const [stock,setStock]=useState(()=>{
     try{const s=localStorage.getItem('pindou_stock');return s?JSON.parse(s):INIT_STOCK;}catch{return INIT_STOCK;}
   });
@@ -406,7 +508,10 @@ export default function App(){
               <div style={{fontSize:10,color:T.textLight,fontWeight:600,marginTop:1}}>戳豆豆 ✦</div>
             </div>
           </div>
-          <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
+            <button className="btn" onClick={handleLogout} style={{padding:"7px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,color:T.textMid,background:T.card}} title={user?.email}>退出</button>
+          </div>
         </div>}
 
         {page!=="diary"&&<div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0"}}>
