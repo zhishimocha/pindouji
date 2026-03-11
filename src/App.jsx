@@ -266,17 +266,22 @@ export default function App(){
     setCloudReady(false);
     async function loadCloud(){
       setSyncLoading(true);
-      const {data,error}=await supabase.from("stock").select("color,quantity").eq("user_id",user.id);
+      const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
       if(error){
         setSyncStatus("err");
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
+        try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
       }else if(data&&data.length>0){
-        const ns={...INIT_STOCK};
-        data.forEach(r=>{if(ns[r.color]!==undefined)ns[r.color]=r.quantity;});
-        setStock(ns);
+        const ns={...INIT_STOCK},nu={...INIT_USED};
+        data.forEach(r=>{
+          if(ns[r.color]!==undefined)ns[r.color]=r.quantity;
+          if(nu[r.color]!==undefined)nu[r.color]=r.used||0;
+        });
+        setStock(ns);setUsed(nu);
         setSyncStatus("ok");
       }else{
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
+        try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
         setSyncStatus("ok");
       }
       setSyncLoading(false);
@@ -285,18 +290,18 @@ export default function App(){
     loadCloud();
   },[user]);
 
-  // 云端写回（只有cloudReady后才写）
+  // 云端写回（stock+used一起）
   const syncTimer=useRef(null);
   useEffect(()=>{
     if(!user||!cloudReady)return;
     clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(async()=>{
-      const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity}));
+      const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity,used:used[color]||0}));
       const {error}=await supabase.from("stock").upsert(rows,{onConflict:"user_id,color"});
       if(error){setSyncStatus("err");console.error("sync error:",error);}
       else setSyncStatus("ok");
     },1500);
-  },[stock,cloudReady]);
+  },[stock,used,cloudReady]);
   const [search,setSearch]=useState("");
   const [sort,setSort]=useState("id-asc");
   const [fSeries,setFSeries]=useState(null);
@@ -611,11 +616,11 @@ export default function App(){
         {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"6px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <JarLogo accent={T.accent} size={56}/>
-            <div>
-              <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:1}}>拼豆记</div>
-              <div style={{fontSize:10,marginTop:3,color:syncLoading?"#f5a623":syncStatus==="err"?"#ff6b6b":syncStatus==="ok"?"#4caf50":T.textLight,fontWeight:600}}>
-                {syncLoading?"☁️ 同步中…":syncStatus==="err"?"⚠️ 同步失败":syncStatus==="ok"?"☁️ 已同步":""}
-              </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
+              {syncLoading&&<div style={{fontSize:10,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
+              {!syncLoading&&syncStatus==="err"&&<div style={{fontSize:10,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
+              {!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:10,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
             </div>
           </div>
           <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
@@ -848,7 +853,8 @@ function WorksPage({T,tn,user,stock,used}){
   }
   function startTask(id){setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"doing"}:t));}
   function doneTask(id){
-    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString()}:t));
+    const doneDate=new Date().toISOString();
+    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate}:t));
     setTab("diary");
   }
   function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));}
