@@ -256,6 +256,7 @@ export default function App(){
   const [stock,setStock]=useState(INIT_STOCK);
   const [used,setUsed]=useState(INIT_USED);
   const [syncLoading,setSyncLoading]=useState(false);
+  const [syncStatus,setSyncStatus]=useState(""); // "ok" | "err" | ""
   const [cloudReady,setCloudReady]=useState(false);
   const [page,setPage]=useState("home");
 
@@ -266,12 +267,17 @@ export default function App(){
     async function loadCloud(){
       setSyncLoading(true);
       const {data,error}=await supabase.from("stock").select("color,quantity").eq("user_id",user.id);
-      if(!error&&data&&data.length>0){
+      if(error){
+        setSyncStatus("err");
+        try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
+      }else if(data&&data.length>0){
         const ns={...INIT_STOCK};
         data.forEach(r=>{if(ns[r.color]!==undefined)ns[r.color]=r.quantity;});
         setStock(ns);
+        setSyncStatus("ok");
       }else{
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
+        setSyncStatus("ok");
       }
       setSyncLoading(false);
       setCloudReady(true);
@@ -286,7 +292,9 @@ export default function App(){
     clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(async()=>{
       const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity}));
-      await supabase.from("stock").upsert(rows,{onConflict:"user_id,color"});
+      const {error}=await supabase.from("stock").upsert(rows,{onConflict:"user_id,color"});
+      if(error){setSyncStatus("err");console.error("sync error:",error);}
+      else setSyncStatus("ok");
     },1500);
   },[stock,cloudReady]);
   const [search,setSearch]=useState("");
@@ -600,10 +608,15 @@ export default function App(){
           {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
         </div>}
         {/* 顶部header在作品页和我的页隐藏 */}
-        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"10px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"6px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <JarLogo accent={T.accent} size={56}/>
-            <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
+            <div>
+              <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:1}}>拼豆记</div>
+              <div style={{fontSize:10,marginTop:3,color:syncLoading?"#f5a623":syncStatus==="err"?"#ff6b6b":syncStatus==="ok"?"#4caf50":T.textLight,fontWeight:600}}>
+                {syncLoading?"☁️ 同步中…":syncStatus==="err"?"⚠️ 同步失败":syncStatus==="ok"?"☁️ 已同步":""}
+              </div>
+            </div>
           </div>
           <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
         </div>}
@@ -847,8 +860,8 @@ function WorksPage({T,tn,user,stock,used}){
     <div style={{fontFamily:"'Nunito',sans-serif",paddingBottom:0}}>
       {/* 新建任务弹窗 */}
       {showAddModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:999,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-          <div style={{background:T.card,borderRadius:"24px 24px 0 0",padding:"24px 20px 40px",width:"100%",maxWidth:480}}>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px"}} onClick={e=>{if(e.target===e.currentTarget){setShowAddModal(false);setNewTaskName("");}}}>
+          <div style={{background:T.card,borderRadius:24,padding:"24px 20px 24px",width:"100%",maxWidth:400}}>
             <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>📋 新建图纸任务</div>
             <input value={newTaskName} onChange={e=>setNewTaskName(e.target.value)}
               placeholder="图纸名称，比如：草莓蛋糕" autoFocus
@@ -858,7 +871,7 @@ function WorksPage({T,tn,user,stock,used}){
               <button onClick={()=>{setShowAddModal(false);setNewTaskName("");}}
                 style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
               <button onClick={()=>{if(newTaskName.trim()){addTask(newTaskName.trim());setNewTaskName("");setShowAddModal(false);}}}
-                style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",opacity:newTaskName.trim()?1:0.5}}>确认</button>
+                style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newTaskName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>确认</button>
             </div>
           </div>
         </div>
