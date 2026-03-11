@@ -496,6 +496,7 @@ export default function App(){
     }
     setResetConfirm(false);
     setResetKey(k=>k+1);
+  }
 
   function exportData(){
     const data={stock,used,exportedAt:new Date().toISOString()};
@@ -1770,3 +1771,4 @@ function FoxBtn({T,tn}){
     </div>
   );
 }
+
