@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   "https://xqteklgmxdslndswaftn.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxdGVrbGdteGRzbG5kc3dhZnRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMDU4NTgsImV4cCI6MjA4ODc4MTg1OH0.K8UxL6SwxIoZ1EvUmYGUO0pxtCB3fFK66slVcUgL3WM"
+  "sb_publishable_FFxfIZn_lbYyA2ZUTNBlOw_NB-MFhyP"
 );
 
 // ══════════════ 登录/注册页 ══════════════
@@ -207,17 +207,7 @@ export default function App(){
     return()=>subscription.unsubscribe();
   },[]);
 
-  if(authLoading)return(
-    <div style={{minHeight:"100vh",background:THEMES.sky.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",fontSize:16,color:THEMES.sky.textMid,fontWeight:700}}>
-      Loading… 🫘
-    </div>
-  );
-  if(!user)return <AuthPage T={T} tn={tn} onLogin={setUser}/>;
 
-  async function handleLogout(){
-    await supabase.auth.signOut();
-    setUser(null);
-  }
   const [stock,setStock]=useState(()=>{
     try{const s=localStorage.getItem('pindou_stock');return s?JSON.parse(s):INIT_STOCK;}catch{return INIT_STOCK;}
   });
@@ -416,6 +406,18 @@ export default function App(){
     setResetConfirm(false);
   }
   const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL};
+
+  async function handleLogout(){
+    await supabase.auth.signOut();
+    setUser(null);
+  }
+
+  if(authLoading)return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",fontSize:16,color:T.textMid,fontWeight:700}}>
+      Loading… 🫘
+    </div>
+  );
+  if(!user)return <AuthPage T={T} tn={tn} onLogin={setUser}/>;
 
   return(
     <>
