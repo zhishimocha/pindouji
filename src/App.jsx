@@ -7,8 +7,54 @@ const supabase = createClient(
 );
 
 // ══════════════ 登录/注册页 ══════════════
+function JarLogo({ accent }) {
+  const [bouncing, setBouncing] = useState(null);
+  const beads = [
+    { cx: 44, cy: 72, r: 9, color: "#ff8fa3", id: 0 },
+    { cx: 62, cy: 78, r: 8, color: "#4a9eff", id: 1 },
+    { cx: 56, cy: 62, r: 7, color: "#ffd166", id: 2 },
+    { cx: 38, cy: 60, r: 7, color: "#64e0a4", id: 3 },
+    { cx: 70, cy: 65, r: 6, color: "#b37bdc", id: 4 },
+  ];
+  return (
+    <div style={{ position: "relative", width: 110, height: 110, margin: "0 auto", cursor: "pointer" }}>
+      <style>{`
+        @keyframes beadBounce { 0%,100%{transform:translateY(0)} 30%{transform:translateY(-18px)} 60%{transform:translateY(-8px)} 80%{transform:translateY(-3px)} }
+        .bead-bounce { animation: beadBounce 0.55s cubic-bezier(.36,.07,.19,.97) both; }
+      `}</style>
+      <svg viewBox="0 0 110 110" width="110" height="110">
+        {/* 罐子底部 */}
+        <rect x="18" y="60" width="74" height="38" rx="10" fill={accent} opacity="0.18"/>
+        {/* 罐子主体 */}
+        <rect x="20" y="38" width="70" height="60" rx="12" fill="white" stroke={accent} strokeWidth="2.5"/>
+        {/* 罐子高光 */}
+        <rect x="26" y="44" width="12" height="40" rx="6" fill={accent} opacity="0.08"/>
+        {/* 罐口 */}
+        <rect x="26" y="32" width="58" height="14" rx="7" fill={accent} opacity="0.25"/>
+        <rect x="30" y="34" width="50" height="10" rx="5" fill={accent} opacity="0.35"/>
+        {/* 豆豆 */}
+        {beads.map(b => (
+          <circle
+            key={b.id}
+            className={bouncing === b.id ? "bead-bounce" : ""}
+            cx={b.cx} cy={b.cy} r={b.r}
+            fill={b.color}
+            style={{ cursor: "pointer", filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.15))" }}
+            onMouseDown={() => { setBouncing(b.id); setTimeout(() => setBouncing(null), 600); }}
+            onClick={() => { setBouncing(b.id); setTimeout(() => setBouncing(null), 600); }}
+          />
+        ))}
+        {/* 豆豆高光 */}
+        {beads.map(b => (
+          <circle key={"h"+b.id} cx={b.cx - b.r*0.3} cy={b.cy - b.r*0.3} r={b.r*0.35} fill="rgba(255,255,255,0.55)" style={{pointerEvents:"none"}}/>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function AuthPage({ T, tn, onLogin }) {
-  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,7 +82,7 @@ function AuthPage({ T, tn, onLogin }) {
     if (mode === "signup") {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setErr(error.message);
-      else setMsg("注册成功！请查收验证邮件，然后回来登录～");
+      else setMsg("注册成功！直接登录就可以啦～");
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setErr("邮箱或密码错误，请重试～");
@@ -46,12 +92,11 @@ function AuthPage({ T, tn, onLogin }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Nunito',sans-serif" }}>
-      <div style={{ width: "100%", maxWidth: 380 }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>🫘</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: T.accent }}>拼豆库存管家</div>
-          <div style={{ fontSize: 12, color: T.textLight, marginTop: 4 }}>戳豆豆 ✦</div>
+    <div style={{ position:"fixed", inset:0, background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Nunito',sans-serif", overflow:"hidden" }}>
+      <div style={{ width: "100%", maxWidth: 360 }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <JarLogo accent={T.accent} />
+          <div style={{ fontSize: 24, fontWeight: 900, color: T.accent, marginTop: 8, letterSpacing: 1 }}>拼豆记</div>
         </div>
         <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 24, padding: 24, boxShadow: T.cardShadow }}>
           <div style={{ display: "flex", marginBottom: 20, background: T.accentSoft, borderRadius: 12, padding: 3, gap: 3 }}>
