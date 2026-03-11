@@ -256,16 +256,17 @@ export default function App(){
   const [stock,setStock]=useState(INIT_STOCK);
   const [used,setUsed]=useState(INIT_USED);
   const [syncLoading,setSyncLoading]=useState(false);
-  const cloudLoaded=useRef(false);
+  const [cloudReady,setCloudReady]=useState(false);
   const [page,setPage]=useState("home");
 
+  // 登录后从云端拉数据
   useEffect(()=>{
-    if(!user)return;
-    cloudLoaded.current=false;
+    if(!user){setCloudReady(false);return;}
+    setCloudReady(false);
     async function loadCloud(){
       setSyncLoading(true);
-      const {data}=await supabase.from("stock").select("color,quantity").eq("user_id",user.id);
-      if(data&&data.length>0){
+      const {data,error}=await supabase.from("stock").select("color,quantity").eq("user_id",user.id);
+      if(!error&&data&&data.length>0){
         const ns={...INIT_STOCK};
         data.forEach(r=>{if(ns[r.color]!==undefined)ns[r.color]=r.quantity;});
         setStock(ns);
@@ -273,20 +274,21 @@ export default function App(){
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
       }
       setSyncLoading(false);
-      cloudLoaded.current=true;
+      setCloudReady(true);
     }
     loadCloud();
   },[user]);
 
+  // 云端写回（只有cloudReady后才写）
   const syncTimer=useRef(null);
   useEffect(()=>{
-    if(!user||!cloudLoaded.current)return;
+    if(!user||!cloudReady)return;
     clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(async()=>{
       const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity}));
       await supabase.from("stock").upsert(rows,{onConflict:"user_id,color"});
     },1500);
-  },[stock,user]);
+  },[stock,cloudReady]);
   const [search,setSearch]=useState("");
   const [sort,setSort]=useState("id-asc");
   const [fSeries,setFSeries]=useState(null);
@@ -600,7 +602,7 @@ export default function App(){
         {/* 顶部header在作品页和我的页隐藏 */}
         {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"10px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <JarLogo accent={T.accent} size={44}/>
+            <JarLogo accent={T.accent} size={56}/>
             <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
           </div>
           <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
@@ -813,6 +815,8 @@ function WorksPage({T,tn,user,stock,used}){
   });
   const [showGoalEdit,setShowGoalEdit]=useState(false);
   const [goalInput,setGoalInput]=useState("");
+  const [showAddModal,setShowAddModal]=useState(false);
+  const [newTaskName,setNewTaskName]=useState("");
   const taskImgRef=useRef(null);
   const [addingImg,setAddingImg]=useState(null);
 
@@ -832,7 +836,6 @@ function WorksPage({T,tn,user,stock,used}){
   function startTask(id){setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"doing"}:t));}
   function doneTask(id){
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString()}:t));
-    // 跳到日记tab
     setTab("diary");
   }
   function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));}
@@ -842,6 +845,24 @@ function WorksPage({T,tn,user,stock,used}){
 
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",paddingBottom:0}}>
+      {/* 新建任务弹窗 */}
+      {showAddModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:999,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div style={{background:T.card,borderRadius:"24px 24px 0 0",padding:"24px 20px 40px",width:"100%",maxWidth:480}}>
+            <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>📋 新建图纸任务</div>
+            <input value={newTaskName} onChange={e=>setNewTaskName(e.target.value)}
+              placeholder="图纸名称，比如：草莓蛋糕" autoFocus
+              onKeyDown={e=>{if(e.key==="Enter"&&newTaskName.trim()){addTask(newTaskName.trim());setNewTaskName("");setShowAddModal(false);}}}
+              style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:16}}/>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setShowAddModal(false);setNewTaskName("");}}
+                style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
+              <button onClick={()=>{if(newTaskName.trim()){addTask(newTaskName.trim());setNewTaskName("");setShowAddModal(false);}}}
+                style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",opacity:newTaskName.trim()?1:0.5}}>确认</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 顶部进度卡片 */}
       <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 18px 0",borderBottom:`1px solid ${T.border}`}}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
@@ -927,10 +948,7 @@ function WorksPage({T,tn,user,stock,used}){
           {/* 即将出炉 */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
             <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
-            <button onClick={()=>{
-              const name=prompt("图纸名称？");
-              if(name&&name.trim())addTask(name.trim());
-            }} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
+            <button onClick={()=>setShowAddModal(true)} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
           </div>
           <input ref={taskImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
             const f=e.target.files[0];if(!f||!addingImg)return;
@@ -1022,15 +1040,57 @@ function WorksPage({T,tn,user,stock,used}){
 // ══════════════════════════════════
 function MinePage({T,tn,user,onLogout,onExport,onImport}){
   const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
+  const [nickname,setNickname]=useState(()=>localStorage.getItem('pindou_nickname')||"");
+  const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
+  const [editingName,setEditingName]=useState(false);
+  const [nameInput,setNameInput]=useState("");
+  const avatarRef=useRef(null);
+
+  function saveNickname(){
+    localStorage.setItem('pindou_nickname',nameInput);
+    setNickname(nameInput);
+    setEditingName(false);
+  }
+  function handleAvatar(e){
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      localStorage.setItem('pindou_avatar',ev.target.result);
+      setAvatar(ev.target.result);
+    };
+    r.readAsDataURL(f);
+    e.target.value="";
+  }
+
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",padding:"0 0 20px"}}>
       {/* 头部 */}
       <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"32px 20px 24px",display:"flex",flexDirection:"column",alignItems:"center"}}>
-        <div style={{width:72,height:72,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,marginBottom:12,boxShadow:`0 4px 16px ${T.accent}44`}}>
-          🧑
+        {/* 头像 */}
+        <div onClick={()=>avatarRef.current?.click()} style={{position:"relative",marginBottom:12,cursor:"pointer"}}>
+          <div style={{width:76,height:76,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,overflow:"hidden",boxShadow:`0 4px 16px ${T.accent}44`}}>
+            {avatar?<img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🧑"}
+          </div>
+          <div style={{position:"absolute",bottom:-2,right:-2,width:22,height:22,borderRadius:"50%",background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",border:`2px solid ${T.card}`}}>📷</div>
         </div>
-        <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:4}}>{user?.email}</div>
-        <div style={{fontSize:11,color:T.textMid}}>加入于 {joinDate}</div>
+        <input ref={avatarRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatar}/>
+
+        {/* 昵称 */}
+        {editingName?(
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
+            <input value={nameInput} onChange={e=>setNameInput(e.target.value)} autoFocus
+              onKeyDown={e=>{if(e.key==="Enter")saveNickname();if(e.key==="Escape")setEditingName(false);}}
+              style={{border:`1.5px solid ${T.border}`,borderRadius:10,padding:"5px 12px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",width:150,textAlign:"center"}}/>
+            <button onClick={saveNickname} style={{background:T.accent,border:"none",borderRadius:8,padding:"5px 12px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>保存</button>
+          </div>
+        ):(
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}} onClick={()=>{setNameInput(nickname);setEditingName(true);}}>
+            <div style={{fontSize:16,fontWeight:800,color:T.text}}>{nickname||"点击设置昵称"}</div>
+            <span style={{fontSize:12,color:T.textLight,cursor:"pointer"}}>✏️</span>
+          </div>
+        )}
+        <div style={{fontSize:11,color:T.textMid}}>{user?.email}</div>
+        <div style={{fontSize:11,color:T.textLight,marginTop:2}}>加入于 {joinDate}</div>
       </div>
 
       <div style={{padding:"16px 16px 0"}}>
@@ -1060,7 +1120,6 @@ function MinePage({T,tn,user,onLogout,onExport,onImport}){
           style={{width:"100%",padding:"14px 0",borderRadius:20,border:`1.5px solid ${T.border}`,background:T.card,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:T.cardShadow}}>
           退出登录
         </button>
-
         <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
           由 大橘来啦（v：daju_laila）制作 · 禁私售
         </div>
