@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 // ══════════════ 登录/注册页 ══════════════
-function JarLogo({ accent }) {
+function JarLogo({ accent, size=110 }) {
   const [bouncing, setBouncing] = useState(null);
   const beads = [
     { cx: 44, cy: 72, r: 9, color: "#ff8fa3", id: 0 },
@@ -17,12 +17,12 @@ function JarLogo({ accent }) {
     { cx: 70, cy: 65, r: 6, color: "#b37bdc", id: 4 },
   ];
   return (
-    <div style={{ position: "relative", width: 110, height: 110, margin: "0 auto", cursor: "pointer" }}>
+    <div style={{ position: "relative", width: size, height: size, margin: "0 auto", cursor: "pointer" }}>
       <style>{`
         @keyframes beadBounce { 0%,100%{transform:translateY(0)} 30%{transform:translateY(-18px)} 60%{transform:translateY(-8px)} 80%{transform:translateY(-3px)} }
         .bead-bounce { animation: beadBounce 0.55s cubic-bezier(.36,.07,.19,.97) both; }
       `}</style>
-      <svg viewBox="0 0 110 110" width="110" height="110">
+      <svg viewBox="0 0 110 110" width={size} height={size}>
         {/* 罐子底部 */}
         <rect x="18" y="60" width="74" height="38" rx="10" fill={accent} opacity="0.18"/>
         {/* 罐子主体 */}
@@ -256,10 +256,12 @@ export default function App(){
   const [stock,setStock]=useState(INIT_STOCK);
   const [used,setUsed]=useState(INIT_USED);
   const [syncLoading,setSyncLoading]=useState(false);
+  const cloudLoaded=useRef(false);
   const [page,setPage]=useState("home");
 
   useEffect(()=>{
     if(!user)return;
+    cloudLoaded.current=false;
     async function loadCloud(){
       setSyncLoading(true);
       const {data}=await supabase.from("stock").select("color,quantity").eq("user_id",user.id);
@@ -271,13 +273,14 @@ export default function App(){
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
       }
       setSyncLoading(false);
+      cloudLoaded.current=true;
     }
     loadCloud();
   },[user]);
 
   const syncTimer=useRef(null);
   useEffect(()=>{
-    if(!user)return;
+    if(!user||!cloudLoaded.current)return;
     clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(async()=>{
       const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity}));
@@ -595,17 +598,15 @@ export default function App(){
           {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
         </div>}
         {/* 顶部header在作品页和我的页隐藏 */}
-        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"12px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <FoxBtn T={T} tn={tn}/>
-            <div>
-              <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
-            </div>
+        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"10px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <JarLogo accent={T.accent} size={44}/>
+            <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
           </div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
-          </div>
+          <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
         </div>}
+        {/* 导入隐藏input */}
+        <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={importData}/>
 
         {page!=="works"&&page!=="mine"&&<div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0"}}>
 
@@ -777,7 +778,7 @@ export default function App(){
 
         {/* 我的页：fixed全屏覆盖 */}
         {page==="mine"&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:64,background:T.bg,zIndex:100,overflowY:"auto"}}>
-          <MinePage T={T} tn={tn} user={user} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} onReset={resetData} resetConfirm={resetConfirm} setTn={setTn}/>
+          <MinePage T={T} tn={tn} user={user} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()}/>
         </div>}
 
         <div className="tt" style={{position:"fixed",bottom:0,left:0,right:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
@@ -1008,7 +1009,7 @@ function WorksPage({T,tn,user,stock,used}){
 
       {/* 日记tab */}
       {tab==="diary"&&(
-        <div style={{position:"absolute",top:0,left:0,right:0,bottom:0}}>
+        <div className="fade">
           <DiaryPage T={T} tn={tn} inWorks={true}/>
         </div>
       )}
@@ -1019,7 +1020,7 @@ function WorksPage({T,tn,user,stock,used}){
 // ══════════════════════════════════
 //  MinePage（我的页）
 // ══════════════════════════════════
-function MinePage({T,tn,user,onLogout,onExport,onImport,onReset,resetConfirm,setTn}){
+function MinePage({T,tn,user,onLogout,onExport,onImport}){
   const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",padding:"0 0 20px"}}>
@@ -1033,18 +1034,6 @@ function MinePage({T,tn,user,onLogout,onExport,onImport,onReset,resetConfirm,set
       </div>
 
       <div style={{padding:"16px 16px 0"}}>
-        {/* 主题切换 */}
-        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
-          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>⚙️ 偏好设置</div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{fontSize:13,fontWeight:700,color:T.text}}>主题外观</div>
-            <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")}
-              style={{padding:"7px 20px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>
-              {tn==="sky"?"🌙 切换夜空":"☀️ 切换日间"}
-            </button>
-          </div>
-        </div>
-
         {/* 数据管理 */}
         <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
           <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>📦 数据管理</div>
@@ -1060,13 +1049,6 @@ function MinePage({T,tn,user,onLogout,onExport,onImport,onReset,resetConfirm,set
               <div>
                 <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬆️ 导入数据</div>
                 <div style={{fontSize:11,color:T.textMid,marginTop:2}}>从备份文件恢复库存数据</div>
-              </div>
-              <span style={{fontSize:18,color:T.textLight}}>›</span>
-            </div>
-            <div className="cc" onClick={onReset} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:resetConfirm?T.dangerBg:T.card,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer"}}>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:resetConfirm?T.danger:T.text}}>{resetConfirm?"⚠️ 再按一次确认清空":"🗑️ 重置数据"}</div>
-                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>清空所有库存记录</div>
               </div>
               <span style={{fontSize:18,color:T.textLight}}>›</span>
             </div>
