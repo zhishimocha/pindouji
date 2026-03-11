@@ -92,7 +92,7 @@ function AuthPage({ T, tn, onLogin }) {
   }
 
   return (
-    <div style={{ position:"fixed", inset:0, background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Nunito',sans-serif", overflow:"hidden" }}>
+    <div style={{ position:"fixed", inset:0, background: T.bg, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "8vh", padding: "8vh 24px 24px", fontFamily: "'Nunito',sans-serif", overflow:"hidden" }}>
       <div style={{ width: "100%", maxWidth: 360 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <JarLogo accent={T.accent} />
@@ -253,15 +253,37 @@ export default function App(){
   },[]);
 
 
-  const [stock,setStock]=useState(()=>{
-    try{const s=localStorage.getItem('pindou_stock');return s?JSON.parse(s):INIT_STOCK;}catch{return INIT_STOCK;}
-  });
-  const [used,setUsed]=useState(()=>{
-    try{const u=localStorage.getItem('pindou_used');return u?JSON.parse(u):INIT_USED;}catch{return INIT_USED;}
-  });
+  const [stock,setStock]=useState(INIT_STOCK);
+  const [used,setUsed]=useState(INIT_USED);
+  const [syncLoading,setSyncLoading]=useState(false);
   const [page,setPage]=useState("home");
-  useEffect(()=>{try{localStorage.setItem('pindou_stock',JSON.stringify(stock));}catch{}},[stock]);
-  useEffect(()=>{try{localStorage.setItem('pindou_used',JSON.stringify(used));}catch{}},[used]);
+
+  useEffect(()=>{
+    if(!user)return;
+    async function loadCloud(){
+      setSyncLoading(true);
+      const {data}=await supabase.from("stock").select("color,quantity").eq("user_id",user.id);
+      if(data&&data.length>0){
+        const ns={...INIT_STOCK};
+        data.forEach(r=>{if(ns[r.color]!==undefined)ns[r.color]=r.quantity;});
+        setStock(ns);
+      }else{
+        try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
+      }
+      setSyncLoading(false);
+    }
+    loadCloud();
+  },[user]);
+
+  const syncTimer=useRef(null);
+  useEffect(()=>{
+    if(!user)return;
+    clearTimeout(syncTimer.current);
+    syncTimer.current=setTimeout(async()=>{
+      const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity}));
+      await supabase.from("stock").upsert(rows,{onConflict:"user_id,color"});
+    },1500);
+  },[stock,user]);
   const [search,setSearch]=useState("");
   const [sort,setSort]=useState("id-asc");
   const [fSeries,setFSeries]=useState(null);
@@ -444,11 +466,37 @@ export default function App(){
     });
   }
   const [resetConfirm,setResetConfirm]=useState(false);
-  function resetData(){
+  async function resetData(){
     if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
     setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
     localStorage.removeItem('pindou_stock');localStorage.removeItem('pindou_used');
+    if(user)await supabase.from('stock').delete().eq('user_id',user.id);
     setResetConfirm(false);
+  }
+
+  function exportData(){
+    const data={stock,used,exportedAt:new Date().toISOString()};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`拼豆记_备份_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.json`;
+    a.click();URL.revokeObjectURL(url);
+  }
+
+  const importRef=useRef(null);
+  function importData(e){
+    const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(d.stock)setStock(d.stock);
+        if(d.used)setUsed(d.used);
+        alert('导入成功！数据已恢复～');
+      }catch{alert('文件格式有误，请使用导出的备份文件～');}
+    };
+    r.readAsText(file);
+    e.target.value='';
   }
   const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL};
 
@@ -467,7 +515,7 @@ export default function App(){
   return(
     <>
       <style>{G}</style>
-      <div className="tt" style={{minHeight:"100vh",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text,paddingBottom:page==="diary"?0:88}}>
+      <div className="tt" style={{minHeight:"100vh",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text,paddingBottom:(page==="works"||page==="mine")?0:88}}>
 
         {/* 裁剪弹窗 */}
         {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -546,29 +594,27 @@ export default function App(){
           </div>
           {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
         </div>}
-        {/* 顶部header在日记页隐藏 */}
-        {page!=="diary"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"12px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        {/* 顶部header在作品页和我的页隐藏 */}
+        {page!=="works"&&page!=="mine"&&<div style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"12px 18px",position:"sticky",top:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <FoxBtn T={T} tn={tn}/>
             <div>
-              <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆库存管家</div>
-              <div style={{fontSize:10,color:T.textLight,fontWeight:600,marginTop:1}}>戳豆豆 ✦</div>
+              <div style={{fontSize:17,fontWeight:900,color:T.accent,letterSpacing:0.3}}>拼豆记</div>
             </div>
           </div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
-            <button className="btn" onClick={handleLogout} style={{padding:"7px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,color:T.textMid,background:T.card}} title={user?.email}>退出</button>
           </div>
         </div>}
 
-        {page!=="diary"&&<div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0"}}>
+        {page!=="works"&&page!=="mine"&&<div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0"}}>
 
           {page==="home"&&<div className="fade">
             <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                 <div style={{fontSize:12,color:T.textLight,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
-                <button className="btn" onClick={resetData} style={{padding:"4px 12px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
-                  {resetConfirm?"⚠️ 再按确认清空":"🗑️ 重置数据"}
+                <button className="btn" onClick={resetData} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
+                  {resetConfirm?"⚠️ 确认清空":"🗑️ 重置"}
                 </button>
               </div>
               <div style={{display:"flex",gap:10}}>
@@ -720,20 +766,25 @@ export default function App(){
           </div>
         </div>}
 
-        {page!=="diary"&&<div className="tt" style={{textAlign:"center",padding:"10px 0 96px",fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
+        {page!=="works"&&page!=="mine"&&<div className="tt" style={{textAlign:"center",padding:"10px 0 96px",fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
           由 大橘来啦（v：daju_laila）制作 · 禁私售
         </div>}
 
-        {/* 日记页：fixed全屏覆盖，底部留导航栏高度 */}
-        {page==="diary"&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:64,background:T.bg,zIndex:100,overflowY:"auto"}}>
-          <DiaryPage T={T} tn={tn}/>
+        {/* 作品页：fixed全屏覆盖 */}
+        {page==="works"&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:64,background:T.bg,zIndex:100,overflowY:"auto"}}>
+          <WorksPage T={T} tn={tn} user={user} stock={stock} used={used}/>
+        </div>}
+
+        {/* 我的页：fixed全屏覆盖 */}
+        {page==="mine"&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:64,background:T.bg,zIndex:100,overflowY:"auto"}}>
+          <MinePage T={T} tn={tn} user={user} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} onReset={resetData} resetConfirm={resetConfirm} setTn={setTn}/>
         </div>}
 
         <div className="tt" style={{position:"fixed",bottom:0,left:0,right:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
-          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🫘",iconI:"🫙"},{key:"diary",label:"日记",iconA:"📖",iconI:"📓"}].map(n=>{
+          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🫘",iconI:"🫙"},{key:"works",label:"作品",iconA:"🎨",iconI:"🖼️"},{key:"mine",label:"我的",iconA:"👤",iconI:"🙂"}].map(n=>{
             const active=page===n.key;
             return(
-              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"4px 32px"}}>
+              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"4px 20px"}}>
                 <span style={{fontSize:26,transition:"filter 0.2s,transform 0.2s",filter:active?"none":"grayscale(0.5) opacity(0.35)",transform:active?"scale(1.15)":"scale(1)"}}>{active?n.iconA:n.iconI}</span>
                 <span style={{fontSize:11,fontWeight:active?800:600,color:active?T.accent:T.textLight,transition:"color 0.2s"}}>{n.label}</span>
                 <div style={{width:active?24:0,height:3,borderRadius:10,background:T.navActiveDot,marginTop:1,transition:"width 0.25s"}}/>
@@ -747,7 +798,296 @@ export default function App(){
 }
 
 // 年份横滚条组件
-function YearScroller({curYear,setCurYear,T}){
+// ══════════════════════════════════
+//  WorksPage（作品页）
+// ══════════════════════════════════
+function WorksPage({T,tn,user,stock,used}){
+  const [tab,setTab]=useState("color");
+  const [colorView,setColorView]=useState("home");
+  const [tasks,setTasks]=useState(()=>{
+    try{const s=localStorage.getItem('pindou_tasks');return s?JSON.parse(s):[];}catch{return[];}
+  });
+  const [monthGoal,setMonthGoal]=useState(()=>{
+    try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}
+  });
+  const [showGoalEdit,setShowGoalEdit]=useState(false);
+  const [goalInput,setGoalInput]=useState("");
+  const taskImgRef=useRef(null);
+  const [addingImg,setAddingImg]=useState(null);
+
+  useEffect(()=>{try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch{}},[tasks]);
+  useEffect(()=>{try{localStorage.setItem('pindou_month_goal',String(monthGoal));}catch{}},[monthGoal]);
+
+  const now=new Date();
+  const thisMonth=`${now.getFullYear()}-${now.getMonth()+1}`;
+  const doneThisMonth=tasks.filter(t=>t.status==="done"&&t.doneDate?.startsWith(thisMonth));
+  const totalBeads=doneThisMonth.reduce((a,t)=>a+(t.beads||0),0);
+  const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
+
+  function addTask(name){
+    const t={id:Date.now(),name,status:"todo",beads:0,img:null,createdAt:new Date().toISOString()};
+    setTasks(prev=>[t,...prev]);
+  }
+  function startTask(id){setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"doing"}:t));}
+  function doneTask(id){
+    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString()}:t));
+    // 跳到日记tab
+    setTab("diary");
+  }
+  function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));}
+  function setTaskImg(id,src){setTasks(prev=>prev.map(t=>t.id===id?{...t,img:src}:t));}
+
+  const activeTasks=tasks.filter(t=>t.status!=="done");
+
+  return(
+    <div style={{fontFamily:"'Nunito',sans-serif",paddingBottom:0}}>
+      {/* 顶部进度卡片 */}
+      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 18px 0",borderBottom:`1px solid ${T.border}`}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
+          <div>
+            <div style={{fontSize:18,fontWeight:900,color:T.accent}}>作品</div>
+            <div style={{fontSize:11,color:T.textMid,marginTop:2}}>本月进度 · {now.getMonth()+1}月</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:22,fontWeight:900,color:T.text}}>{doneThisMonth.length} <span style={{fontSize:12,fontWeight:600,color:T.textMid}}>件</span></div>
+            <div style={{fontSize:11,color:T.textMid}}>消耗 {totalBeads.toLocaleString()} 粒</div>
+          </div>
+        </div>
+        <div style={{marginBottom:4}}>
+          {showGoalEdit?(
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+              <input value={goalInput} onChange={e=>setGoalInput(e.target.value)} type="number" placeholder="输入目标件数"
+                style={{flex:1,border:`1.5px solid ${T.border}`,borderRadius:12,padding:"6px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none"}}/>
+              <button onClick={()=>{if(goalInput===""){setMonthGoal(0);}else{setMonthGoal(Number(goalInput));}setShowGoalEdit(false);}}
+                style={{padding:"6px 14px",borderRadius:20,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>确认</button>
+              <button onClick={()=>setShowGoalEdit(false)}
+                style={{padding:"6px 14px",borderRadius:20,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>取消</button>
+            </div>
+          ):(
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.textMid,fontWeight:600,marginBottom:5}}>
+              <span>{monthGoal>0?`本月目标 ${monthGoal} 件`:"暂未设置目标"}</span>
+              <button onClick={()=>{setGoalInput(String(monthGoal||""));setShowGoalEdit(true);}}
+                style={{background:"none",border:"none",fontSize:10,color:T.accent,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:0}}>修改目标</button>
+            </div>
+          )}
+          {monthGoal>0&&<div style={{background:T.accentLight,borderRadius:20,height:10,overflow:"hidden",marginBottom:8}}>
+            <div style={{width:`${progress*100}%`,height:"100%",borderRadius:20,background:`linear-gradient(90deg,${T.accent},#72b4ff)`,transition:"width 0.5s"}}/>
+          </div>}
+          <div style={{display:"flex",gap:6,marginBottom:14}}>
+            {[
+              ["✅",doneThisMonth.length,"已完成","#4caf50","#f0fff4"],
+              ["🔥",tasks.filter(t=>t.status==="doing").length,"进行中",T.warn,T.warnBg],
+              ["📋",tasks.filter(t=>t.status==="todo").length,"待开始",T.textMid,T.accentSoft]
+            ].map(([ic,n,lb,col,bg])=>(
+              <div key={lb} style={{flex:1,textAlign:"center",fontSize:10,fontWeight:700,color:col,background:bg,borderRadius:8,padding:"4px 0"}}>{ic} {lb} {n}</div>
+            ))}
+          </div>
+        </div>
+        {/* Tab切换 */}
+        <div style={{display:"flex",gap:6}}>
+          {[["color","🎨 配色"],["diary","📖 日记"]].map(([key,label])=>(
+            <button key={key} onClick={()=>{setTab(key);setColorView("home");}}
+              style={{flex:1,padding:"10px 0",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,background:"transparent",color:tab===key?T.accent:T.textLight,borderBottom:tab===key?`3px solid ${T.accent}`:"3px solid transparent",transition:"all 0.2s"}}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 配色主页 */}
+      {tab==="color"&&colorView==="home"&&(
+        <div className="fade" style={{padding:"18px 16px"}}>
+          {/* 两张入口卡片 */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+            <div className="cc" onClick={()=>setColorView("missing")}
+              style={{background:T.card,borderRadius:22,padding:"18px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`}}>
+              <div style={{width:48,height:48,borderRadius:16,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}>🔍</div>
+              <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:5}}>缺色替换</div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.5}}>上传图纸，对比库存，找替代色</div>
+              <div style={{marginTop:12,display:"flex",alignItems:"center",gap:4}}>
+                <div style={{flex:1,height:3,borderRadius:10,background:T.accentLight}}/>
+                <div style={{flex:2,height:3,borderRadius:10,background:T.accent}}/>
+                <div style={{flex:1,height:3,borderRadius:10,background:T.accentLight}}/>
+              </div>
+            </div>
+            <div className="cc" onClick={()=>setColorView("restyle")}
+              style={{background:T.card,borderRadius:22,padding:"18px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`}}>
+              <div style={{width:48,height:48,borderRadius:16,background:"linear-gradient(135deg,#fff8ec,#fde5b0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}>🌈</div>
+              <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:5}}>重新配色</div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.5}}>改变色调，预览新方案</div>
+              <div style={{marginTop:12,display:"flex",alignItems:"center",gap:3}}>
+                {["#ff8fa3","#ffd166","#4a9eff","#64e0a4","#b37bdc"].map(c=>(
+                  <div key={c} style={{flex:1,height:3,borderRadius:10,background:c}}/>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 即将出炉 */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
+            <button onClick={()=>{
+              const name=prompt("图纸名称？");
+              if(name&&name.trim())addTask(name.trim());
+            }} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
+          </div>
+          <input ref={taskImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
+            const f=e.target.files[0];if(!f||!addingImg)return;
+            const r=new FileReader();r.onload=ev=>{setTaskImg(addingImg,ev.target.result);setAddingImg(null);};r.readAsDataURL(f);
+            e.target.value="";
+          }}/>
+
+          {activeTasks.length===0&&(
+            <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有任务～点右上角新建一个吧(◕ᴗ◕✿)</div>
+          )}
+          {activeTasks.map(task=>(
+            <div key={task.id} className="cc"
+              style={{background:T.card,border:`1.5px solid ${task.status==="doing"?T.warn:T.border}`,borderRadius:20,padding:"14px 16px",marginBottom:10,boxShadow:T.cardShadow,display:"flex",alignItems:"center",gap:12}}>
+              {/* 封面图 */}
+              <div onClick={()=>{setAddingImg(task.id);taskImgRef.current?.click();}}
+                style={{width:50,height:50,borderRadius:14,background:task.status==="doing"?T.warnBg:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,overflow:"hidden",cursor:"pointer",border:`2px dashed ${task.img?"transparent":T.border}`}}>
+                {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"📷"}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                  <div style={{fontSize:14,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.name}</div>
+                  <div style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,flexShrink:0,background:task.status==="doing"?T.warnBg:T.accentSoft,color:task.status==="doing"?T.warn:T.textMid}}>
+                    {task.status==="doing"?"🔥 进行中":"📋 待开始"}
+                  </div>
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}>
+                {task.status==="todo"&&(
+                  <button className="btn" onClick={()=>startTask(task.id)}
+                    style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.accentLight,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>开始</button>
+                )}
+                {task.status==="doing"&&(
+                  <button className="btn" onClick={()=>doneTask(task.id)}
+                    style={{padding:"5px 12px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>✓ 完成</button>
+                )}
+                <button className="btn" onClick={()=>deleteTask(task.id)}
+                  style={{padding:"4px 8px",borderRadius:50,border:`1.5px solid ${T.dangerBorder||T.border}`,background:"none",color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:700,cursor:"pointer"}}>删除</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 缺色替换 */}
+      {tab==="color"&&colorView==="missing"&&(
+        <div className="fade" style={{padding:"18px 16px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+            <button onClick={()=>setColorView("home")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
+            <div style={{fontSize:15,fontWeight:800,color:T.text}}>🔍 缺色替换</div>
+          </div>
+          <div style={{background:T.accentSoft,border:`2px dashed ${T.accent}`,borderRadius:22,padding:36,textAlign:"center",marginBottom:16}}>
+            <div style={{fontSize:40,marginBottom:10}}>📷</div>
+            <div style={{fontSize:14,fontWeight:800,color:T.accent}}>上传图纸</div>
+            <div style={{fontSize:11,color:T.textMid,marginTop:6,lineHeight:1.6}}>建议框选图纸下方<br/>「色块统计区」识别更准确</div>
+          </div>
+          <div style={{background:T.warnBg,border:`1px solid #fde5b0`,borderRadius:16,padding:"12px 14px",fontSize:11,color:T.warn,fontWeight:600,lineHeight:1.7}}>
+            💡 开发中，即将上线～
+          </div>
+        </div>
+      )}
+
+      {/* 重新配色 */}
+      {tab==="color"&&colorView==="restyle"&&(
+        <div className="fade" style={{padding:"18px 16px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+            <button onClick={()=>setColorView("home")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
+            <div style={{fontSize:15,fontWeight:800,color:T.text}}>🌈 重新配色</div>
+          </div>
+          <div style={{background:T.warnBg,border:`2px dashed ${T.warn}`,borderRadius:22,padding:36,textAlign:"center"}}>
+            <div style={{fontSize:40,marginBottom:10}}>🚧</div>
+            <div style={{fontSize:14,fontWeight:800,color:T.warn}}>开发中～</div>
+            <div style={{fontSize:11,color:T.textMid,marginTop:6}}>敬请期待！</div>
+          </div>
+        </div>
+      )}
+
+      {/* 日记tab */}
+      {tab==="diary"&&(
+        <div style={{position:"absolute",top:0,left:0,right:0,bottom:0}}>
+          <DiaryPage T={T} tn={tn} inWorks={true}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════
+//  MinePage（我的页）
+// ══════════════════════════════════
+function MinePage({T,tn,user,onLogout,onExport,onImport,onReset,resetConfirm,setTn}){
+  const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
+  return(
+    <div style={{fontFamily:"'Nunito',sans-serif",padding:"0 0 20px"}}>
+      {/* 头部 */}
+      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"32px 20px 24px",display:"flex",flexDirection:"column",alignItems:"center"}}>
+        <div style={{width:72,height:72,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,marginBottom:12,boxShadow:`0 4px 16px ${T.accent}44`}}>
+          🧑
+        </div>
+        <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:4}}>{user?.email}</div>
+        <div style={{fontSize:11,color:T.textMid}}>加入于 {joinDate}</div>
+      </div>
+
+      <div style={{padding:"16px 16px 0"}}>
+        {/* 主题切换 */}
+        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
+          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>⚙️ 偏好设置</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontSize:13,fontWeight:700,color:T.text}}>主题外观</div>
+            <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")}
+              style={{padding:"7px 20px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>
+              {tn==="sky"?"🌙 切换夜空":"☀️ 切换日间"}
+            </button>
+          </div>
+        </div>
+
+        {/* 数据管理 */}
+        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
+          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>📦 数据管理</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div className="cc" onClick={onExport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬇️ 导出数据</div>
+                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>备份库存数据为JSON文件</div>
+              </div>
+              <span style={{fontSize:18,color:T.textLight}}>›</span>
+            </div>
+            <div className="cc" onClick={onImport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬆️ 导入数据</div>
+                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>从备份文件恢复库存数据</div>
+              </div>
+              <span style={{fontSize:18,color:T.textLight}}>›</span>
+            </div>
+            <div className="cc" onClick={onReset} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:resetConfirm?T.dangerBg:T.card,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:resetConfirm?T.danger:T.text}}>{resetConfirm?"⚠️ 再按一次确认清空":"🗑️ 重置数据"}</div>
+                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>清空所有库存记录</div>
+              </div>
+              <span style={{fontSize:18,color:T.textLight}}>›</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 退出登录 */}
+        <button className="btn" onClick={onLogout}
+          style={{width:"100%",padding:"14px 0",borderRadius:20,border:`1.5px solid ${T.border}`,background:T.card,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:T.cardShadow}}>
+          退出登录
+        </button>
+
+        <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
+          由 大橘来啦（v：daju_laila）制作 · 禁私售
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
   const ref=useRef(null);
   const years=Array.from({length:30},(_,i)=>2015+i);
   useEffect(()=>{
