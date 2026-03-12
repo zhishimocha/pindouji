@@ -11,7 +11,7 @@ function UpgradeModal({T,onClose}){
   const perks=[
     {icon:"🎯",title:"专注模式",desc:"高亮单色逐一拼，再也不拿错"},
     {icon:"📷",title:"AI识图",desc:"拍照自动识别用量，秒更库存"},
-    {icon:"📦",title:"数据导出/导入",desc:"随时备份，换手机不丢数据"},
+    {icon:"☁️",title:"云同步",desc:"多设备实时同步，数据不丢失"},
   ];
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px"}}
@@ -1214,13 +1214,18 @@ function MissingColorPage({T,stock,onBack}){
 // ══════════════════════════════════
 //  FocusMode（专注模式全屏）
 // ══════════════════════════════════
-function FocusMode({T,tn,task,onDeductStock,onExit}){
-  const [phase,setPhase]=useState("start"); // start | focus
+function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
+  const [phase,setPhase]=useState("start");
   const [autoDeduct,setAutoDeduct]=useState(false);
   const [sortOrder,setSortOrder]=useState("count-desc");
   const [doneColors,setDoneColors]=useState(new Set());
   const [activeColor,setActiveColor]=useState(null);
   const [drawerOpen,setDrawerOpen]=useState(false);
+  const [showGrid,setShowGrid]=useState(true);
+  const [boardSize,setBoardSize]=useState(52);
+  const [allDoneConfirm,setAllDoneConfirm]=useState(false);
+  const imgRef=useRef(null);
+  const [imgRect,setImgRect]=useState(null); // {left,top,width,height} relative to container
 
   const colors=useMemo(()=>task.colorData||[],[task.colorData]);
 
@@ -1237,9 +1242,17 @@ function FocusMode({T,tn,task,onDeductStock,onExit}){
     if(autoDeduct){const c=colors.find(x=>x.id===colorId);if(c&&c.count>0)onDeductStock(colorId,c.count);}
     const newDone=new Set([...doneColors,colorId]);
     setDoneColors(newDone);
+    const remaining=colors.filter(c=>!newDone.has(c.id));
     const idx=sorted.findIndex(c=>c.id===colorId);
     const next=sorted[idx+1];
     setActiveColor(next?.id||null);
+    // 全部完成
+    if(remaining.length===0){setAllDoneConfirm(true);}
+  }
+
+  function handleAllDone(){
+    onComplete();
+    onExit();
   }
 
   const activeColorData=activeColor?colors.find(c=>c.id===activeColor):null;
@@ -1247,15 +1260,24 @@ function FocusMode({T,tn,task,onDeductStock,onExit}){
   const totalLeft=sorted.length;
   const totalDone=doneColors.size;
 
+  // 图纸加载后计算实际显示区域
+  function onImgLoad(){
+    if(!imgRef.current)return;
+    const el=imgRef.current;
+    const cont=el.parentElement;
+    const cr=cont.getBoundingClientRect();
+    const ir=el.getBoundingClientRect();
+    setImgRect({left:ir.left-cr.left,top:ir.top-cr.top,width:ir.width,height:ir.height});
+  }
+
   // ── 开始前设置页 ──
   if(phase==="start")return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
-      <div style={{padding:"18px 18px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12}}>
+      <div style={{padding:"18px 18px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
         <button onClick={onExit} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:T.textMid,lineHeight:1}}>←</button>
         <div style={{fontSize:16,fontWeight:800,color:T.text}}>🎯 专注模式</div>
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"20px 18px"}}>
-        {/* 作品预览 */}
         <div style={{background:T.card,borderRadius:20,padding:14,marginBottom:18,display:"flex",gap:14,alignItems:"center",boxShadow:T.cardShadow,border:`1.5px solid ${T.border}`}}>
           <div style={{width:58,height:58,borderRadius:14,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
             {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
@@ -1271,22 +1293,46 @@ function FocusMode({T,tn,task,onDeductStock,onExit}){
             <span style={{fontSize:18}}>⚠️</span>
             <div>
               <div style={{fontSize:13,color:T.warn,fontWeight:700,marginBottom:3}}>还没有颜色数据</div>
-              <div style={{fontSize:11,color:T.textMid,lineHeight:1.6}}>建议先在图纸卡片上扫描颜色统计，进入专注模式后颜色列表会更完整</div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.6}}>建议先扫描颜色统计，进入后颜色列表会更完整</div>
             </div>
           </div>
         )}
 
-        {/* 排列顺序 */}
+        {/* 颜色排列顺序 */}
         <div style={{background:T.card,borderRadius:18,padding:"14px 16px",marginBottom:12,border:`1.5px solid ${T.border}`}}>
           <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:10,letterSpacing:0.5}}>颜色排列顺序</div>
           <div style={{display:"flex",gap:8}}>
             {[["count-desc","多→少"],["count-asc","少→多"],["id-asc","色号序"]].map(([val,label])=>(
               <button key={val} onClick={()=>setSortOrder(val)}
-                style={{flex:1,padding:"9px 0",borderRadius:10,border:`1.5px solid ${sortOrder===val?T.accent:T.border}`,background:sortOrder===val?T.accent:T.card,color:sortOrder===val?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.15s"}}>
+                style={{flex:1,padding:"9px 0",borderRadius:10,border:`1.5px solid ${sortOrder===val?T.accent:T.border}`,background:sortOrder===val?T.accent:T.card,color:sortOrder===val?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                 {label}
               </button>
             ))}
           </div>
+        </div>
+
+        {/* 网格线设置 */}
+        <div style={{background:T.card,borderRadius:18,padding:"14px 16px",marginBottom:12,border:`1.5px solid ${T.border}`}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:showGrid?10:0}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:T.text}}>网格辅助线</div>
+              <div style={{fontSize:11,color:T.textMid,marginTop:2}}>每10格画一条线，方便定位</div>
+            </div>
+            <div onClick={()=>setShowGrid(v=>!v)}
+              style={{width:46,height:26,borderRadius:13,background:showGrid?T.accent:T.barBg,cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}>
+              <div style={{position:"absolute",top:3,left:showGrid?22:3,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.25)",transition:"left 0.2s"}}/>
+            </div>
+          </div>
+          {showGrid&&(
+            <div style={{display:"flex",gap:8}}>
+              {[52,78,104].map(s=>(
+                <button key={s} onClick={()=>setBoardSize(s)}
+                  style={{flex:1,padding:"8px 0",borderRadius:10,border:`1.5px solid ${boardSize===s?T.accent:T.border}`,background:boardSize===s?T.accent:T.card,color:boardSize===s?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  {s}×{s}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 自动扣库存 */}
@@ -1301,8 +1347,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit}){
           </div>
         </div>
       </div>
-
-      <div style={{padding:"16px 18px 36px",borderTop:`1px solid ${T.border}`}}>
+      <div style={{padding:"16px 18px 36px",borderTop:`1px solid ${T.border}`,flexShrink:0}}>
         <button onClick={startFocus}
           style={{width:"100%",padding:"15px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:900,cursor:"pointer",boxShadow:`0 4px 16px ${T.accent}50`}}>
           开始专注 🎯
@@ -1311,36 +1356,77 @@ function FocusMode({T,tn,task,onDeductStock,onExit}){
     </div>
   );
 
+  // ── 全部完成确认弹窗 ──
+  if(allDoneConfirm)return(
+    <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.65)",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px",fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{background:T.card,borderRadius:28,padding:"32px 24px",width:"100%",maxWidth:320,textAlign:"center"}}>
+        <div style={{fontSize:56,marginBottom:12}}>🎉</div>
+        <div style={{fontSize:18,fontWeight:900,color:T.text,marginBottom:8}}>全部拼完啦！</div>
+        <div style={{fontSize:13,color:T.textMid,marginBottom:24,lineHeight:1.6}}>恭喜完成「{task.name}」<br/>要标记为已完成吗？</div>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onExit} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>稍后再说</button>
+          <button onClick={handleAllDone} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>✓ 标记完成</button>
+        </div>
+      </div>
+    </div>
+  );
+
   // ── 专注拼豆页 ──
   const bgDark=tn==="night"?"#0a1520":"#1a1a2e";
   const drawerBg=tn==="night"?T.card:"#ffffff";
 
+  // 生成网格线SVG paths
+  function gridLines(){
+    const lines=[];
+    const step=100/boardSize*10; // % per 10 cells
+    for(let i=step;i<100;i+=step){
+      lines.push(<line key={`v${i}`} x1={`${i}%`} y1="0" x2={`${i}%`} y2="100%" stroke="rgba(255,80,80,0.55)" strokeWidth="0.8"/>);
+      lines.push(<line key={`h${i}`} x1="0" y1={`${i}%`} x2="100%" y2={`${i}%`} stroke="rgba(255,80,80,0.55)" strokeWidth="0.8"/>);
+    }
+    return lines;
+  }
+
   return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:bgDark,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
       {/* 顶部状态栏 */}
-      <div style={{padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(0,0,0,0.35)",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(0,0,0,0.35)",flexShrink:0,gap:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
           {activeColorInfo?(
-            <div style={{width:30,height:30,borderRadius:9,background:activeColorInfo.hex,border:"2px solid rgba(255,255,255,0.25)",boxShadow:"0 0 10px rgba(255,255,255,0.15)",flexShrink:0}}/>
+            <div style={{width:26,height:26,borderRadius:8,background:activeColorInfo.hex,border:"2px solid rgba(255,255,255,0.25)",flexShrink:0}}/>
           ):(
-            <div style={{width:30,height:30,borderRadius:9,background:"rgba(255,255,255,0.1)",flexShrink:0}}/>
+            <div style={{width:26,height:26,borderRadius:8,background:"rgba(255,255,255,0.1)",flexShrink:0}}/>
           )}
-          <div>
-            <div style={{fontSize:13,fontWeight:800,color:"#fff"}}>
-              {activeColor?`正在拼 ${activeColor}`:"点击颜色开始"}
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {activeColor?`拼 ${activeColor}`:"点颜色开始"}
             </div>
-            <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",marginTop:1}}>
-              已完成 {totalDone} 个 · 剩余 {totalLeft} 个
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.5)",marginTop:1}}>
+              已完成 {totalDone}/{totalDone+totalLeft}
             </div>
           </div>
         </div>
-        <button onClick={onExit} style={{background:"rgba(255,255,255,0.12)",border:"none",borderRadius:50,padding:"6px 16px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>退出</button>
+        <div style={{display:"flex",gap:6,flexShrink:0}}>
+          <button onClick={()=>setShowGrid(v=>!v)}
+            style={{background:showGrid?"rgba(255,80,80,0.3)":"rgba(255,255,255,0.1)",border:`1px solid ${showGrid?"rgba(255,80,80,0.6)":"rgba(255,255,255,0.2)"}`,borderRadius:20,padding:"5px 10px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            {showGrid?"格 ✓":"格"}
+          </button>
+          <button onClick={onExit} style={{background:"rgba(255,255,255,0.12)",border:"none",borderRadius:50,padding:"5px 14px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>退出</button>
+        </div>
       </div>
 
-      {/* 图纸大图区 */}
-      <div style={{flex:1,overflow:"auto",background:"#111",display:"flex",alignItems:"center",justifyContent:"center",WebkitOverflowScrolling:"touch"}}>
+      {/* 图纸大图区 + 网格线 */}
+      <div style={{flex:1,overflow:"auto",background:"#111",display:"flex",alignItems:"center",justifyContent:"center",WebkitOverflowScrolling:"touch",position:"relative"}}>
         {task.img?(
-          <img src={task.img} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain",userSelect:"none",touchAction:"pinch-zoom"}} alt="图纸"/>
+          <div style={{position:"relative",display:"inline-block",lineHeight:0}}>
+            <img ref={imgRef} src={task.img}
+              style={{display:"block",maxWidth:"100vw",maxHeight:"calc(100vh - 200px)",objectFit:"contain",userSelect:"none",touchAction:"pinch-zoom"}}
+              onLoad={onImgLoad} alt="图纸"/>
+            {showGrid&&imgRef.current&&(
+              <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}>
+                {gridLines()}
+              </svg>
+            )}
+          </div>
         ):(
           <div style={{color:"rgba(255,255,255,0.25)",textAlign:"center"}}>
             <div style={{fontSize:48,marginBottom:10}}>🖼️</div>
@@ -1351,68 +1437,79 @@ function FocusMode({T,tn,task,onDeductStock,onExit}){
 
       {/* 底部抽屉 */}
       <div style={{background:drawerBg,borderRadius:"20px 20px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,0.35)",flexShrink:0}}>
-        {/* 把手 */}
-        <div style={{padding:"10px 16px 0",display:"flex",flexDirection:"column",gap:0}} onClick={()=>setDrawerOpen(v=>!v)}>
-          <div style={{width:36,height:4,borderRadius:2,background:T.border,margin:"0 auto 8px",cursor:"pointer"}}/>
+        {/* 把手 + 当前颜色操作行（始终显示） */}
+        <div style={{padding:"8px 16px 6px"}}>
+          <div style={{width:36,height:4,borderRadius:2,background:"rgba(0,0,0,0.12)",margin:"0 auto 8px",cursor:"pointer"}} onClick={()=>setDrawerOpen(v=>!v)}/>
+          {activeColor&&(
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:activeColorInfo?.hex||"#ccc",border:`2px solid ${T.border}`,flexShrink:0,boxShadow:`0 0 0 3px ${T.accent}30`}}/>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:800,color:T.text}}>{activeColor}</div>
+                <div style={{fontSize:11,color:T.textMid}}>共 {activeColorData?.count||0} 粒</div>
+              </div>
+              <button onClick={()=>markDone(activeColor)}
+                style={{padding:"8px 16px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",boxShadow:"0 2px 8px rgba(76,175,80,0.35)",flexShrink:0}}>
+                ✓ 拼完了
+              </button>
+            </div>
+          )}
+          {!activeColor&&sorted.length===0&&(
+            <div style={{textAlign:"center",padding:"8px 0",fontSize:14,fontWeight:800,color:"#4caf50"}}>🎉 全部拼完啦！</div>
+          )}
         </div>
 
-        {/* 当前颜色操作行 */}
-        {activeColor&&(
-          <div style={{padding:"4px 16px 10px",display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:38,height:38,borderRadius:11,background:activeColorInfo?.hex||"#ccc",border:`2px solid ${T.border}`,flexShrink:0,boxShadow:`0 0 0 3px ${T.accent}30`}}/>
-            <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:800,color:T.text}}>{activeColor}</div>
-              <div style={{fontSize:11,color:T.textMid}}>共 {activeColorData?.count||0} 粒</div>
-            </div>
-            <button onClick={()=>markDone(activeColor)}
-              style={{padding:"9px 18px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",boxShadow:"0 2px 10px rgba(76,175,80,0.4)",flexShrink:0}}>
-              ✓ 拼完了
-            </button>
-          </div>
-        )}
-
-        {/* 颜色列表：收起=横向滚动行，展开=网格 */}
+        {/* 收起状态：横向滚动色块 */}
         {!drawerOpen&&(
-          <div style={{padding:"4px 16px 20px",display:"flex",alignItems:"center",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+          <div style={{padding:"6px 10px 16px",display:"flex",alignItems:"center",gap:6}}>
             <style>{`.fscroll::-webkit-scrollbar{display:none}`}</style>
-            <div className="fscroll" style={{display:"flex",gap:8,flexShrink:0}}>
+            <div className="fscroll" style={{display:"flex",gap:6,overflowX:"auto",flex:1,WebkitOverflowScrolling:"touch"}}>
               {sorted.map(c=>{
                 const info=ALL_COLORS.find(x=>x.id===c.id);
                 const isAct=c.id===activeColor;
+                const rgb=info?[parseInt(info.hex.slice(1,3),16),parseInt(info.hex.slice(3,5),16),parseInt(info.hex.slice(5,7),16)]:[180,180,180];
+                const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000;
+                const txt=bright>140?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
                 return(
-                  <div key={c.id} onClick={()=>setActiveColor(c.id)}
-                    style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",transform:isAct?"scale(1.12)":"scale(1)",transition:"transform 0.15s"}}>
-                    <div style={{width:38,height:38,borderRadius:11,background:info?.hex||"#ccc",border:`2.5px solid ${isAct?T.accent:"transparent"}`,boxShadow:isAct?`0 0 0 3px ${T.accent}40`:"none"}}/>
-                    <div style={{fontSize:9,fontWeight:700,color:T.text}}>{c.id}</div>
-                    <div style={{fontSize:8,color:T.textMid}}>{c.count}粒</div>
+                  <div key={c.id} onClick={()=>setActiveColor(c.id)} style={{flexShrink:0,borderRadius:10,overflow:"hidden",border:`2px solid ${isAct?T.accent:"transparent"}`,cursor:"pointer",transform:isAct?"scale(1.08)":"scale(1)",transition:"transform 0.15s",width:44}}>
+                    <div style={{background:T.accentSoft,padding:"2px 4px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{fontSize:9,fontWeight:800,color:T.accent,flex:1,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.id}</span>
+                    </div>
+                    <div style={{background:info?.hex||"#ccc",aspectRatio:"1/1",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <span style={{fontSize:10,fontWeight:900,color:txt}}>{c.count}</span>
+                    </div>
                   </div>
                 );
               })}
-              {sorted.length===0&&(
-                <div style={{color:T.textMid,fontSize:13,padding:"8px 4px",fontWeight:700}}>🎉 全部完成！</div>
-              )}
+              {sorted.length===0&&<div style={{color:T.textMid,fontSize:12,padding:"4px 8px",fontWeight:700,whiteSpace:"nowrap"}}>🎉 全部完成！</div>}
             </div>
-            <div onClick={e=>{e.stopPropagation();setDrawerOpen(true);}} style={{flexShrink:0,width:28,height:28,borderRadius:"50%",background:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",marginLeft:4,fontSize:13,color:T.accent,fontWeight:800}}>↑</div>
+            <div onClick={()=>setDrawerOpen(true)} style={{flexShrink:0,width:28,height:28,borderRadius:"50%",background:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:13,color:T.accent,fontWeight:800}}>↑</div>
           </div>
         )}
 
-        {/* 展开的完整列表 */}
+        {/* 展开：p5风格大卡片网格 */}
         {drawerOpen&&(
-          <div style={{maxHeight:"46vh",overflowY:"auto",padding:"4px 16px 24px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{maxHeight:"45vh",overflowY:"auto"}}>
+            <div style={{padding:"4px 12px 6px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div style={{fontSize:11,color:T.textMid,fontWeight:600}}>剩余 {sorted.length} 个颜色</div>
               <button onClick={()=>setDrawerOpen(false)} style={{background:"none",border:"none",fontSize:12,color:T.accent,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700}}>收起 ↓</button>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,padding:"0 12px 20px"}}>
               {sorted.map(c=>{
                 const info=ALL_COLORS.find(x=>x.id===c.id);
                 const isAct=c.id===activeColor;
+                const bg=info?.hex||"#ccc";
+                const rgb=info?[parseInt(bg.slice(1,3),16),parseInt(bg.slice(3,5),16),parseInt(bg.slice(5,7),16)]:[180,180,180];
+                const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000;
+                const txt=bright>140?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
                 return(
                   <div key={c.id} onClick={()=>{setActiveColor(c.id);setDrawerOpen(false);}}
-                    style={{background:isAct?T.accentSoft:T.card,border:`1.5px solid ${isAct?T.accent:T.border}`,borderRadius:12,padding:"8px 6px",cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
-                    <div style={{width:"100%",aspectRatio:"1",borderRadius:8,background:info?.hex||"#ccc",marginBottom:4,border:"1px solid rgba(0,0,0,0.08)"}}/>
-                    <div style={{fontSize:10,fontWeight:800,color:T.text}}>{c.id}</div>
-                    <div style={{fontSize:9,color:T.textMid,marginTop:1}}>{c.count}粒</div>
+                    style={{borderRadius:12,overflow:"hidden",border:`2px solid ${isAct?T.accent:"transparent"}`,cursor:"pointer",boxShadow:isAct?`0 0 0 2px ${T.accent}40`:"none"}}>
+                    <div style={{background:isAct?T.accent:T.accentSoft,padding:"3px 8px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{flex:1,fontSize:11,fontWeight:800,color:isAct?"#fff":T.accent,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.id}</span>
+                    </div>
+                    <div style={{background:bg,padding:"8px 4px",display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1/1"}}>
+                      <span style={{fontSize:16,fontWeight:900,color:txt}}>{c.count}</span>
+                    </div>
                   </div>
                 );
               })}
@@ -1534,6 +1631,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock}){
   // 专注模式全屏
   if(view==="focus"&&focusTask)return(
     <FocusMode T={T} tn={tn} task={focusTask} onDeductStock={onDeductStock}
+      onComplete={()=>doneTask(focusTask.id)}
       onExit={()=>{setView("home");setFocusTask(null);}}/>
   );
 
@@ -1595,12 +1693,6 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock}){
                 </div>
                 <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
                   <button onClick={closeAddModal} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
-                  {newImg&&(
-                    <button onClick={saveNewTask} disabled={!newName.trim()}
-                      style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:newName.trim()?T.card:"#ccc",color:newName.trim()?T.accent:T.textLight,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
-                      仅存图
-                    </button>
-                  )}
                   <button onClick={saveNewTask} disabled={!newName.trim()}
                     style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
                     {newColorData.length>0?"保存图纸 ✓":"保存图纸"}
@@ -1814,34 +1906,13 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
       </div>
 
       <div style={{padding:"16px 16px 0"}}>
-        {/* 数据管理 */}
-        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
-          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>📦 数据管理</div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div className="cc" onClick={onExport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer",position:"relative"}}>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬇️ 导出数据</div>
-                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>备份库存数据为JSON文件</div>
-              </div>
-              <span style={{fontSize:18,color:T.textLight}}>›</span>
-            </div>
-            <div className="cc" onClick={onImport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer",position:"relative"}}>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬆️ 导入数据</div>
-                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>从备份文件恢复库存数据</div>
-              </div>
-              <span style={{fontSize:18,color:T.textLight}}>›</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 升级/Pro状态 */}
+        {/* 升级/Pro状态 — 放在最上面 */}
         {!isPro&&(
           <div className="cc" onClick={onUpgrade} style={{background:`linear-gradient(135deg,#fff8ec,#f5f0ff)`,border:`1.5px solid #ffd166`,borderRadius:20,padding:"16px",marginBottom:12,cursor:"pointer",boxShadow:"0 4px 16px rgba(255,209,102,0.2)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div>
                 <div style={{fontSize:13,fontWeight:900,color:"#b87c00",marginBottom:4}}>🌟 升级 Pro</div>
-                <div style={{fontSize:11,color:"#9a6a00",lineHeight:1.6}}>解锁专注模式、AI识图<br/>和数据导出备份功能</div>
+                <div style={{fontSize:11,color:"#9a6a00",lineHeight:1.6}}>解锁专注模式、AI识图<br/>和云同步功能</div>
               </div>
               <div style={{background:"linear-gradient(135deg,#ffd166,#ffb347)",borderRadius:14,padding:"8px 14px",fontSize:12,fontWeight:800,color:"#fff",boxShadow:"0 2px 8px rgba(255,180,70,0.4)"}}>查看 ›</div>
             </div>
@@ -1853,6 +1924,27 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
             <div style={{fontSize:11,color:"#9a6a00",marginTop:3}}>全功能已解锁，享受拼豆乐趣～</div>
           </div>
         )}
+
+        {/* 数据管理 */}
+        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
+          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>📦 数据管理</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div className="cc" onClick={onExport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬇️ 导出数据</div>
+                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>备份库存数据为JSON文件</div>
+              </div>
+              <span style={{fontSize:18,color:T.textLight}}>›</span>
+            </div>
+            <div className="cc" onClick={onImport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬆️ 导入数据</div>
+                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>从备份文件恢复库存数据</div>
+              </div>
+              <span style={{fontSize:18,color:T.textLight}}>›</span>
+            </div>
+          </div>
+        </div>
 
         {/* 退出登录 */}
         <button className="btn" onClick={onLogout}
