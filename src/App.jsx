@@ -302,468 +302,471 @@ export default function App(){
     });
     return()=>subscription.unsubscribe();
   },[]);
+
+
   const [isPro,setIsPro]=useState(false);
-const [showUpgrade,setShowUpgrade]=useState(false);
+  const [showUpgrade,setShowUpgrade]=useState(false);
 
-const [stock,setStock]=useState(INIT_STOCK);
-const [used,setUsed]=useState(INIT_USED);
-const [syncLoading,setSyncLoading]=useState(false);
-const [syncStatus,setSyncStatus]=useState(""); // "ok" | "err" | ""
-const [cloudReady,setCloudReady]=useState(false);
-const [page,setPage]=useState("home");
+  const [stock,setStock]=useState(INIT_STOCK);
+  const [used,setUsed]=useState(INIT_USED);
+  const [syncLoading,setSyncLoading]=useState(false);
+  const [syncStatus,setSyncStatus]=useState(""); // "ok" | "err" | ""
+  const [cloudReady,setCloudReady]=useState(false);
+  const [page,setPage]=useState("home");
 
-// 专注模式
-const [focusMode,setFocusMode]=useState(false);
-const [focusColor,setFocusColor]=useState(null);
+  // 专注模式
+  const [focusMode,setFocusMode]=useState(false);
+  const [focusColor,setFocusColor]=useState(null);
 
-// 登录后从云端拉数据
-useEffect(()=>{
-  if(!user){setCloudReady(false);setIsPro(false);return;}
-  setCloudReady(false);
-  async function loadCloud(){
-    setSyncLoading(true);
-    // 拉库存
-    const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
-    // 拉plan
-    const {data:profile}=await supabase.from("profiles").select("plan").eq("id",user.id).single();
-    if(profile?.plan==="pro")setIsPro(true);
-    if(error){
-      setSyncStatus("err");
-      try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
-      try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
-    }else if(data&&data.length>0){
-      const ns={...INIT_STOCK},nu={...INIT_USED};
-      data.forEach(r=>{
-        if(ns[r.color]!==undefined)ns[r.color]=r.quantity;
-        if(nu[r.color]!==undefined)nu[r.color]=r.used||0;
+  // 登录后从云端拉数据
+  useEffect(()=>{
+    if(!user){setCloudReady(false);setIsPro(false);return;}
+    setCloudReady(false);
+    async function loadCloud(){
+      setSyncLoading(true);
+      // 拉库存
+      const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
+      // 拉plan
+      const {data:profile}=await supabase.from("profiles").select("plan, role").eq("id",user.id).single();
+if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
+      if(error){
+        setSyncStatus("err");
+        try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
+        try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
+      }else if(data&&data.length>0){
+        const ns={...INIT_STOCK},nu={...INIT_USED};
+        data.forEach(r=>{
+          if(ns[r.color]!==undefined)ns[r.color]=r.quantity;
+          if(nu[r.color]!==undefined)nu[r.color]=r.used||0;
+        });
+        setStock(ns);setUsed(nu);
+        setSyncStatus("ok");
+      }else{
+        try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
+        try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
+        setSyncStatus("ok");
+      }
+      setSyncLoading(false);
+      setCloudReady(true);
+    }
+    loadCloud();
+  },[user]);
+
+  // 云端写回（stock+used一起）
+  const syncTimer=useRef(null);
+  useEffect(()=>{
+    if(!user||!cloudReady)return;
+    clearTimeout(syncTimer.current);
+    syncTimer.current=setTimeout(async()=>{
+      const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity,used:used[color]||0}));
+      const {error}=await supabase.from("stock").upsert(rows,{onConflict:"user_id,color"});
+      if(error){setSyncStatus("err");console.error("sync error:",error);}
+      else setSyncStatus("ok");
+    },1500);
+  },[stock,used,cloudReady]);
+  const [search,setSearch]=useState("");
+  const [sort,setSort]=useState("id-asc");
+  const [fSeries,setFSeries]=useState(null);
+
+  const [wL,setWL]=useState(500);
+  const [wC,setWC]=useState(200);
+  const [history,setHistory]=useState([]); // [{stock,used}]
+  const MAX_HISTORY=20;
+  const [batch,setBatch]=useState(false);
+  const [sel,setSel]=useState(new Set());
+  const [bAmt,setBAmt]=useState("");
+  const [bDir,setBDir]=useState("-");
+  const [cmdText,setCmdText]=useState("");
+  const [cmdErr,setCmdErr]=useState("");
+  const [cmdTags,setCmdTags]=useState([]); // [{id,dir,amt}] 识图结果tag模式
+  const [imgLoading,setImgLoading]=useState(false);
+  const [imgErr,setImgErr]=useState("");
+  const imgRef=useRef(null);
+
+  const critC=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wC);
+  const lowC=ALL_COLORS.filter(c=>Math.round(stock[c.id])>=wC&&Math.round(stock[c.id])<wL);
+  const sUsed=useMemo(()=>SERIES.map(s=>({s,total:ALL_COLORS.filter(c=>c.id.startsWith(s)).reduce((sum,c)=>sum+used[c.id],0)})).sort((a,b)=>b.total-a.total),[used]);
+  const top5=sUsed.filter(x=>x.total>0).slice(0,5);
+  const maxU=top5[0]?.total||1;
+
+  const filtered=useMemo(()=>{
+    let l=[...ALL_COLORS];
+    if(fSeries)l=l.filter(c=>c.id.startsWith(fSeries));
+    if(search.trim())l=l.filter(c=>c.id.toLowerCase().includes(search.trim().toLowerCase()));
+    if(sort==="id-asc")l.sort((a,b)=>a.id.localeCompare(b.id));
+    else if(sort==="id-desc")l.sort((a,b)=>b.id.localeCompare(a.id));
+    else if(sort==="stock-asc")l.sort((a,b)=>stock[a.id]-stock[b.id]);
+    else if(sort==="stock-desc")l.sort((a,b)=>stock[b.id]-stock[a.id]);
+    else if(sort==="used-desc")l.sort((a,b)=>used[b.id]-used[a.id]);
+    return l;
+  },[search,sort,stock,used,fSeries]);
+
+
+
+  function getStatus(id){if(gToBeads(stock[id])<wC)return"c";if(gToBeads(stock[id])<wL)return"l";return"ok";}
+  function goS(s){setFSeries(s);setSort("used-desc");setSearch("");setPage("stock");}
+  function toggleSel(id){setSel(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});}
+  function applyBatch(){
+    const amt=parseFloat(bAmt);if(isNaN(amt)||amt<=0)return;
+    pushHistory(stock,used);
+    const ns={...stock},nu={...used};
+    sel.forEach(id=>{if(bDir==="-"){const d=Math.min(ns[id],amt);nu[id]+=d;ns[id]=Math.max(0,ns[id]-amt);}else{ns[id]+=amt;}});
+    setStock(ns);setUsed(nu);setSel(new Set());setBAmt("");setBatch(false);
+  }
+  function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");setCmdTags([]);}
+
+  function applyTags(){
+    if(cmdTags.length===0)return;
+    const ns={...stock},nu={...used};
+    cmdTags.forEach(({id,dir,amt})=>{
+      const a=parseFloat(amt);
+      if(isNaN(a)||a<=0)return;
+      const ids=id==="全部"?ALL_COLORS.map(c=>c.id):[id].filter(i=>ALL_COLORS.find(c=>c.id===i));
+      ids.forEach(i=>{
+        if(dir==="-"){const d=Math.min(ns[i]||0,a);nu[i]=(nu[i]||0)+d;ns[i]=Math.max(0,(ns[i]||0)-a);}
+        else{ns[i]=(ns[i]||0)+a;}
       });
-      setStock(ns);setUsed(nu);
-      setSyncStatus("ok");
-    }else{
-      try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
-      try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
-      setSyncStatus("ok");
-    }
-    setSyncLoading(false);
-    setCloudReady(true);
-  }
-  loadCloud();
-},[user]);
-
-// 云端写回（stock+used一起）
-const syncTimer=useRef(null);
-useEffect(()=>{
-  if(!user||!cloudReady)return;
-  clearTimeout(syncTimer.current);
-  syncTimer.current=setTimeout(async()=>{
-    const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity,used:used[color]||0}));
-    const {error}=await supabase.from("stock").upsert(rows,{onConflict:"user_id,color"});
-    if(error){setSyncStatus("err");console.error("sync error:",error);}
-    else setSyncStatus("ok");
-  },1500);
-},[stock,used,cloudReady]);
-const [search,setSearch]=useState("");
-const [sort,setSort]=useState("id-asc");
-const [fSeries,setFSeries]=useState(null);
-
-const [wL,setWL]=useState(500);
-const [wC,setWC]=useState(200);
-const [history,setHistory]=useState([]); // [{stock,used}]
-const MAX_HISTORY=20;
-const [batch,setBatch]=useState(false);
-const [sel,setSel]=useState(new Set());
-const [bAmt,setBAmt]=useState("");
-const [bDir,setBDir]=useState("-");
-const [cmdText,setCmdText]=useState("");
-const [cmdErr,setCmdErr]=useState("");
-const [cmdTags,setCmdTags]=useState([]); // [{id,dir,amt}] 识图结果tag模式
-const [imgLoading,setImgLoading]=useState(false);
-const [imgErr,setImgErr]=useState("");
-const imgRef=useRef(null);
-
-const critC=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wC);
-const lowC=ALL_COLORS.filter(c=>Math.round(stock[c.id])>=wC&&Math.round(stock[c.id])<wL);
-const sUsed=useMemo(()=>SERIES.map(s=>({s,total:ALL_COLORS.filter(c=>c.id.startsWith(s)).reduce((sum,c)=>sum+used[c.id],0)})).sort((a,b)=>b.total-a.total),[used]);
-const top5=sUsed.filter(x=>x.total>0).slice(0,5);
-const maxU=top5[0]?.total||1;
-
-const filtered=useMemo(()=>{
-  let l=[...ALL_COLORS];
-  if(fSeries)l=l.filter(c=>c.id.startsWith(fSeries));
-  if(search.trim())l=l.filter(c=>c.id.toLowerCase().includes(search.trim().toLowerCase()));
-  if(sort==="id-asc")l.sort((a,b)=>a.id.localeCompare(b.id));
-  else if(sort==="id-desc")l.sort((a,b)=>b.id.localeCompare(a.id));
-  else if(sort==="stock-asc")l.sort((a,b)=>stock[a.id]-stock[b.id]);
-  else if(sort==="stock-desc")l.sort((a,b)=>stock[b.id]-stock[a.id]);
-  else if(sort==="used-desc")l.sort((a,b)=>used[b.id]-used[a.id]);
-  return l;
-},[search,sort,stock,used,fSeries]);
-
-
-
-function getStatus(id){if(gToBeads(stock[id])<wC)return"c";if(gToBeads(stock[id])<wL)return"l";return"ok";}
-function goS(s){setFSeries(s);setSort("used-desc");setSearch("");setPage("stock");}
-function toggleSel(id){setSel(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});}
-function applyBatch(){
-  const amt=parseFloat(bAmt);if(isNaN(amt)||amt<=0)return;
-  pushHistory(stock,used);
-  const ns={...stock},nu={...used};
-  sel.forEach(id=>{if(bDir==="-"){const d=Math.min(ns[id],amt);nu[id]+=d;ns[id]=Math.max(0,ns[id]-amt);}else{ns[id]+=amt;}});
-  setStock(ns);setUsed(nu);setSel(new Set());setBAmt("");setBatch(false);
-}
-function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");setCmdTags([]);}
-
-function applyTags(){
-  if(cmdTags.length===0)return;
-  const ns={...stock},nu={...used};
-  cmdTags.forEach(({id,dir,amt})=>{
-    const a=parseFloat(amt);
-    if(isNaN(a)||a<=0)return;
-    const ids=id==="全部"?ALL_COLORS.map(c=>c.id):[id].filter(i=>ALL_COLORS.find(c=>c.id===i));
-    ids.forEach(i=>{
-      if(dir==="-"){const d=Math.min(ns[i]||0,a);nu[i]=(nu[i]||0)+d;ns[i]=Math.max(0,(ns[i]||0)-a);}
-      else{ns[i]=(ns[i]||0)+a;}
     });
-  });
-  pushHistory(stock,used);
-  setStock(ns);setUsed(nu);
-  setCmdTags([]);setBatch(false);setSel(new Set());
-}
+    pushHistory(stock,used);
+    setStock(ns);setUsed(nu);
+    setCmdTags([]);setBatch(false);setSel(new Set());
+  }
 
-const [cropImg,setCropImg]=useState(null); // 裁剪用的原图base64
-const [cropBox,setCropBox]=useState(null); // {x,y,w,h} 相对于显示尺寸
-const [cropDrag,setCropDrag]=useState(null); // 拖拽状态
-const cropCanvasRef=useRef(null);
-const cropImgRef=useRef(null);
+  const [cropImg,setCropImg]=useState(null); // 裁剪用的原图base64
+  const [cropBox,setCropBox]=useState(null); // {x,y,w,h} 相对于显示尺寸
+  const [cropDrag,setCropDrag]=useState(null); // 拖拽状态
+  const cropCanvasRef=useRef(null);
+  const cropImgRef=useRef(null);
 
-async function handleImg(e){
-  const file=e.target.files[0];
-  if(!file)return;
-  const url=URL.createObjectURL(file);
-  const img=new Image();
-  img.onload=()=>{
-    const canvas=document.createElement('canvas');
-    const max=1600;let w=img.width,h=img.height;
-    if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
-    canvas.width=w;canvas.height=h;
-    canvas.getContext('2d').drawImage(img,0,0,w,h);
-    URL.revokeObjectURL(url);
-    setCropImg(canvas.toDataURL('image/jpeg',0.9));
-    setCropBox(null);
-  };
-  img.src=url;
-  e.target.value="";
-}
-
-async function confirmCrop(){
-  if(!cropImg)return;
-  setImgLoading(true);setImgErr("");
-  try{
-    let finalB64=cropImg;
-    if(cropBox&&cropImgRef.current){
-      const el=cropImgRef.current;
-      const scaleX=el.naturalWidth/el.clientWidth;
-      const scaleY=el.naturalHeight/el.clientHeight;
+  async function handleImg(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
       const canvas=document.createElement('canvas');
-      canvas.width=Math.round(cropBox.w*scaleX);
-      canvas.height=Math.round(cropBox.h*scaleY);
-      const ctx=canvas.getContext('2d');
-      const imgEl=new Image();
-      await new Promise(res=>{imgEl.onload=res;imgEl.src=cropImg;});
-      ctx.drawImage(imgEl,Math.round(cropBox.x*scaleX),Math.round(cropBox.y*scaleY),canvas.width,canvas.height,0,0,canvas.width,canvas.height);
-      finalB64=canvas.toDataURL('image/jpeg',0.92);
-    }
-    setCropImg(null);setCropBox(null);
-    const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:finalB64})});
-    const data=await resp.json();
-    if(data.result&&data.result!=='无法识别'){
-      // 解析成tags
-      const tags=data.result.split(/[,，]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
-        const m=s.match(/^([A-Za-z]+\d+|全部)\s*([+-])\s*(\d+)$/i);
-        if(!m)return null;
-        return {id:m[1].toUpperCase(),dir:m[2],amt:m[3]};
-      }).filter(Boolean);
-      if(tags.length>0){setCmdTags(tags);setCmdText("");setCmdErr("");}
-      else{setImgErr("识别失败，试试框选统计表区域再识别～");}
-    }else{setImgErr("识别失败，试试框选统计表区域再识别～");}
-  }catch(err){setImgErr("请求出错："+err.message);}
-  finally{setImgLoading(false);}
-}
-
-function applyCmd(){
-  const raw=cmdText.trim();
-  if(!raw)return;
-  // 支持多条指令用逗号/换行分隔，格式：A15-200 / B3+500 / 全部-100
-  const lines=raw.split(/[,，\n]+/).map(s=>s.trim()).filter(Boolean);
-  const ns={...stock},nu={...used};
-  let hasErr=false;
-  lines.forEach(line=>{
-    const m=line.match(/^(全部|[A-Za-z]\d+)\s*([+-])\s*(\d+)$/i);
-    if(!m){hasErr=true;return;}
-    const [,target,dir,amtStr]=m;
-    const amt=parseFloat(amtStr);
-    if(isNaN(amt)||amt<=0){hasErr=true;return;}
-    const ids=target==="全部"?ALL_COLORS.map(c=>c.id):[target.toUpperCase()].filter(id=>ALL_COLORS.find(c=>c.id===id));
-    if(ids.length===0){hasErr=true;return;}
-    ids.forEach(id=>{
-      if(dir==="-"){const d=Math.min(ns[id]||0,amt);nu[id]=(nu[id]||0)+d;ns[id]=Math.max(0,(ns[id]||0)-amt);}
-      else{ns[id]=(ns[id]||0)+amt;}
-    });
-  });
-  if(hasErr){setCmdErr("部分指令格式有误，请检查～例：A15-200 或 全部+100");return;}
-  pushHistory(stock,used);
-  setStock(ns);setUsed(nu);
-  setCmdText("");setCmdErr("");setBatch(false);setSel(new Set());
-}
-
-
-
-
-
-
-const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
-
-function pushHistory(s,u){setHistory(h=>[...h.slice(-MAX_HISTORY+1),{stock:{...s},used:{...u}}]);}
-
-const saveStock=useCallback((id,beads)=>{
-  pushHistory(stock,used);
-  const diff=(stock[id]||0)-beads;
-  if(diff>0){setUsed(u=>({...u,[id]:(u[id]||0)+diff}));}
-  setStock(s=>({...s,[id]:beads}));
-},[stock,used]);
-const deductStock=useCallback((id,beads)=>{
-  pushHistory(stock,used);
-  setStock(s=>({...s,[id]:Math.max(0,(s[id]||0)-beads)}));
-  setUsed(u=>({...u,[id]:(u[id]||0)+beads}));
-},[stock,used]);
-function undoLast(){
-  setHistory(h=>{
-    if(h.length===0)return h;
-    const prev=h[h.length-1];
-    setStock(prev.stock);
-    setUsed(prev.used);
-    return h.slice(0,-1);
-  });
-}
-const [resetConfirm,setResetConfirm]=useState(false);
-const [resetKey,setResetKey]=useState(0);
-async function resetData(){
-  if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
-  setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
-  localStorage.removeItem('pindou_stock');localStorage.removeItem('pindou_used');
-  localStorage.removeItem('pindou_tasks');
-  if(user){
-    await supabase.from('stock').delete().eq('user_id',user.id);
-    await supabase.from('profiles').update({tasks:[]}).eq('id',user.id);
+      const max=1600;let w=img.width,h=img.height;
+      if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      setCropImg(canvas.toDataURL('image/jpeg',0.9));
+      setCropBox(null);
+    };
+    img.src=url;
+    e.target.value="";
   }
-  setResetConfirm(false);
-  setResetKey(k=>k+1);
-}
 
-function exportData(){
-  const data={stock,used,exportedAt:new Date().toISOString()};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=`拼豆记_备份_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.json`;
-  a.click();URL.revokeObjectURL(url);
-}
-
-const importRef=useRef(null);
-function importData(e){
-  const file=e.target.files[0];if(!file)return;
-  const r=new FileReader();
-  r.onload=ev=>{
+  async function confirmCrop(){
+    if(!cropImg)return;
+    setImgLoading(true);setImgErr("");
     try{
-      const d=JSON.parse(ev.target.result);
-      if(d.stock)setStock(d.stock);
-      if(d.used)setUsed(d.used);
-      alert('导入成功！数据已恢复～');
-    }catch{alert('文件格式有误，请使用导出的备份文件～');}
-  };
-  r.readAsText(file);
-  e.target.value='';
-}
-const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL,focusMode,focusColor,onFocusClick:handleFocusClick};
+      let finalB64=cropImg;
+      if(cropBox&&cropImgRef.current){
+        const el=cropImgRef.current;
+        const scaleX=el.naturalWidth/el.clientWidth;
+        const scaleY=el.naturalHeight/el.clientHeight;
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.round(cropBox.w*scaleX);
+        canvas.height=Math.round(cropBox.h*scaleY);
+        const ctx=canvas.getContext('2d');
+        const imgEl=new Image();
+        await new Promise(res=>{imgEl.onload=res;imgEl.src=cropImg;});
+        ctx.drawImage(imgEl,Math.round(cropBox.x*scaleX),Math.round(cropBox.y*scaleY),canvas.width,canvas.height,0,0,canvas.width,canvas.height);
+        finalB64=canvas.toDataURL('image/jpeg',0.92);
+      }
+      setCropImg(null);setCropBox(null);
+      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:finalB64})});
+      const data=await resp.json();
+      if(data.result&&data.result!=='无法识别'){
+        // 解析成tags
+        const tags=data.result.split(/[,，]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
+          const m=s.match(/^([A-Za-z]+\d+|全部)\s*([+-])\s*(\d+)$/i);
+          if(!m)return null;
+          return {id:m[1].toUpperCase(),dir:m[2],amt:m[3]};
+        }).filter(Boolean);
+        if(tags.length>0){setCmdTags(tags);setCmdText("");setCmdErr("");}
+        else{setImgErr("识别失败，试试框选统计表区域再识别～");}
+      }else{setImgErr("识别失败，试试框选统计表区域再识别～");}
+    }catch(err){setImgErr("请求出错："+err.message);}
+    finally{setImgLoading(false);}
+  }
 
-function handleFocusClick(id){
-  setFocusColor(prev=>prev===id?null:id);
-}
-function exitFocusMode(){setFocusMode(false);setFocusColor(null);}
-function focusNav(dir){
-  const idx=filtered.findIndex(c=>c.id===focusColor);
-  if(idx===-1){setFocusColor(filtered[0]?.id||null);return;}
-  const next=filtered[(idx+dir+filtered.length)%filtered.length];
-  if(next)setFocusColor(next.id);
-}
+  function applyCmd(){
+    const raw=cmdText.trim();
+    if(!raw)return;
+    // 支持多条指令用逗号/换行分隔，格式：A15-200 / B3+500 / 全部-100
+    const lines=raw.split(/[,，\n]+/).map(s=>s.trim()).filter(Boolean);
+    const ns={...stock},nu={...used};
+    let hasErr=false;
+    lines.forEach(line=>{
+      const m=line.match(/^(全部|[A-Za-z]\d+)\s*([+-])\s*(\d+)$/i);
+      if(!m){hasErr=true;return;}
+      const [,target,dir,amtStr]=m;
+      const amt=parseFloat(amtStr);
+      if(isNaN(amt)||amt<=0){hasErr=true;return;}
+      const ids=target==="全部"?ALL_COLORS.map(c=>c.id):[target.toUpperCase()].filter(id=>ALL_COLORS.find(c=>c.id===id));
+      if(ids.length===0){hasErr=true;return;}
+      ids.forEach(id=>{
+        if(dir==="-"){const d=Math.min(ns[id]||0,amt);nu[id]=(nu[id]||0)+d;ns[id]=Math.max(0,(ns[id]||0)-amt);}
+        else{ns[id]=(ns[id]||0)+amt;}
+      });
+    });
+    if(hasErr){setCmdErr("部分指令格式有误，请检查～例：A15-200 或 全部+100");return;}
+    pushHistory(stock,used);
+    setStock(ns);setUsed(nu);
+    setCmdText("");setCmdErr("");setBatch(false);setSel(new Set());
+  }
 
-async function handleLogout(){
-  await supabase.auth.signOut();
-  setUser(null);
-}
 
-if(authLoading)return(
-  <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",fontSize:16,color:T.textMid,fontWeight:700}}>
-    Loading… 🫘
-  </div>
-);
-if(!user)return <AuthPage T={T} tn={tn} onLogin={setUser}/>;
 
-return(
-  <>
-    <style>{G}</style>
-    {showUpgrade&&<UpgradeModal T={T} onClose={()=>setShowUpgrade(false)}/>}
-    <div className="tt" style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
 
-      {/* 裁剪弹窗 */}
-      {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
-        <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10}}>拖拽边框调整选区 · 框选统计表区域</div>
-        <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:12}}
-          onPointerMove={ev=>{
-            if(!cropDrag||!cropImgRef.current)return;
-            const el=cropImgRef.current.getBoundingClientRect();
-            const cx=Math.max(0,Math.min(ev.clientX-el.left,el.width));
-            const cy=Math.max(0,Math.min(ev.clientY-el.top,el.height));
-            const dx=cx-cropDrag.lastX, dy=cy-cropDrag.lastY;
-            setCropBox(b=>{
-              if(!b)return b;
-              let {x,y,w,h}=b;
-              const minS=30;
-              if(cropDrag.type==="move"){
-                x=Math.max(0,Math.min(x+dx,el.width-w));
-                y=Math.max(0,Math.min(y+dy,el.height-h));
-              }else{
-                if(cropDrag.type.includes("l")){const nx=Math.min(x+dx,x+w-minS);w=w-(nx-x);x=nx;}
-                if(cropDrag.type.includes("r")){w=Math.max(minS,Math.min(w+dx,el.width-x));}
-                if(cropDrag.type.includes("t")){const ny=Math.min(y+dy,y+h-minS);h=h-(ny-y);y=ny;}
-                if(cropDrag.type.includes("b")){h=Math.max(minS,Math.min(h+dy,el.height-y));}
-              }
-              return {x,y,w,h};
-            });
-            setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
-          }}
-          onPointerUp={()=>setCropDrag(null)}
-        >
-          <img ref={cropImgRef} src={cropImg}
-            onLoad={ev=>{
-              const {clientWidth:w,clientHeight:h}=ev.target;
-              // 默认框选下半部分（统计表通常在下方）
-              setCropBox({x:w*0.05,y:h*0.65,w:w*0.9,h:h*0.32});
-            }}
-            style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none"}}/>
-          {cropBox&&<>
-            {/* 暗色遮罩四周 */}
-            <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`
-              linear-gradient(to bottom,
-                rgba(0,0,0,0.45) ${cropBox.y}px,
-                transparent ${cropBox.y}px,
-                transparent ${cropBox.y+cropBox.h}px,
-                rgba(0,0,0,0.45) ${cropBox.y+cropBox.h}px
-              )`}}/>
-            {/* 选框本体——中间拖动 */}
-            <div onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
-              style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
-              {/* 三等分辅助线 */}
-              {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.4)"}}/>)}
-              {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.4)"}}/>)}
-              {/* 8个控制点 */}
-              {[
-                {type:"tl",style:{top:-8,left:-8,cursor:"nw-resize"}},
-                {type:"t", style:{top:-8,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
-                {type:"tr",style:{top:-8,right:-8,cursor:"ne-resize"}},
-                {type:"r", style:{top:"50%",right:-8,transform:"translateY(-50%)",cursor:"e-resize"}},
-                {type:"br",style:{bottom:-8,right:-8,cursor:"se-resize"}},
-                {type:"b", style:{bottom:-8,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
-                {type:"bl",style:{bottom:-8,left:-8,cursor:"sw-resize"}},
-                {type:"l", style:{top:"50%",left:-8,transform:"translateY(-50%)",cursor:"w-resize"}},
-              ].map(({type,style})=>(
-                <div key={type}
-                  onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
-                  style={{position:"absolute",width:18,height:18,background:"#60d4f0",borderRadius:3,touchAction:"none",...style}}/>
-              ))}
-            </div>
-          </>}
-        </div>
-        <div style={{display:"flex",gap:12,marginTop:14}}>
-          <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
-          <button onClick={confirmCrop} disabled={imgLoading} style={{padding:"8px 28px",borderRadius:50,border:"none",background:"#60d4f0",color:"#1a2a3a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
-            {imgLoading?"识别中…":"✓ 确认识别"}
-          </button>
-        </div>
-        {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
-      </div>}
-      {/* 顶部header在作品页和我的页隐藏 */}
-      {page!=="works"&&page!=="mine"&&<div className="tt" style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"6px 18px",flexShrink:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <JarLogo accent={T.accent} size={44}/>
-          <div style={{display:"flex",alignItems:"center",gap:5}}>
-            <div style={{fontSize:18,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:"44px"}}>拼豆记</div>
-            {syncLoading&&<div style={{fontSize:9,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
-            {!syncLoading&&syncStatus==="err"&&<div style={{fontSize:9,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
-            {!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:9,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
-          </div>
-        </div>
-        <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
-      </div>}
-      {/* 导入隐藏input */}
-      <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={importData}/>
 
-      {/* 主内容滚动区 — 包含所有页面 */}
-      <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",display:"flex",flexDirection:"column",minHeight:0}}>
 
-        {/* home / stock 内容 */}
-        {(page==="home"||page==="stock")&&<>
-          <div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0",width:"100%",boxSizing:"border-box"}}>
+  const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
 
-            {page==="home"&&<div className="fade">
-              <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                  <div style={{fontSize:12,color:T.textLight,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
-                  <button className="btn" onClick={resetData} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
-                    {resetConfirm?"⚠️ 确认清空":"🗑️ 重置"}
-                  </button>
-                </div>
-                <div style={{display:"flex",gap:10}}>
-                  {[["🟡 即将不足",wL,setWL,T.warn,T.warnBg,T.warnBorder],[" 🔴 不足",wC,setWC,T.danger,T.dangerBg,T.dangerBorder]].map(([lbl,val,set,col,bg,bd])=>(
-                    <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:1,background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
-                      {lbl}
-                      <input type="number" value={val} onChange={e=>set(Number(e.target.value))} style={{...inp({width:48,padding:"3px 5px",fontSize:12,textAlign:"center",borderRadius:8}),marginLeft:"auto"}}/>
-                      <span style={{fontSize:11}}>粒</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              {[["🟡 即将不足",lowC,T.warnBg,T.warnBorder,T.warn],["🔴 不足",critC,T.dangerBg,T.dangerBorder,T.danger]].map(([title,colors,bg,bd])=>(
-                <div key={title} className="tt" style={{background:bg,border:`1.5px solid ${bd}`,borderRadius:24,padding:"16px",marginBottom:14}}>
-                  <div style={{fontSize:13,fontWeight:800,marginBottom:10,display:"flex",alignItems:"center",gap:8,color:T.text}}>
-                    {title}<span style={{background:tn==="night"?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.85)",borderRadius:50,padding:"2px 12px",fontSize:11,color:T.textMid,fontWeight:600}}>{colors.length} 个</span>
-                  </div>
-                  {colors.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"10px 0"}}>暂无 ✨</div>
-                    :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                      {colors.map(c=><StockCard key={c.id} c={c} compact={true} isSel={sel.has(c.id)} {...cardProps}/>)}
-                    </div>
-                  }
-                </div>
-              ))}
-              <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"18px",marginBottom:14,boxShadow:T.cardShadow}}>
-                <div style={{fontSize:14,fontWeight:800,marginBottom:14,color:T.text}}>📊 色系消耗 Top5</div>
-                {top5.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"16px 0"}}>✨ 更新库存后自动统计</div>
-                  :top5.map(({s,total},i)=>(
-                    <div key={s} onClick={()=>goS(s)} style={{marginBottom:12,cursor:"pointer"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5,fontWeight:700}}>
-                        <span style={{color:T.accent}}>{s} 系列</span>
-                        <span style={{color:T.textMid,fontWeight:400}}>{Math.round(total)} 粒</span>
-                      </div>
-                      <div style={{background:T.barBg,borderRadius:20,height:10,overflow:"hidden"}}>
-                        <div style={{width:`${(total/maxU)*100}%`,height:"100%",borderRadius:20,background:T.bars[i],transition:"width 0.5s"}}/>
-                      </div>
-                    </div>
-                  ))
+  function pushHistory(s,u){setHistory(h=>[...h.slice(-MAX_HISTORY+1),{stock:{...s},used:{...u}}]);}
+
+  const saveStock=useCallback((id,beads)=>{
+    pushHistory(stock,used);
+    const diff=(stock[id]||0)-beads;
+    if(diff>0){setUsed(u=>({...u,[id]:(u[id]||0)+diff}));}
+    setStock(s=>({...s,[id]:beads}));
+  },[stock,used]);
+  const deductStock=useCallback((id,beads)=>{
+    pushHistory(stock,used);
+    setStock(s=>({...s,[id]:Math.max(0,(s[id]||0)-beads)}));
+    setUsed(u=>({...u,[id]:(u[id]||0)+beads}));
+  },[stock,used]);
+  function undoLast(){
+    setHistory(h=>{
+      if(h.length===0)return h;
+      const prev=h[h.length-1];
+      setStock(prev.stock);
+      setUsed(prev.used);
+      return h.slice(0,-1);
+    });
+  }
+  const [resetConfirm,setResetConfirm]=useState(false);
+  const [resetKey,setResetKey]=useState(0);
+  async function resetData(){
+    if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
+    setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
+    localStorage.removeItem('pindou_stock');localStorage.removeItem('pindou_used');
+    localStorage.removeItem('pindou_tasks');
+    if(user){
+      await supabase.from('stock').delete().eq('user_id',user.id);
+      await supabase.from('profiles').update({tasks:[]}).eq('id',user.id);
+    }
+    setResetConfirm(false);
+    setResetKey(k=>k+1);
+  }
+
+  function exportData(){
+    const data={stock,used,exportedAt:new Date().toISOString()};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`拼豆记_备份_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.json`;
+    a.click();URL.revokeObjectURL(url);
+  }
+
+  const importRef=useRef(null);
+  function importData(e){
+    const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(d.stock)setStock(d.stock);
+        if(d.used)setUsed(d.used);
+        alert('导入成功！数据已恢复～');
+      }catch{alert('文件格式有误，请使用导出的备份文件～');}
+    };
+    r.readAsText(file);
+    e.target.value='';
+  }
+  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL,focusMode,focusColor,onFocusClick:handleFocusClick};
+
+  function handleFocusClick(id){
+    setFocusColor(prev=>prev===id?null:id);
+  }
+  function exitFocusMode(){setFocusMode(false);setFocusColor(null);}
+  function focusNav(dir){
+    const idx=filtered.findIndex(c=>c.id===focusColor);
+    if(idx===-1){setFocusColor(filtered[0]?.id||null);return;}
+    const next=filtered[(idx+dir+filtered.length)%filtered.length];
+    if(next)setFocusColor(next.id);
+  }
+
+  async function handleLogout(){
+    await supabase.auth.signOut();
+    setUser(null);
+  }
+
+  if(authLoading)return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",fontSize:16,color:T.textMid,fontWeight:700}}>
+      Loading… 🫘
+    </div>
+  );
+  if(!user)return <AuthPage T={T} tn={tn} onLogin={setUser}/>;
+
+  return(
+    <>
+      <style>{G}</style>
+      {showUpgrade&&<UpgradeModal T={T} onClose={()=>setShowUpgrade(false)}/>}
+      <div className="tt" style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
+
+        {/* 裁剪弹窗 */}
+        {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10}}>拖拽边框调整选区 · 框选统计表区域</div>
+          <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:12}}
+            onPointerMove={ev=>{
+              if(!cropDrag||!cropImgRef.current)return;
+              const el=cropImgRef.current.getBoundingClientRect();
+              const cx=Math.max(0,Math.min(ev.clientX-el.left,el.width));
+              const cy=Math.max(0,Math.min(ev.clientY-el.top,el.height));
+              const dx=cx-cropDrag.lastX, dy=cy-cropDrag.lastY;
+              setCropBox(b=>{
+                if(!b)return b;
+                let {x,y,w,h}=b;
+                const minS=30;
+                if(cropDrag.type==="move"){
+                  x=Math.max(0,Math.min(x+dx,el.width-w));
+                  y=Math.max(0,Math.min(y+dy,el.height-h));
+                }else{
+                  if(cropDrag.type.includes("l")){const nx=Math.min(x+dx,x+w-minS);w=w-(nx-x);x=nx;}
+                  if(cropDrag.type.includes("r")){w=Math.max(minS,Math.min(w+dx,el.width-x));}
+                  if(cropDrag.type.includes("t")){const ny=Math.min(y+dy,y+h-minS);h=h-(ny-y);y=ny;}
+                  if(cropDrag.type.includes("b")){h=Math.max(minS,Math.min(h+dy,el.height-y));}
                 }
-                {top5.length>0&&<div style={{fontSize:11,color:T.textLight,textAlign:"right",marginTop:6}}>点击查看系列详情 →</div>}
+                return {x,y,w,h};
+              });
+              setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
+            }}
+            onPointerUp={()=>setCropDrag(null)}
+          >
+            <img ref={cropImgRef} src={cropImg}
+              onLoad={ev=>{
+                const {clientWidth:w,clientHeight:h}=ev.target;
+                // 默认框选下半部分（统计表通常在下方）
+                setCropBox({x:w*0.05,y:h*0.65,w:w*0.9,h:h*0.32});
+              }}
+              style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none"}}/>
+            {cropBox&&<>
+              {/* 暗色遮罩四周 */}
+              <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`
+                linear-gradient(to bottom,
+                  rgba(0,0,0,0.45) ${cropBox.y}px,
+                  transparent ${cropBox.y}px,
+                  transparent ${cropBox.y+cropBox.h}px,
+                  rgba(0,0,0,0.45) ${cropBox.y+cropBox.h}px
+                )`}}/>
+              {/* 选框本体——中间拖动 */}
+              <div onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
+                style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
+                {/* 三等分辅助线 */}
+                {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.4)"}}/>)}
+                {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.4)"}}/>)}
+                {/* 8个控制点 */}
+                {[
+                  {type:"tl",style:{top:-8,left:-8,cursor:"nw-resize"}},
+                  {type:"t", style:{top:-8,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
+                  {type:"tr",style:{top:-8,right:-8,cursor:"ne-resize"}},
+                  {type:"r", style:{top:"50%",right:-8,transform:"translateY(-50%)",cursor:"e-resize"}},
+                  {type:"br",style:{bottom:-8,right:-8,cursor:"se-resize"}},
+                  {type:"b", style:{bottom:-8,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
+                  {type:"bl",style:{bottom:-8,left:-8,cursor:"sw-resize"}},
+                  {type:"l", style:{top:"50%",left:-8,transform:"translateY(-50%)",cursor:"w-resize"}},
+                ].map(({type,style})=>(
+                  <div key={type}
+                    onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
+                    style={{position:"absolute",width:18,height:18,background:"#60d4f0",borderRadius:3,touchAction:"none",...style}}/>
+                ))}
               </div>
-            </div>}
-            {page==="stock"&&<div className="fade">
+            </>}
+          </div>
+          <div style={{display:"flex",gap:12,marginTop:14}}>
+            <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
+            <button onClick={confirmCrop} disabled={imgLoading} style={{padding:"8px 28px",borderRadius:50,border:"none",background:"#60d4f0",color:"#1a2a3a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+              {imgLoading?"识别中…":"✓ 确认识别"}
+            </button>
+          </div>
+          {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
+        </div>}
+        {/* 顶部header在作品页和我的页隐藏 */}
+        {page!=="works"&&page!=="mine"&&<div className="tt" style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"6px 18px",flexShrink:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <JarLogo accent={T.accent} size={44}/>
+            <div style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{fontSize:18,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:"44px"}}>拼豆记</div>
+              {syncLoading&&<div style={{fontSize:9,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
+              {!syncLoading&&syncStatus==="err"&&<div style={{fontSize:9,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
+              {!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:9,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
+            </div>
+          </div>
+          <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
+        </div>}
+        {/* 导入隐藏input */}
+        <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={importData}/>
+
+        {/* 主内容滚动区 — 包含所有页面 */}
+        <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",display:"flex",flexDirection:"column",minHeight:0}}>
+
+          {/* home / stock 内容 */}
+          {(page==="home"||page==="stock")&&<>
+            <div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0",width:"100%",boxSizing:"border-box"}}>
+
+              {page==="home"&&<div className="fade">
+                <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                    <div style={{fontSize:12,color:T.textLight,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
+                    <button className="btn" onClick={resetData} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
+                      {resetConfirm?"⚠️ 确认清空":"🗑️ 重置"}
+                    </button>
+                  </div>
+                  <div style={{display:"flex",gap:10}}>
+                    {[["🟡 即将不足",wL,setWL,T.warn,T.warnBg,T.warnBorder],[" 🔴 不足",wC,setWC,T.danger,T.dangerBg,T.dangerBorder]].map(([lbl,val,set,col,bg,bd])=>(
+                      <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:1,background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
+                        {lbl}
+                        <input type="number" value={val} onChange={e=>set(Number(e.target.value))} style={{...inp({width:48,padding:"3px 5px",fontSize:12,textAlign:"center",borderRadius:8}),marginLeft:"auto"}}/>
+                        <span style={{fontSize:11}}>粒</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {[["🟡 即将不足",lowC,T.warnBg,T.warnBorder,T.warn],["🔴 不足",critC,T.dangerBg,T.dangerBorder,T.danger]].map(([title,colors,bg,bd])=>(
+                  <div key={title} className="tt" style={{background:bg,border:`1.5px solid ${bd}`,borderRadius:24,padding:"16px",marginBottom:14}}>
+                    <div style={{fontSize:13,fontWeight:800,marginBottom:10,display:"flex",alignItems:"center",gap:8,color:T.text}}>
+                      {title}<span style={{background:tn==="night"?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.85)",borderRadius:50,padding:"2px 12px",fontSize:11,color:T.textMid,fontWeight:600}}>{colors.length} 个</span>
+                    </div>
+                    {colors.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"10px 0"}}>暂无 ✨</div>
+                      :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                        {colors.map(c=><StockCard key={c.id} c={c} compact={true} isSel={sel.has(c.id)} {...cardProps}/>)}
+                      </div>
+                    }
+                  </div>
+                ))}
+                <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"18px",marginBottom:14,boxShadow:T.cardShadow}}>
+                  <div style={{fontSize:14,fontWeight:800,marginBottom:14,color:T.text}}>📊 色系消耗 Top5</div>
+                  {top5.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"16px 0"}}>✨ 更新库存后自动统计</div>
+                    :top5.map(({s,total},i)=>(
+                      <div key={s} onClick={()=>goS(s)} style={{marginBottom:12,cursor:"pointer"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5,fontWeight:700}}>
+                          <span style={{color:T.accent}}>{s} 系列</span>
+                          <span style={{color:T.textMid,fontWeight:400}}>{Math.round(total)} 粒</span>
+                        </div>
+                        <div style={{background:T.barBg,borderRadius:20,height:10,overflow:"hidden"}}>
+                          <div style={{width:`${(total/maxU)*100}%`,height:"100%",borderRadius:20,background:T.bars[i],transition:"width 0.5s"}}/>
+                        </div>
+                      </div>
+                    ))
+                  }
+                  {top5.length>0&&<div style={{fontSize:11,color:T.textLight,textAlign:"right",marginTop:6}}>点击查看系列详情 →</div>}
+                </div>
+              </div>}
+
+              {page==="stock"&&<div className="fade">
                 <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center"}}>
                   <input placeholder="🔍 搜索色号 A5、B12..." value={search} onChange={e=>{setSearch(e.target.value);setFSeries(null);}} style={{...inp({flex:1,padding:"10px 16px",borderRadius:50,fontSize:13})}}/>
                   <select value={sort} onChange={e=>setSort(e.target.value)} style={{...inp({padding:"10px 8px",borderRadius:50,fontSize:12,cursor:"pointer"})}}>
@@ -962,6 +965,7 @@ function getSimilarColors(targetId,stock,count=6){
   const other=withDist.filter(c=>!c.sameSeries).sort((a,b)=>a.dist-b.dist);
   return [...same,...other].slice(0,count);
 }
+
 // ══════════════════════════════════
 //  MissingColorPage（缺色替换）
 // ══════════════════════════════════
@@ -1208,306 +1212,318 @@ function MissingColorPage({T,stock,onBack}){
 }
 
 // ══════════════════════════════════
-//  专注模式（重构版：高亮+网格标记）
+//  FocusMode（专注模式全屏）
 // ══════════════════════════════════
 function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
-  const [phase,setPhase]=useState("start"); // "start" | "focus" | "allDoneConfirm"
+  const [phase,setPhase]=useState("start");
   const [autoDeduct,setAutoDeduct]=useState(false);
-  const [gridRows,setGridRows]=useState(20);
-  const [gridCols,setGridCols]=useState(20);
-  const [showGrid,setShowGrid]=useState(true);
-  const [gridCells,setGridCells]=useState([]); // 二维数组，每个元素存储颜色id或null
+  const [sortOrder,setSortOrder]=useState("count-desc");
   const [doneColors,setDoneColors]=useState(new Set());
   const [activeColor,setActiveColor]=useState(null);
+  const [drawerOpen,setDrawerOpen]=useState(false);
+  const [showGrid,setShowGrid]=useState(true);
+  const [boardSize,setBoardSize]=useState(52);
   const [allDoneConfirm,setAllDoneConfirm]=useState(false);
+  const imgRef=useRef(null);
+  const [imgRect,setImgRect]=useState(null); // {left,top,width,height} relative to container
 
   const colors=useMemo(()=>task.colorData||[],[task.colorData]);
-  const remainingColors=useMemo(()=>colors.filter(c=>!doneColors.has(c.id)),[colors,doneColors]);
 
-  // 初始化gridCells
-  useEffect(()=>{
-    setGridCells(Array(gridRows).fill().map(()=>Array(gridCols).fill(null)));
-  },[gridRows,gridCols]);
+  const sorted=useMemo(()=>{
+    const rem=colors.filter(c=>!doneColors.has(c.id));
+    if(sortOrder==="count-asc")return[...rem].sort((a,b)=>a.count-b.count);
+    if(sortOrder==="id-asc")return[...rem].sort((a,b)=>a.id.localeCompare(b.id));
+    return[...rem].sort((a,b)=>b.count-a.count);
+  },[colors,doneColors,sortOrder]);
 
-  // 绘图相关
-  const canvasRef=useRef(null);
-  const [imgDrawRect,setImgDrawRect]=useState(null); // {x,y,w,h,scale}
-  const containerRef=useRef(null);
-  const transformRef=useRef(null);
-
-  function startFocus(){
-    setPhase("focus");
-    if(remainingColors.length>0) setActiveColor(remainingColors[0].id);
-  }
-
-  function markCell(row,col){
-    if(!activeColor) return;
-    if(doneColors.has(activeColor)) return; // 已完成颜色不能标记
-    if(gridCells[row][col]!==null) return; // 已有标记，不能覆盖（可根据需求改为允许覆盖）
-
-    setGridCells(prev=>{
-      const newCells=prev.map(r=>[...r]);
-      newCells[row][col]=activeColor;
-      return newCells;
-    });
-  }
+  function startFocus(){setPhase("focus");if(sorted.length>0)setActiveColor(sorted[0].id);}
 
   function markDone(colorId){
-    if(autoDeduct){
-      const c=colors.find(x=>x.id===colorId);
-      if(c && c.count>0) onDeductStock(colorId, c.count);
-    }
-    const newDone=new Set([...doneColors, colorId]);
+    if(autoDeduct){const c=colors.find(x=>x.id===colorId);if(c&&c.count>0)onDeductStock(colorId,c.count);}
+    const newDone=new Set([...doneColors,colorId]);
     setDoneColors(newDone);
-    // 从gridCells中移除该颜色的标记（可选，这里保留但会在绘制时淡化）
-    // 自动切换到下一个未完成颜色
-    const next=remainingColors.find(c=>c.id!==colorId);
-    setActiveColor(next?.id || null);
-    if(newDone.size===colors.length){
-      setAllDoneConfirm(true);
-    }
+    const remaining=colors.filter(c=>!newDone.has(c.id));
+    const idx=sorted.findIndex(c=>c.id===colorId);
+    const next=sorted[idx+1];
+    setActiveColor(next?.id||null);
+    // 全部完成
+    if(remaining.length===0){setAllDoneConfirm(true);}
   }
 
-  // 绘制canvas
-  useEffect(()=>{
-    if(phase!=="focus" || !canvasRef.current || !task.img) return;
-    const canvas=canvasRef.current;
-    const ctx=canvas.getContext('2d');
-    const img=new Image();
-    img.src=task.img;
-    img.onload=()=>{
-      // 获取容器尺寸
-      const container=containerRef.current;
-      if(!container) return;
-      const cw=container.clientWidth;
-      const ch=container.clientHeight;
-      canvas.width=cw;
-      canvas.height=ch;
-      // 绘制图片，保持比例居中
-      const imgW=img.width, imgH=img.height;
-      const scale=Math.min(cw/imgW, ch/imgH);
-      const drawW=imgW*scale;
-      const drawH=imgH*scale;
-      const drawX=(cw-drawW)/2;
-      const drawY=(ch-drawH)/2;
-      ctx.drawImage(img, drawX, drawY, drawW, drawH);
-      setImgDrawRect({x:drawX, y:drawY, w:drawW, h:drawH, scale});
-
-      // 绘制网格和单元格标记
-      drawGrid(ctx, drawX, drawY, drawW, drawH);
-    };
-  },[phase, task.img, gridRows, gridCols, gridCells, activeColor, doneColors, showGrid]);
-
-  function drawGrid(ctx, drawX, drawY, drawW, drawH){
-    const cellW=drawW/gridCols;
-    const cellH=drawH/gridRows;
-
-    // 绘制单元格颜色覆盖
-    for(let r=0; r<gridRows; r++){
-      for(let c=0; c<gridCols; c++){
-        const colorId=gridCells[r][c];
-        if(!colorId) continue;
-        const x=drawX + c*cellW;
-        const y=drawY + r*cellH;
-        const isActive = (colorId === activeColor);
-        const isDone = doneColors.has(colorId);
-        if(isActive){
-          // 高亮当前颜色：半透明黄色
-          ctx.fillStyle='rgba(255, 255, 0, 0.5)';
-          ctx.fillRect(x, y, cellW, cellH);
-        }else if(isDone){
-          // 已完成颜色：半透明灰色（变暗）
-          ctx.fillStyle='rgba(128, 128, 128, 0.5)';
-          ctx.fillRect(x, y, cellW, cellH);
-        }
-      }
-    }
-
-    // 绘制网格线
-    if(showGrid){
-      ctx.strokeStyle='rgba(255, 80, 80, 0.6)';
-      ctx.lineWidth=1;
-      for(let i=1; i<gridCols; i++){
-        const x=drawX + i*cellW;
-        ctx.beginPath();
-        ctx.moveTo(x, drawY);
-        ctx.lineTo(x, drawY+drawH);
-        ctx.stroke();
-      }
-      for(let i=1; i<gridRows; i++){
-        const y=drawY + i*cellH;
-        ctx.beginPath();
-        ctx.moveTo(drawX, y);
-        ctx.lineTo(drawX+drawW, y);
-        ctx.stroke();
-      }
-    }
+  function handleAllDone(){
+    onComplete();
+    onExit();
   }
 
-  // 处理canvas点击，通过transform实例转换坐标
-  const handleCanvasClick=(e)=>{
-    if(!imgDrawRect || !transformRef.current) return;
-    // 使用transform实例将屏幕坐标转换为内容坐标
-    const instance=transformRef.current;
-    const {x:contentX, y:contentY}=instance.screenToContentCoordinates(e.clientX, e.clientY);
-    // contentX/Y 是相对于canvas内容区域（即未缩放平移前的canvas坐标系），因为canvas的像素尺寸等于容器尺寸，所以contentX范围0～width
-    const {x:drawX, y:drawY, w:drawW, h:drawH}=imgDrawRect;
-    if(contentX<drawX || contentX>drawX+drawW || contentY<drawY || contentY>drawY+drawH) return;
-    const col=Math.floor((contentX-drawX)/(drawW/gridCols));
-    const row=Math.floor((contentY-drawY)/(drawH/gridRows));
-    if(row>=0 && row<gridRows && col>=0 && col<gridCols){
-      markCell(row, col);
-    }
-  };
+  const activeColorData=activeColor?colors.find(c=>c.id===activeColor):null;
+  const activeColorInfo=activeColor?ALL_COLORS.find(c=>c.id===activeColor):null;
+  const totalLeft=sorted.length;
+  const totalDone=doneColors.size;
 
-  if(phase==="start"){
-    return(
-      <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
-        <div style={{padding:"18px 18px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-          <button onClick={onExit} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:T.textMid,lineHeight:1}}>←</button>
-          <div style={{fontSize:16,fontWeight:800,color:T.text}}>🎯 专注模式设置</div>
+  // 图纸加载后计算实际显示区域
+  function onImgLoad(){
+    if(!imgRef.current)return;
+    const el=imgRef.current;
+    const cont=el.parentElement;
+    const cr=cont.getBoundingClientRect();
+    const ir=el.getBoundingClientRect();
+    setImgRect({left:ir.left-cr.left,top:ir.top-cr.top,width:ir.width,height:ir.height});
+  }
+
+  // ── 开始前设置页 ──
+  if(phase==="start")return(
+    <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
+      <div style={{padding:"18px 18px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+        <button onClick={onExit} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:T.textMid,lineHeight:1}}>←</button>
+        <div style={{fontSize:16,fontWeight:800,color:T.text}}>🎯 专注模式</div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"20px 18px"}}>
+        <div style={{background:T.card,borderRadius:20,padding:14,marginBottom:18,display:"flex",gap:14,alignItems:"center",boxShadow:T.cardShadow,border:`1.5px solid ${T.border}`}}>
+          <div style={{width:58,height:58,borderRadius:14,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
+            {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
+          </div>
+          <div>
+            <div style={{fontSize:15,fontWeight:800,color:T.text}}>{task.name}</div>
+            <div style={{fontSize:11,color:T.textMid,marginTop:3}}>{colors.length} 个颜色 · {colors.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
+          </div>
         </div>
-        <div style={{flex:1,overflowY:"auto",padding:"20px 18px"}}>
-          <div style={{background:T.card,borderRadius:20,padding:14,marginBottom:18,display:"flex",gap:14,alignItems:"center",boxShadow:T.cardShadow,border:`1.5px solid ${T.border}`}}>
-            <div style={{width:58,height:58,borderRadius:14,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
-              {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
-            </div>
+
+        {colors.length===0&&(
+          <div style={{background:T.warnBg,border:`1.5px solid ${T.warnBorder}`,borderRadius:16,padding:"14px 16px",marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
+            <span style={{fontSize:18}}>⚠️</span>
             <div>
-              <div style={{fontSize:15,fontWeight:800,color:T.text}}>{task.name}</div>
-              <div style={{fontSize:11,color:T.textMid,marginTop:3}}>{colors.length} 个颜色 · {colors.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
+              <div style={{fontSize:13,color:T.warn,fontWeight:700,marginBottom:3}}>还没有颜色数据</div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.6}}>建议先扫描颜色统计，进入后颜色列表会更完整</div>
             </div>
           </div>
+        )}
 
-          {/* 网格行列设置 */}
-          <div style={{background:T.card,borderRadius:18,padding:"14px 16px",marginBottom:12,border:`1.5px solid ${T.border}`}}>
-            <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:10}}>网格行列数</div>
-            <div style={{display:"flex",gap:10}}>
-              <label style={{flex:1}}>行数
-                <input type="number" min="1" max="100" value={gridRows} onChange={e=>setGridRows(Number(e.target.value))}
-                  style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:10,padding:"6px 8px",fontFamily:"'Nunito',sans-serif",fontSize:13,background:T.card,color:T.text}}/>
-              </label>
-              <label style={{flex:1}}>列数
-                <input type="number" min="1" max="100" value={gridCols} onChange={e=>setGridCols(Number(e.target.value))}
-                  style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:10,padding:"6px 8px",fontFamily:"'Nunito',sans-serif",fontSize:13,background:T.card,color:T.text}}/>
-              </label>
-            </div>
-            <div style={{marginTop:8,fontSize:11,color:T.textLight}}>每个单元格对应图纸上一个格子</div>
+        {/* 颜色排列顺序 */}
+        <div style={{background:T.card,borderRadius:18,padding:"14px 16px",marginBottom:12,border:`1.5px solid ${T.border}`}}>
+          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:10,letterSpacing:0.5}}>颜色排列顺序</div>
+          <div style={{display:"flex",gap:8}}>
+            {[["count-desc","多→少"],["count-asc","少→多"],["id-asc","色号序"]].map(([val,label])=>(
+              <button key={val} onClick={()=>setSortOrder(val)}
+                style={{flex:1,padding:"9px 0",borderRadius:10,border:`1.5px solid ${sortOrder===val?T.accent:T.border}`,background:sortOrder===val?T.accent:T.card,color:sortOrder===val?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                {label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* 网格线显示 */}
-          <div style={{background:T.card,borderRadius:18,padding:"14px 16px",marginBottom:12,border:`1.5px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        {/* 网格线设置 */}
+        <div style={{background:T.card,borderRadius:18,padding:"14px 16px",marginBottom:12,border:`1.5px solid ${T.border}`}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:showGrid?10:0}}>
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:T.text}}>显示网格线</div>
-              <div style={{fontSize:11,color:T.textMid,marginTop:2}}>辅助定位格子边界</div>
+              <div style={{fontSize:13,fontWeight:700,color:T.text}}>网格辅助线</div>
+              <div style={{fontSize:11,color:T.textMid,marginTop:2}}>每10格画一条线，方便定位</div>
             </div>
             <div onClick={()=>setShowGrid(v=>!v)}
-              style={{width:46,height:26,borderRadius:13,background:showGrid?T.accent:T.barBg,cursor:"pointer",position:"relative"}}>
+              style={{width:46,height:26,borderRadius:13,background:showGrid?T.accent:T.barBg,cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}>
               <div style={{position:"absolute",top:3,left:showGrid?22:3,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.25)",transition:"left 0.2s"}}/>
             </div>
           </div>
+          {showGrid&&(
+            <div style={{display:"flex",gap:8}}>
+              {[52,78,104].map(s=>(
+                <button key={s} onClick={()=>setBoardSize(s)}
+                  style={{flex:1,padding:"8px 0",borderRadius:10,border:`1.5px solid ${boardSize===s?T.accent:T.border}`,background:boardSize===s?T.accent:T.card,color:boardSize===s?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  {s}×{s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-          {/* 自动扣库存 */}
-          <div style={{background:T.card,borderRadius:18,padding:"14px 16px",border:`1.5px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div>
-              <div style={{fontSize:13,fontWeight:700,color:T.text}}>自动扣库存</div>
-              <div style={{fontSize:11,color:T.textMid,marginTop:2}}>完成一个颜色时自动扣除用量</div>
-            </div>
-            <div onClick={()=>setAutoDeduct(v=>!v)}
-              style={{width:46,height:26,borderRadius:13,background:autoDeduct?T.accent:T.barBg,cursor:"pointer",position:"relative"}}>
-              <div style={{position:"absolute",top:3,left:autoDeduct?22:3,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.25)",transition:"left 0.2s"}}/>
-            </div>
+        {/* 自动扣库存 */}
+        <div style={{background:T.card,borderRadius:18,padding:"14px 16px",border:`1.5px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:T.text}}>自动扣库存</div>
+            <div style={{fontSize:11,color:T.textMid,marginTop:2}}>完成一个颜色时自动扣除用量</div>
           </div>
-        </div>
-        <div style={{padding:"16px 18px 36px",borderTop:`1px solid ${T.border}`,flexShrink:0}}>
-          <button onClick={startFocus}
-            style={{width:"100%",padding:"15px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:900,cursor:"pointer",boxShadow:`0 4px 16px ${T.accent}50`}}>
-            开始专注 🎯
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if(allDoneConfirm){
-    return(
-      <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.65)",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px",fontFamily:"'Nunito',sans-serif"}}>
-        <div style={{background:T.card,borderRadius:28,padding:"32px 24px",width:"100%",maxWidth:320,textAlign:"center"}}>
-          <div style={{fontSize:56,marginBottom:12}}>🎉</div>
-          <div style={{fontSize:18,fontWeight:900,color:T.text,marginBottom:8}}>全部拼完啦！</div>
-          <div style={{fontSize:13,color:T.textMid,marginBottom:24,lineHeight:1.6}}>恭喜完成「{task.name}」<br/>要标记为已完成吗？</div>
-          <div style={{display:"flex",gap:10}}>
-            <button onClick={onExit} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>稍后再说</button>
-            <button onClick={()=>{onComplete(); onExit();}} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>✓ 标记完成</button>
+          <div onClick={()=>setAutoDeduct(v=>!v)}
+            style={{width:46,height:26,borderRadius:13,background:autoDeduct?T.accent:T.barBg,cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}>
+            <div style={{position:"absolute",top:3,left:autoDeduct?22:3,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.25)",transition:"left 0.2s"}}/>
           </div>
         </div>
       </div>
-    );
-  }
-
-  return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:tn==="night"?"#0a1520":"#1a1a2e",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
-      {/* 顶部栏 */}
-      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(0,0,0,0.35)",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          {activeColor?(
-            <>
-              <div style={{width:26,height:26,borderRadius:8,background:ALL_COLORS.find(c=>c.id===activeColor)?.hex||"#ccc",border:"2px solid rgba(255,255,255,0.25)"}}/>
-              <div style={{color:"#fff",fontSize:12,fontWeight:800}}>{activeColor}</div>
-            </>
-          ):(
-            <div style={{color:"#fff",fontSize:12}}>点击颜色开始</div>
-          )}
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          <button onClick={()=>setShowGrid(v=>!v)} style={{background:"rgba(255,255,255,0.12)",border:"none",borderRadius:20,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>
-            {showGrid?"网格 ✓":"网格"}
-          </button>
-          <button onClick={onExit} style={{background:"rgba(255,255,255,0.12)",border:"none",borderRadius:20,padding:"5px 12px",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>退出</button>
-        </div>
+      <div style={{padding:"16px 18px 36px",borderTop:`1px solid ${T.border}`,flexShrink:0}}>
+        <button onClick={startFocus}
+          style={{width:"100%",padding:"15px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:900,cursor:"pointer",boxShadow:`0 4px 16px ${T.accent}50`}}>
+          开始专注 🎯
+        </button>
       </div>
+    </div>
+  );
 
-      {/* 可缩放平移的画布区域 */}
-      <div ref={containerRef} style={{flex:1,overflow:"hidden",position:"relative"}}>
-        <div style={{width:"100%",height:"100%",overflow:"auto"}}>
-  <canvas
-  ref={canvasRef}
-  onClick={handleCanvasClick}
-  style={{display:"block",width:"100%",height:"100%",cursor:"crosshair"}}
-/>
-  </div>
-</div>
-
-
-      {/* 底部颜色列表 */}
-      <div style={{background:T.card,borderRadius:"20px 20px 0 0",padding:"12px 16px",flexShrink:0}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <span style={{fontSize:11,color:T.textMid,fontWeight:600}}>剩余 {remainingColors.length} 个颜色</span>
-          {activeColor && (
-            <button onClick={()=>markDone(activeColor)} style={{padding:"6px 16px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer"}}>
-              完成 {activeColor}
-            </button>
-          )}
-        </div>
-        <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
-          {remainingColors.map(c=>{
-            const info=ALL_COLORS.find(x=>x.id===c.id);
-            const isActive=c.id===activeColor;
-            return(
-              <div key={c.id} onClick={()=>setActiveColor(c.id)} style={{flexShrink:0,width:48,borderRadius:10,overflow:"hidden",border:`2px solid ${isActive?T.accent:"transparent"}`,cursor:"pointer",background:T.accentSoft}}>
-                <div style={{background:info?.hex||"#ccc",height:24,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:isDark(info?.hex)?"#fff":"#000"}}>
-                  {c.count}
-                </div>
-                <div style={{textAlign:"center",fontSize:10,fontWeight:800,padding:"2px 0",background:T.card,color:T.text}}>
-                  {c.id}
-                </div>
-              </div>
-            );
-          })}
+  // ── 全部完成确认弹窗 ──
+  if(allDoneConfirm)return(
+    <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.65)",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px",fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{background:T.card,borderRadius:28,padding:"32px 24px",width:"100%",maxWidth:320,textAlign:"center"}}>
+        <div style={{fontSize:56,marginBottom:12}}>🎉</div>
+        <div style={{fontSize:18,fontWeight:900,color:T.text,marginBottom:8}}>全部拼完啦！</div>
+        <div style={{fontSize:13,color:T.textMid,marginBottom:24,lineHeight:1.6}}>恭喜完成「{task.name}」<br/>要标记为已完成吗？</div>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onExit} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>稍后再说</button>
+          <button onClick={handleAllDone} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>✓ 标记完成</button>
         </div>
       </div>
     </div>
   );
+
+  // ── 专注拼豆页 ──
+  const bgDark=tn==="night"?"#0a1520":"#1a1a2e";
+  const drawerBg=tn==="night"?T.card:"#ffffff";
+
+  // 生成网格线SVG paths
+  function gridLines(){
+    const lines=[];
+    const step=100/boardSize*10; // % per 10 cells
+    for(let i=step;i<100;i+=step){
+      lines.push(<line key={`v${i}`} x1={`${i}%`} y1="0" x2={`${i}%`} y2="100%" stroke="rgba(255,80,80,0.55)" strokeWidth="0.8"/>);
+      lines.push(<line key={`h${i}`} x1="0" y1={`${i}%`} x2="100%" y2={`${i}%`} stroke="rgba(255,80,80,0.55)" strokeWidth="0.8"/>);
+    }
+    return lines;
+  }
+
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:500,background:bgDark,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
+      {/* 顶部状态栏 */}
+      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(0,0,0,0.35)",flexShrink:0,gap:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+          {activeColorInfo?(
+            <div style={{width:26,height:26,borderRadius:8,background:activeColorInfo.hex,border:"2px solid rgba(255,255,255,0.25)",flexShrink:0}}/>
+          ):(
+            <div style={{width:26,height:26,borderRadius:8,background:"rgba(255,255,255,0.1)",flexShrink:0}}/>
+          )}
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {activeColor?`拼 ${activeColor}`:"点颜色开始"}
+            </div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.5)",marginTop:1}}>
+              已完成 {totalDone}/{totalDone+totalLeft}
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6,flexShrink:0}}>
+          <button onClick={()=>setShowGrid(v=>!v)}
+            style={{background:showGrid?"rgba(255,80,80,0.3)":"rgba(255,255,255,0.1)",border:`1px solid ${showGrid?"rgba(255,80,80,0.6)":"rgba(255,255,255,0.2)"}`,borderRadius:20,padding:"5px 10px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            {showGrid?"格 ✓":"格"}
+          </button>
+          <button onClick={onExit} style={{background:"rgba(255,255,255,0.12)",border:"none",borderRadius:50,padding:"5px 14px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>退出</button>
+        </div>
+      </div>
+
+      {/* 图纸大图区 + 网格线 */}
+      <div style={{flex:1,overflow:"auto",background:"#111",display:"flex",alignItems:"center",justifyContent:"center",WebkitOverflowScrolling:"touch",position:"relative"}}>
+        {task.img?(
+          <div style={{position:"relative",display:"inline-block",lineHeight:0}}>
+            <img ref={imgRef} src={task.img}
+              style={{display:"block",maxWidth:"100vw",maxHeight:"calc(100vh - 200px)",objectFit:"contain",userSelect:"none",touchAction:"pinch-zoom"}}
+              onLoad={onImgLoad} alt="图纸"/>
+            {showGrid&&imgRef.current&&(
+              <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}>
+                {gridLines()}
+              </svg>
+            )}
+          </div>
+        ):(
+          <div style={{color:"rgba(255,255,255,0.25)",textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:10}}>🖼️</div>
+            <div style={{fontSize:13}}>没有图纸图片</div>
+          </div>
+        )}
+      </div>
+
+      {/* 底部抽屉 */}
+      <div style={{background:drawerBg,borderRadius:"20px 20px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,0.35)",flexShrink:0}}>
+        {/* 把手 + 当前颜色操作行（始终显示） */}
+        <div style={{padding:"8px 16px 6px"}}>
+          <div style={{width:36,height:4,borderRadius:2,background:"rgba(0,0,0,0.12)",margin:"0 auto 8px",cursor:"pointer"}} onClick={()=>setDrawerOpen(v=>!v)}/>
+          {activeColor&&(
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:activeColorInfo?.hex||"#ccc",border:`2px solid ${T.border}`,flexShrink:0,boxShadow:`0 0 0 3px ${T.accent}30`}}/>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:800,color:T.text}}>{activeColor}</div>
+                <div style={{fontSize:11,color:T.textMid}}>共 {activeColorData?.count||0} 粒</div>
+              </div>
+              <button onClick={()=>markDone(activeColor)}
+                style={{padding:"8px 16px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",boxShadow:"0 2px 8px rgba(76,175,80,0.35)",flexShrink:0}}>
+                ✓ 拼完了
+              </button>
+            </div>
+          )}
+          {!activeColor&&sorted.length===0&&(
+            <div style={{textAlign:"center",padding:"8px 0",fontSize:14,fontWeight:800,color:"#4caf50"}}>🎉 全部拼完啦！</div>
+          )}
+        </div>
+
+        {/* 收起状态：横向滚动色块 */}
+        {!drawerOpen&&(
+          <div style={{padding:"6px 10px 16px",display:"flex",alignItems:"center",gap:6}}>
+            <style>{`.fscroll::-webkit-scrollbar{display:none}`}</style>
+            <div className="fscroll" style={{display:"flex",gap:6,overflowX:"auto",flex:1,WebkitOverflowScrolling:"touch"}}>
+              {sorted.map(c=>{
+                const info=ALL_COLORS.find(x=>x.id===c.id);
+                const isAct=c.id===activeColor;
+                const rgb=info?[parseInt(info.hex.slice(1,3),16),parseInt(info.hex.slice(3,5),16),parseInt(info.hex.slice(5,7),16)]:[180,180,180];
+                const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000;
+                const txt=bright>140?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
+                return(
+                  <div key={c.id} onClick={()=>setActiveColor(c.id)} style={{flexShrink:0,borderRadius:10,overflow:"hidden",border:`2px solid ${isAct?T.accent:"transparent"}`,cursor:"pointer",transform:isAct?"scale(1.08)":"scale(1)",transition:"transform 0.15s",width:44}}>
+                    <div style={{background:T.accentSoft,padding:"2px 4px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{fontSize:9,fontWeight:800,color:T.accent,flex:1,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.id}</span>
+                    </div>
+                    <div style={{background:info?.hex||"#ccc",aspectRatio:"1/1",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <span style={{fontSize:10,fontWeight:900,color:txt}}>{c.count}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {sorted.length===0&&<div style={{color:T.textMid,fontSize:12,padding:"4px 8px",fontWeight:700,whiteSpace:"nowrap"}}>🎉 全部完成！</div>}
+            </div>
+            <div onClick={()=>setDrawerOpen(true)} style={{flexShrink:0,width:28,height:28,borderRadius:"50%",background:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:13,color:T.accent,fontWeight:800}}>↑</div>
+          </div>
+        )}
+
+        {/* 展开：p5风格大卡片网格 */}
+        {drawerOpen&&(
+          <div style={{maxHeight:"45vh",overflowY:"auto"}}>
+            <div style={{padding:"4px 12px 6px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontSize:11,color:T.textMid,fontWeight:600}}>剩余 {sorted.length} 个颜色</div>
+              <button onClick={()=>setDrawerOpen(false)} style={{background:"none",border:"none",fontSize:12,color:T.accent,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700}}>收起 ↓</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,padding:"0 12px 20px"}}>
+              {sorted.map(c=>{
+                const info=ALL_COLORS.find(x=>x.id===c.id);
+                const isAct=c.id===activeColor;
+                const bg=info?.hex||"#ccc";
+                const rgb=info?[parseInt(bg.slice(1,3),16),parseInt(bg.slice(3,5),16),parseInt(bg.slice(5,7),16)]:[180,180,180];
+                const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000;
+                const txt=bright>140?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
+                return(
+                  <div key={c.id} onClick={()=>{setActiveColor(c.id);setDrawerOpen(false);}}
+                    style={{borderRadius:12,overflow:"hidden",border:`2px solid ${isAct?T.accent:"transparent"}`,cursor:"pointer",boxShadow:isAct?`0 0 0 2px ${T.accent}40`:"none"}}>
+                    <div style={{background:isAct?T.accent:T.accentSoft,padding:"3px 8px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{flex:1,fontSize:11,fontWeight:800,color:isAct?"#fff":T.accent,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.id}</span>
+                    </div>
+                    <div style={{background:bg,padding:"8px 4px",display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1/1"}}>
+                      <span style={{fontSize:16,fontWeight:900,color:txt}}>{c.count}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {sorted.length===0&&(
+                <div style={{gridColumn:"1/-1",textAlign:"center",padding:"20px 0",color:T.textMid,fontSize:13}}>🎉 全部完成啦！</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
+
 // ══════════════════════════════════
 //  WorksPage（作品页 重构版）
 // ══════════════════════════════════
@@ -2275,3 +2291,4 @@ function FoxBtn({T,tn}){
     </div>
   );
 }
+
