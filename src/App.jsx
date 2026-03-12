@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 const supabase = createClient(
   "https://xqteklgmxdslndswaftn.supabase.co",
@@ -1469,25 +1468,15 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
 
       {/* 可缩放平移的画布区域 */}
       <div ref={containerRef} style={{flex:1,overflow:"hidden",position:"relative"}}>
-        <TransformWrapper
-          ref={transformRef}
-          initialScale={1}
-          minScale={0.5}
-          maxScale={5}
-          wheel={{step:0.1}}
-          pinch={{step:0.1}}
-          doubleClick={{disabled:true}}
-          centerOnInit
-        >
-          <TransformComponent wrapperStyle={{width:"100%",height:"100%"}}>
-            <canvas
-              ref={canvasRef}
-              onClick={handleCanvasClick}
-              style={{display:"block",width:"100%",height:"100%",cursor:"crosshair"}}
-            />
-          </TransformComponent>
-        </TransformWrapper>
-      </div>
+        <div style={{width:"100%",height:"100%",overflow:"auto"}}>
+  <canvas
+  ref={canvasRef}
+  onClick={handleCanvasClick}
+  style={{display:"block",width:"100%",height:"100%",cursor:"crosshair"}}
+/>
+  </div>
+</div>
+
 
       {/* 底部颜色列表 */}
       <div style={{background:T.card,borderRadius:"20px 20px 0 0",padding:"12px 16px",flexShrink:0}}>
