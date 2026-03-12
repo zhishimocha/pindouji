@@ -327,7 +327,7 @@ export default function App(){
       // 拉库存
       const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
       // 拉plan
-      const {data:profile}=await supabase.from("profiles").select("plan, role").eq("id",user.id).single();
+      const {data:profile}=await supabase.from("profiles").select("plan,role").eq("user_id",user.id).single();
 if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
       if(error){
         setSyncStatus("err");
