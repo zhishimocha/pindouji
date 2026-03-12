@@ -327,7 +327,7 @@ export default function App(){
       // 拉库存
       const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
       // 拉plan
-      const {data:profile}=await supabase.from("profiles").select("plan,role").eq("user_id",user.id).single();
+      const {data:profile}=await supabase.from("profiles").select("plan, role").eq("user_id",user.id).single();
 if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
       if(error){
         setSyncStatus("err");
@@ -556,7 +556,7 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
     localStorage.removeItem('pindou_tasks');
     if(user){
       await supabase.from('stock').delete().eq('user_id',user.id);
-      await supabase.from('profiles').update({tasks:[]}).eq('id',user.id);
+      await supabase.from('profiles').update({tasks:[]}).eq('user_id',user.id);
     }
     setResetConfirm(false);
     setResetKey(k=>k+1);
@@ -1552,7 +1552,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock}){
   useEffect(()=>{
     async function loadTasks(){
       if(user){
-        const {data}=await supabase.from("profiles").select("tasks").eq("id",user.id).single();
+        const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
         if(data?.tasks)setTasks(data.tasks);
         else{try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}}
       }else{try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}}
@@ -1568,7 +1568,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock}){
     if(!user)return;
     clearTimeout(tasksTimer.current);
     tasksTimer.current=setTimeout(async()=>{
-      await supabase.from("profiles").update({tasks}).eq("id",user.id);
+      await supabase.from("profiles").update({tasks}).eq("user_id",user.id);
     },1500);
   },[tasks,tasksLoaded]);
 
