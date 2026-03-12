@@ -6,6 +6,46 @@ const supabase = createClient(
   "sb_publishable_FFxfIZn_lbYyA2ZUTNBlOw_NB-MFhyP"
 );
 
+// ══════════════ 升级弹窗 ══════════════
+function UpgradeModal({T,onClose}){
+  const perks=[
+    {icon:"🎯",title:"专注模式",desc:"高亮单色逐一拼，再也不拿错"},
+    {icon:"📷",title:"AI识图",desc:"拍照自动识别用量，秒更库存"},
+    {icon:"📦",title:"数据导出/导入",desc:"随时备份，换手机不丢数据"},
+  ];
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px"}}
+      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:T.card,borderRadius:28,padding:"28px 22px",width:"100%",maxWidth:380,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Nunito',sans-serif"}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:40,marginBottom:8}}>🌟</div>
+          <div style={{fontSize:20,fontWeight:900,color:T.accent,marginBottom:6}}>解锁 Pro 功能</div>
+          <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>升级后立即解锁以下全部功能～</div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:22}}>
+          {perks.map(p=>(
+            <div key={p.icon} style={{display:"flex",alignItems:"center",gap:12,background:T.accentSoft,borderRadius:14,padding:"12px 14px"}}>
+              <div style={{fontSize:24,flexShrink:0}}>{p.icon}</div>
+              <div>
+                <div style={{fontSize:13,fontWeight:800,color:T.text}}>{p.title}</div>
+                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>{p.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{background:`linear-gradient(135deg,#ff8fa3,#ffd166,#4a9eff)`,borderRadius:50,padding:"14px 0",textAlign:"center",marginBottom:10,cursor:"pointer"}}
+          onClick={()=>alert("联系大橘：v：daju_laila 开通Pro～")}>
+          <div style={{fontSize:14,fontWeight:900,color:"#fff"}}>🎉 联系开通 Pro</div>
+        </div>
+        <button onClick={onClose}
+          style={{width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+          暂不升级
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ══════════════ 登录/注册页 ══════════════
 function JarLogo({ accent, size=110 }) {
   const [bouncing, setBouncing] = useState(null);
@@ -160,7 +200,7 @@ const G=`
 `;
 
 // ── 色卡组件（点击弹菜单：改库存 / 扣用量）──
-const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch,isSel,onToggleSel,onSave,onDeduct,wC,wL}){
+const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch,isSel,onToggleSel,onSave,onDeduct,wC,wL,focusMode,focusColor,onFocusClick}){
   const beads=Math.round(stock[c.id]);
   const st=beads<wC?"c":beads<wL?"l":"ok";
   const col=st==="c"?T.danger:st==="l"?T.warn:T.text;
@@ -173,7 +213,14 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
   useEffect(()=>{if(mode==="edit"||mode==="deduct")setTimeout(()=>inputRef.current&&inputRef.current.focus(),0);},[mode]);
   useEffect(()=>{if(mode===null)setLocalB("");},[mode]);
 
-  function handleClick(e){if(batch){onToggleSel(c.id);return;}e.stopPropagation();setMode(m=>m===null?"menu":null);}
+  const isFocused=focusMode&&focusColor===c.id;
+  const isDimmed=focusMode&&focusColor&&focusColor!==c.id;
+
+  function handleClick(e){
+    if(batch){onToggleSel(c.id);return;}
+    if(focusMode){onFocusClick&&onFocusClick(c.id);return;}
+    e.stopPropagation();setMode(m=>m===null?"menu":null);
+  }
   function startEdit(e){e.stopPropagation();setLocalB(String(beads));setMode("edit");}
   function startDeduct(e){e.stopPropagation();setLocalB("");setMode("deduct");}
   function saveEdit(e){e&&e.stopPropagation();const n=parseInt(localB);if(!isNaN(n)&&n>=0)onSave(c.id,n);setMode(null);}
@@ -187,13 +234,17 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
   return(
     <div className="cc tt" onClick={handleClick}
       style={{background:T.card,borderRadius:compact?16:20,overflow:"hidden",cursor:"pointer",position:"relative",
-        border:isSel?`2.5px solid ${T.accent}`:st==="c"?`2px solid ${T.danger}`:st==="l"?`2px solid ${T.warn}`:`1.5px solid ${T.border}`,
-        boxShadow:isSel?`0 0 0 3px ${T.accent}30`:mode==="menu"?`0 0 0 3px ${T.accent}40`:T.cardShadow,
-        transform:isSel?"scale(0.97)":"none"}}>
+        opacity:isDimmed?0.13:1,
+        filter:isDimmed?"grayscale(0.7)":"none",
+        border:isFocused?`2.5px solid ${T.accent}`:isSel?`2.5px solid ${T.accent}`:st==="c"?`2px solid ${T.danger}`:st==="l"?`2px solid ${T.warn}`:`1.5px solid ${T.border}`,
+        boxShadow:isFocused?`0 0 0 4px ${T.accent}50,${T.cardShadow}`:isSel?`0 0 0 3px ${T.accent}30`:mode==="menu"?`0 0 0 3px ${T.accent}40`:T.cardShadow,
+        transform:isFocused?"scale(1.04)":isSel?"scale(0.97)":"none",
+        transition:"opacity 0.25s,filter 0.25s,transform 0.18s,box-shadow 0.18s,border 0.18s"}}>
       <div style={{background:c.hex,height:compact?40:50,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
         {tn==="night"&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/>}
         <span style={{fontSize:compact?12:13,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.65)",position:"relative"}}>{c.id}</span>
         {batch&&<div style={{position:"absolute",right:8,width:20,height:20,borderRadius:"50%",background:isSel?T.accent:"rgba(255,255,255,0.8)",border:`2px solid ${isSel?T.accent:"rgba(200,200,200,0.9)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:800}}>{isSel?"✓":""}</div>}
+        {isFocused&&<div style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.35)",borderRadius:6,padding:"1px 5px",fontSize:9,color:"#fff",fontWeight:800}}>✦ 拼这个</div>}
       </div>
 
       {/* 默认显示 */}
@@ -253,6 +304,9 @@ export default function App(){
   },[]);
 
 
+  const [isPro,setIsPro]=useState(false);
+  const [showUpgrade,setShowUpgrade]=useState(false);
+
   const [stock,setStock]=useState(INIT_STOCK);
   const [used,setUsed]=useState(INIT_USED);
   const [syncLoading,setSyncLoading]=useState(false);
@@ -260,13 +314,21 @@ export default function App(){
   const [cloudReady,setCloudReady]=useState(false);
   const [page,setPage]=useState("home");
 
+  // 专注模式
+  const [focusMode,setFocusMode]=useState(false);
+  const [focusColor,setFocusColor]=useState(null);
+
   // 登录后从云端拉数据
   useEffect(()=>{
-    if(!user){setCloudReady(false);return;}
+    if(!user){setCloudReady(false);setIsPro(false);return;}
     setCloudReady(false);
     async function loadCloud(){
       setSyncLoading(true);
+      // 拉库存
       const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
+      // 拉plan
+      const {data:profile}=await supabase.from("profiles").select("plan").eq("id",user.id).single();
+      if(profile?.plan==="pro")setIsPro(true);
       if(error){
         setSyncStatus("err");
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
@@ -522,7 +584,18 @@ export default function App(){
     r.readAsText(file);
     e.target.value='';
   }
-  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL};
+  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL,focusMode,focusColor,onFocusClick:handleFocusClick};
+
+  function handleFocusClick(id){
+    setFocusColor(prev=>prev===id?null:id);
+  }
+  function exitFocusMode(){setFocusMode(false);setFocusColor(null);}
+  function focusNav(dir){
+    const idx=filtered.findIndex(c=>c.id===focusColor);
+    if(idx===-1){setFocusColor(filtered[0]?.id||null);return;}
+    const next=filtered[(idx+dir+filtered.length)%filtered.length];
+    if(next)setFocusColor(next.id);
+  }
 
   async function handleLogout(){
     await supabase.auth.signOut();
@@ -539,6 +612,7 @@ export default function App(){
   return(
     <>
       <style>{G}</style>
+      {showUpgrade&&<UpgradeModal T={T} onClose={()=>setShowUpgrade(false)}/>}
       <div className="tt" style={{minHeight:"100vh",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text,paddingBottom:(page==="works"||page==="mine")?0:88}}>
 
         {/* 裁剪弹窗 */}
@@ -693,7 +767,12 @@ export default function App(){
                 <option value="stock-asc">库存↑</option><option value="stock-desc">库存↓</option>
                 <option value="used-desc">消耗↓</option>
               </select>
-              <button className="btn" onClick={()=>{setBatch(!batch);setSel(new Set());}} style={{padding:"10px 14px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,whiteSpace:"nowrap",background:batch?T.accent:T.accentLight,color:batch?"#fff":T.accent}}>{batch?"✕ 退出":"批量"}</button>
+              <button className="btn" onClick={()=>{if(!isPro){setShowUpgrade(true);return;}if(focusMode){exitFocusMode();}else{setBatch(false);setSel(new Set());setFocusMode(true);}}}
+                style={{padding:"10px 12px",borderRadius:50,border:`1.5px solid ${focusMode?T.accent:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,whiteSpace:"nowrap",background:focusMode?T.accent:T.accentSoft,color:focusMode?"#fff":isPro?T.accent:T.textLight,position:"relative"}}>
+                {focusMode?"✕ 专注":"🎯"}
+                {!isPro&&<span style={{position:"absolute",top:-4,right:-4,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>Pro</span>}
+              </button>
+              <button className="btn" onClick={()=>{if(focusMode)exitFocusMode();setBatch(!batch);setSel(new Set());}} style={{padding:"10px 14px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,whiteSpace:"nowrap",background:batch?T.accent:T.accentLight,color:batch?"#fff":T.accent}}>{batch?"✕ 退出":"批量"}</button>
             </div>
             {history.length>0&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:8,marginTop:-4}}>
               <button className="btn" onClick={undoLast} style={{padding:"6px 14px",borderRadius:50,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,background:T.accentLight,color:T.accent,display:"flex",alignItems:"center",gap:4}}>↩️ 撤销<span style={{background:T.accent,color:"#fff",borderRadius:50,fontSize:10,padding:"1px 6px",fontWeight:900}}>{history.length}</span></button>
@@ -702,8 +781,17 @@ export default function App(){
               <span style={{fontSize:13,color:T.accent,fontWeight:800}}>{fSeries} 系列</span>
               <button onClick={()=>setFSeries(null)} style={{...inp({fontSize:11,padding:"3px 12px",borderRadius:50,cursor:"pointer",color:T.textMid})}}>清除 ×</button>
             </div>}
+            {focusMode&&<div style={{background:`linear-gradient(135deg,${T.accentSoft},#f0e8ff)`,border:`1.5px solid ${T.accent}`,borderRadius:14,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.accent,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
+              <span>🎯 专注模式</span>
+              {focusColor?(
+                <>
+                  <div style={{width:22,height:22,borderRadius:7,background:ALL_COLORS.find(c=>c.id===focusColor)?.hex||"#ccc",border:"2px solid rgba(0,0,0,0.12)",flexShrink:0}}/>
+                  <span style={{flex:1}}>正在拼 <b>{focusColor}</b></span>
+                </>
+              ):<span style={{flex:1,color:T.textMid,fontWeight:600,fontSize:12}}>点击任意色卡开始高亮</span>}
+            </div>}
             {batch&&<div style={{background:T.accentSoft,border:`1px solid ${T.border}`,borderRadius:14,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.accent,fontWeight:700}}>🫧 点击色卡勾选{sel.size>0&&<span style={{marginLeft:8}}>· 已选 {sel.size} 个</span>}</div>}
-            <div style={{fontSize:12,color:T.textLight,marginBottom:10,fontWeight:600}}>共 {filtered.length} 个色号 · 点击色卡编辑克/粒数</div>
+            <div style={{fontSize:12,color:T.textLight,marginBottom:10,fontWeight:600}}>共 {filtered.length} 个色号 · {focusMode?"点击高亮单个颜色":"点击色卡编辑克/粒数"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {filtered.map(c=><StockCard key={c.id} c={c} compact={false} isSel={sel.has(c.id)} {...cardProps}/>)}
             </div>
@@ -766,9 +854,10 @@ export default function App(){
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 手动输入：A15-200、全部+100</div>
-                <button className="btn" onClick={()=>imgRef.current?.click()} disabled={imgLoading}
-                  style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap"}}>
+                <button className="btn" onClick={()=>{if(!isPro){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
+                  style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap",position:"relative"}}>
                   {imgLoading?"识别中…":"📷 识图"}
+                  {!isPro&&<span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>Pro</span>}
                 </button>
                 <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
               </div>
@@ -797,14 +886,37 @@ export default function App(){
           由 大橘来啦（v：daju_laila）制作 · 禁私售
         </div>}
 
+        {/* 专注模式浮动导航条 */}
+        {focusMode&&page==="stock"&&!batch&&(
+          <div style={{position:"fixed",bottom:70,left:0,right:0,zIndex:250,display:"flex",justifyContent:"center",padding:"0 14px",pointerEvents:"none"}}>
+            <div className="tt" style={{background:T.card,border:`1.5px solid ${T.accent}`,borderRadius:50,padding:"8px 12px",display:"flex",alignItems:"center",gap:10,boxShadow:`0 4px 20px ${T.accent}40`,pointerEvents:"all"}}>
+              <button onClick={()=>focusNav(-1)} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.accentSoft,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",color:T.accent,fontWeight:800}}>‹</button>
+              {focusColor?(
+                <div style={{display:"flex",alignItems:"center",gap:8,minWidth:100}}>
+                  <div style={{width:28,height:28,borderRadius:9,background:ALL_COLORS.find(c=>c.id===focusColor)?.hex||"#ccc",border:"2px solid rgba(0,0,0,0.12)",flexShrink:0,boxShadow:`0 0 0 2px ${T.accent}`}}/>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:900,color:T.accent}}>{focusColor}</div>
+                    <div style={{fontSize:9,color:T.textMid,fontWeight:600}}>{filtered.findIndex(c=>c.id===focusColor)+1} / {filtered.length}</div>
+                  </div>
+                </div>
+              ):(
+                <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:100,textAlign:"center"}}>点色卡开始</div>
+              )}
+              <button onClick={()=>focusNav(1)} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.accentSoft,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",color:T.accent,fontWeight:800}}>›</button>
+              <div style={{width:1,height:20,background:T.border}}/>
+              <button onClick={exitFocusMode} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,color:T.textMid}}>退出</button>
+            </div>
+          </div>
+        )}
+
         {/* 作品页：fixed全屏覆盖 */}
         {page==="works"&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:64,background:T.bg,zIndex:100,overflowY:"auto"}}>
-          <WorksPage T={T} tn={tn} user={user} stock={stock} used={used} resetKey={resetKey}/>
+          <WorksPage T={T} tn={tn} user={user} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock}/>
         </div>}
 
         {/* 我的页：fixed全屏覆盖 */}
         {page==="mine"&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:64,background:T.bg,zIndex:100,overflowY:"auto"}}>
-          <MinePage T={T} tn={tn} user={user} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()}/>
+          <MinePage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()}/>
         </div>}
 
         <div className="tt" style={{position:"fixed",bottom:0,left:0,right:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
@@ -1097,39 +1209,259 @@ function MissingColorPage({T,stock,onBack}){
   );
 }
 
-function WorksPage({T,tn,user,stock,used,resetKey}){
-  const [tab,setTab]=useState("color");
-  const [colorView,setColorView]=useState("home");
+// ══════════════════════════════════
+//  FocusMode（专注模式全屏）
+// ══════════════════════════════════
+function FocusMode({T,tn,task,onDeductStock,onExit}){
+  const [phase,setPhase]=useState("start"); // start | focus
+  const [autoDeduct,setAutoDeduct]=useState(false);
+  const [sortOrder,setSortOrder]=useState("count-desc");
+  const [doneColors,setDoneColors]=useState(new Set());
+  const [activeColor,setActiveColor]=useState(null);
+  const [drawerOpen,setDrawerOpen]=useState(false);
+
+  const colors=useMemo(()=>task.colorData||[],[task.colorData]);
+
+  const sorted=useMemo(()=>{
+    const rem=colors.filter(c=>!doneColors.has(c.id));
+    if(sortOrder==="count-asc")return[...rem].sort((a,b)=>a.count-b.count);
+    if(sortOrder==="id-asc")return[...rem].sort((a,b)=>a.id.localeCompare(b.id));
+    return[...rem].sort((a,b)=>b.count-a.count);
+  },[colors,doneColors,sortOrder]);
+
+  function startFocus(){setPhase("focus");if(sorted.length>0)setActiveColor(sorted[0].id);}
+
+  function markDone(colorId){
+    if(autoDeduct){const c=colors.find(x=>x.id===colorId);if(c&&c.count>0)onDeductStock(colorId,c.count);}
+    const newDone=new Set([...doneColors,colorId]);
+    setDoneColors(newDone);
+    const idx=sorted.findIndex(c=>c.id===colorId);
+    const next=sorted[idx+1];
+    setActiveColor(next?.id||null);
+  }
+
+  const activeColorData=activeColor?colors.find(c=>c.id===activeColor):null;
+  const activeColorInfo=activeColor?ALL_COLORS.find(c=>c.id===activeColor):null;
+  const totalLeft=sorted.length;
+  const totalDone=doneColors.size;
+
+  // ── 开始前设置页 ──
+  if(phase==="start")return(
+    <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
+      <div style={{padding:"18px 18px 14px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12}}>
+        <button onClick={onExit} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:T.textMid,lineHeight:1}}>←</button>
+        <div style={{fontSize:16,fontWeight:800,color:T.text}}>🎯 专注模式</div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"20px 18px"}}>
+        {/* 作品预览 */}
+        <div style={{background:T.card,borderRadius:20,padding:14,marginBottom:18,display:"flex",gap:14,alignItems:"center",boxShadow:T.cardShadow,border:`1.5px solid ${T.border}`}}>
+          <div style={{width:58,height:58,borderRadius:14,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
+            {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
+          </div>
+          <div>
+            <div style={{fontSize:15,fontWeight:800,color:T.text}}>{task.name}</div>
+            <div style={{fontSize:11,color:T.textMid,marginTop:3}}>{colors.length} 个颜色 · {colors.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
+          </div>
+        </div>
+
+        {colors.length===0&&(
+          <div style={{background:T.warnBg,border:`1.5px solid ${T.warnBorder}`,borderRadius:16,padding:"14px 16px",marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
+            <span style={{fontSize:18}}>⚠️</span>
+            <div>
+              <div style={{fontSize:13,color:T.warn,fontWeight:700,marginBottom:3}}>还没有颜色数据</div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.6}}>建议先在图纸卡片上扫描颜色统计，进入专注模式后颜色列表会更完整</div>
+            </div>
+          </div>
+        )}
+
+        {/* 排列顺序 */}
+        <div style={{background:T.card,borderRadius:18,padding:"14px 16px",marginBottom:12,border:`1.5px solid ${T.border}`}}>
+          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:10,letterSpacing:0.5}}>颜色排列顺序</div>
+          <div style={{display:"flex",gap:8}}>
+            {[["count-desc","多→少"],["count-asc","少→多"],["id-asc","色号序"]].map(([val,label])=>(
+              <button key={val} onClick={()=>setSortOrder(val)}
+                style={{flex:1,padding:"9px 0",borderRadius:10,border:`1.5px solid ${sortOrder===val?T.accent:T.border}`,background:sortOrder===val?T.accent:T.card,color:sortOrder===val?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.15s"}}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 自动扣库存 */}
+        <div style={{background:T.card,borderRadius:18,padding:"14px 16px",border:`1.5px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:T.text}}>自动扣库存</div>
+            <div style={{fontSize:11,color:T.textMid,marginTop:2}}>完成一个颜色时自动扣除用量</div>
+          </div>
+          <div onClick={()=>setAutoDeduct(v=>!v)}
+            style={{width:46,height:26,borderRadius:13,background:autoDeduct?T.accent:T.barBg,cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}>
+            <div style={{position:"absolute",top:3,left:autoDeduct?22:3,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.25)",transition:"left 0.2s"}}/>
+          </div>
+        </div>
+      </div>
+
+      <div style={{padding:"16px 18px 36px",borderTop:`1px solid ${T.border}`}}>
+        <button onClick={startFocus}
+          style={{width:"100%",padding:"15px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:900,cursor:"pointer",boxShadow:`0 4px 16px ${T.accent}50`}}>
+          开始专注 🎯
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── 专注拼豆页 ──
+  const bgDark=tn==="night"?"#0a1520":"#1a1a2e";
+  const drawerBg=tn==="night"?T.card:"#ffffff";
+
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:500,background:bgDark,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
+      {/* 顶部状态栏 */}
+      <div style={{padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(0,0,0,0.35)",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          {activeColorInfo?(
+            <div style={{width:30,height:30,borderRadius:9,background:activeColorInfo.hex,border:"2px solid rgba(255,255,255,0.25)",boxShadow:"0 0 10px rgba(255,255,255,0.15)",flexShrink:0}}/>
+          ):(
+            <div style={{width:30,height:30,borderRadius:9,background:"rgba(255,255,255,0.1)",flexShrink:0}}/>
+          )}
+          <div>
+            <div style={{fontSize:13,fontWeight:800,color:"#fff"}}>
+              {activeColor?`正在拼 ${activeColor}`:"点击颜色开始"}
+            </div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",marginTop:1}}>
+              已完成 {totalDone} 个 · 剩余 {totalLeft} 个
+            </div>
+          </div>
+        </div>
+        <button onClick={onExit} style={{background:"rgba(255,255,255,0.12)",border:"none",borderRadius:50,padding:"6px 16px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>退出</button>
+      </div>
+
+      {/* 图纸大图区 */}
+      <div style={{flex:1,overflow:"auto",background:"#111",display:"flex",alignItems:"center",justifyContent:"center",WebkitOverflowScrolling:"touch"}}>
+        {task.img?(
+          <img src={task.img} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain",userSelect:"none",touchAction:"pinch-zoom"}} alt="图纸"/>
+        ):(
+          <div style={{color:"rgba(255,255,255,0.25)",textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:10}}>🖼️</div>
+            <div style={{fontSize:13}}>没有图纸图片</div>
+          </div>
+        )}
+      </div>
+
+      {/* 底部抽屉 */}
+      <div style={{background:drawerBg,borderRadius:"20px 20px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,0.35)",flexShrink:0}}>
+        {/* 把手 */}
+        <div style={{padding:"10px 16px 0",display:"flex",flexDirection:"column",gap:0}} onClick={()=>setDrawerOpen(v=>!v)}>
+          <div style={{width:36,height:4,borderRadius:2,background:T.border,margin:"0 auto 8px",cursor:"pointer"}}/>
+        </div>
+
+        {/* 当前颜色操作行 */}
+        {activeColor&&(
+          <div style={{padding:"4px 16px 10px",display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:38,height:38,borderRadius:11,background:activeColorInfo?.hex||"#ccc",border:`2px solid ${T.border}`,flexShrink:0,boxShadow:`0 0 0 3px ${T.accent}30`}}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:800,color:T.text}}>{activeColor}</div>
+              <div style={{fontSize:11,color:T.textMid}}>共 {activeColorData?.count||0} 粒</div>
+            </div>
+            <button onClick={()=>markDone(activeColor)}
+              style={{padding:"9px 18px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",boxShadow:"0 2px 10px rgba(76,175,80,0.4)",flexShrink:0}}>
+              ✓ 拼完了
+            </button>
+          </div>
+        )}
+
+        {/* 颜色列表：收起=横向滚动行，展开=网格 */}
+        {!drawerOpen&&(
+          <div style={{padding:"4px 16px 20px",display:"flex",alignItems:"center",gap:6,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+            <style>{`.fscroll::-webkit-scrollbar{display:none}`}</style>
+            <div className="fscroll" style={{display:"flex",gap:8,flexShrink:0}}>
+              {sorted.map(c=>{
+                const info=ALL_COLORS.find(x=>x.id===c.id);
+                const isAct=c.id===activeColor;
+                return(
+                  <div key={c.id} onClick={()=>setActiveColor(c.id)}
+                    style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",transform:isAct?"scale(1.12)":"scale(1)",transition:"transform 0.15s"}}>
+                    <div style={{width:38,height:38,borderRadius:11,background:info?.hex||"#ccc",border:`2.5px solid ${isAct?T.accent:"transparent"}`,boxShadow:isAct?`0 0 0 3px ${T.accent}40`:"none"}}/>
+                    <div style={{fontSize:9,fontWeight:700,color:T.text}}>{c.id}</div>
+                    <div style={{fontSize:8,color:T.textMid}}>{c.count}粒</div>
+                  </div>
+                );
+              })}
+              {sorted.length===0&&(
+                <div style={{color:T.textMid,fontSize:13,padding:"8px 4px",fontWeight:700}}>🎉 全部完成！</div>
+              )}
+            </div>
+            <div onClick={e=>{e.stopPropagation();setDrawerOpen(true);}} style={{flexShrink:0,width:28,height:28,borderRadius:"50%",background:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",marginLeft:4,fontSize:13,color:T.accent,fontWeight:800}}>↑</div>
+          </div>
+        )}
+
+        {/* 展开的完整列表 */}
+        {drawerOpen&&(
+          <div style={{maxHeight:"46vh",overflowY:"auto",padding:"4px 16px 24px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{fontSize:11,color:T.textMid,fontWeight:600}}>剩余 {sorted.length} 个颜色</div>
+              <button onClick={()=>setDrawerOpen(false)} style={{background:"none",border:"none",fontSize:12,color:T.accent,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700}}>收起 ↓</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+              {sorted.map(c=>{
+                const info=ALL_COLORS.find(x=>x.id===c.id);
+                const isAct=c.id===activeColor;
+                return(
+                  <div key={c.id} onClick={()=>{setActiveColor(c.id);setDrawerOpen(false);}}
+                    style={{background:isAct?T.accentSoft:T.card,border:`1.5px solid ${isAct?T.accent:T.border}`,borderRadius:12,padding:"8px 6px",cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
+                    <div style={{width:"100%",aspectRatio:"1",borderRadius:8,background:info?.hex||"#ccc",marginBottom:4,border:"1px solid rgba(0,0,0,0.08)"}}/>
+                    <div style={{fontSize:10,fontWeight:800,color:T.text}}>{c.id}</div>
+                    <div style={{fontSize:9,color:T.textMid,marginTop:1}}>{c.count}粒</div>
+                  </div>
+                );
+              })}
+              {sorted.length===0&&(
+                <div style={{gridColumn:"1/-1",textAlign:"center",padding:"20px 0",color:T.textMid,fontSize:13}}>🎉 全部完成啦！</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════
+//  WorksPage（作品页 重构版）
+// ══════════════════════════════════
+function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock}){
+  const [view,setView]=useState("home"); // home | missing | diary | focus
+  const [focusTask,setFocusTask]=useState(null);
   const [tasks,setTasks]=useState([]);
   const [tasksLoaded,setTasksLoaded]=useState(false);
-  const [monthGoal,setMonthGoal]=useState(()=>{
-    try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}
-  });
+  const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
   const [showGoalEdit,setShowGoalEdit]=useState(false);
   const [goalInput,setGoalInput]=useState("");
   const [showAddModal,setShowAddModal]=useState(false);
-  const [newTaskName,setNewTaskName]=useState("");
-  const taskImgRef=useRef(null);
-  const [addingImg,setAddingImg]=useState(null);
+  // 新建任务的临时状态
+  const [newName,setNewName]=useState("");
+  const [newImg,setNewImg]=useState(null);
+  const [newColorData,setNewColorData]=useState([]); // [{id,hex,count}]
+  const [scanLoading,setScanLoading]=useState(false);
+  const [scanErr,setScanErr]=useState("");
+  const [addStep,setAddStep]=useState("info"); // info | scan
+  const newImgRef=useRef(null);
+  // 长按删除
+  const [longPressId,setLongPressId]=useState(null);
+  const longPressTimer=useRef(null);
 
-  // 从云端或localStorage加载tasks
+  // 云端加载tasks
   useEffect(()=>{
     async function loadTasks(){
       if(user){
         const {data}=await supabase.from("profiles").select("tasks").eq("id",user.id).single();
-        if(data?.tasks){setTasks(data.tasks);}
-        else{
-          try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}
-        }
-      }else{
-        try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}
-      }
+        if(data?.tasks)setTasks(data.tasks);
+        else{try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}}
+      }else{try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}}
       setTasksLoaded(true);
     }
     loadTasks();
   },[user]);
 
-  // tasks变化时同步
   const tasksTimer=useRef(null);
   useEffect(()=>{
     if(!tasksLoaded)return;
@@ -1141,207 +1473,269 @@ function WorksPage({T,tn,user,stock,used,resetKey}){
     },1500);
   },[tasks,tasksLoaded]);
 
-  // resetKey变化时清空tasks
-  useEffect(()=>{
-    if(resetKey===0)return;
-    setTasks([]);
-  },[resetKey]);
+  useEffect(()=>{if(resetKey===0)return;setTasks([]);},[resetKey]);
 
   const now=new Date();
   const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const doneThisMonth=tasks.filter(t=>t.status==="done"&&t.doneDate?.startsWith(thisMonth));
-  const totalBeads=doneThisMonth.reduce((a,t)=>a+(t.beads||0),0);
+  const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
 
-  function addTask(name){
-    const t={id:Date.now(),name,status:"todo",beads:0,img:null,createdAt:new Date().toISOString()};
-    setTasks(prev=>[t,...prev]);
-  }
-  function startTask(id){setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"doing"}:t));}
-  function doneTask(id){
-    const doneDate=new Date().toISOString();
-    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate}:t));
-  }
-  function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));}
-  function setTaskImg(id,src){setTasks(prev=>prev.map(t=>t.id===id?{...t,img:src}:t));}
+  function openAddModal(){setNewName("");setNewImg(null);setNewColorData([]);setScanErr("");setAddStep("info");setShowAddModal(true);}
+  function closeAddModal(){setShowAddModal(false);}
 
-  const activeTasks=tasks.filter(t=>t.status!=="done");
+  function saveNewTask(){
+    if(!newName.trim())return;
+    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:newColorData,status:"todo",createdAt:new Date().toISOString(),doneDate:null};
+    setTasks(prev=>[t,...prev]);
+    closeAddModal();
+  }
+
+  function handleNewImg(e){
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=ev=>setNewImg(ev.target.result);r.readAsDataURL(f);
+    e.target.value="";
+  }
+
+  async function scanColors(){
+    if(!newImg){setScanErr("请先上传图纸图片");return;}
+    setScanLoading(true);setScanErr("");
+    try{
+      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({image:newImg,prompt:"请识别图片下方颜色统计区，提取每个色号和对应颗数，格式：色号 颗数，每行一个，例：\nA2 65\nB11 120\n只输出色号和数字，不要其他内容。"})});
+      const data=await resp.json();
+      if(data.result){
+        const lines=data.result.split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
+        const items=lines.map(line=>{
+          const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);
+          if(!m)return null;
+          const id=m[1].toUpperCase();
+          const colorInfo=ALL_COLORS.find(c=>c.id===id);
+          return colorInfo?{id,hex:colorInfo.hex,count:parseInt(m[2])}:null;
+        }).filter(Boolean);
+        if(items.length>0){setNewColorData(items);setAddStep("scan");}
+        else setScanErr("未能识别颜色，建议截取图纸下方统计区再试～");
+      }else setScanErr("识别失败，请重试～");
+    }catch(e){setScanErr("请求失败："+e.message);}
+    finally{setScanLoading(false);}
+  }
+
+  function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));setLongPressId(null);}
+  function doneTask(id){setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString()}:t));}
+
+  function startLongPress(id){longPressTimer.current=setTimeout(()=>setLongPressId(id),600);}
+  function cancelLongPress(){clearTimeout(longPressTimer.current);}
+
+  function enterFocus(task){setFocusTask(task);setView("focus");}
+
+  const activeTasks=tasks.filter(t=>t.status!=="todo"||true).filter(t=>t.status!=="done");
+
+  // 专注模式全屏
+  if(view==="focus"&&focusTask)return(
+    <FocusMode T={T} tn={tn} task={focusTask} onDeductStock={onDeductStock}
+      onExit={()=>{setView("home");setFocusTask(null);}}/>
+  );
+
+  // 缺色替换页
+  if(view==="missing")return <MissingColorPage T={T} stock={stock} onBack={()=>setView("home")}/>;
+
+  // 日记页
+  if(view==="diary")return(
+    <div style={{fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${T.border}`}}>
+        <button onClick={()=>setView("home")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer",lineHeight:1}}>←</button>
+        <div style={{fontSize:15,fontWeight:800,color:T.text}}>📖 拼豆日记</div>
+      </div>
+      <DiaryPage T={T} tn={tn} inWorks={true}/>
+    </div>
+  );
 
   return(
-    <div style={{fontFamily:"'Nunito',sans-serif",paddingBottom:0}}>
-      {/* 新建任务弹窗 */}
+    <div style={{fontFamily:"'Nunito',sans-serif",paddingBottom:20}}>
+
+      {/* 新建图纸弹窗 */}
       {showAddModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px"}} onClick={e=>{if(e.target===e.currentTarget){setShowAddModal(false);setNewTaskName("");}}}>
-          <div style={{background:T.card,borderRadius:24,padding:"24px 20px 24px",width:"100%",maxWidth:400}}>
-            <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>📋 新建图纸任务</div>
-            <input value={newTaskName} onChange={e=>setNewTaskName(e.target.value)}
-              placeholder="图纸名称，比如：草莓蛋糕" autoFocus
-              onKeyDown={e=>{if(e.key==="Enter"&&newTaskName.trim()){addTask(newTaskName.trim());setNewTaskName("");setShowAddModal(false);}}}
-              style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:16}}/>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:999,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+          onClick={e=>{if(e.target===e.currentTarget)closeAddModal();}}>
+          <div style={{background:T.card,borderRadius:"24px 24px 0 0",padding:"24px 20px 36px",width:"100%",maxWidth:480,maxHeight:"85vh",overflowY:"auto"}}>
+            {addStep==="info"&&(
+              <>
+                <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:18}}>🖼️ 新建图纸</div>
+                <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="图纸名称，比如：草莓蛋糕" autoFocus
+                  style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:14}}/>
+                {/* 图片上传区 */}
+                <div onClick={()=>newImgRef.current?.click()}
+                  style={{background:T.accentSoft,border:`2px dashed ${T.border}`,borderRadius:16,padding:"20px",textAlign:"center",cursor:"pointer",marginBottom:14,overflow:"hidden",position:"relative",minHeight:80}}>
+                  {newImg?(
+                    <img src={newImg} style={{width:"100%",maxHeight:180,objectFit:"contain",borderRadius:10}} alt=""/>
+                  ):(
+                    <>
+                      <div style={{fontSize:28,marginBottom:6}}>📷</div>
+                      <div style={{fontSize:13,fontWeight:700,color:T.accent}}>点击上传图纸</div>
+                      <div style={{fontSize:11,color:T.textMid,marginTop:4}}>专注模式时会显示此图纸</div>
+                    </>
+                  )}
+                </div>
+                <input ref={newImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleNewImg}/>
+                {/* 扫描颜色 */}
+                {newImg&&(
+                  <div style={{marginBottom:14}}>
+                    <button onClick={scanColors} disabled={scanLoading}
+                      style={{width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.accentSoft,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:scanLoading?0.7:1}}>
+                      {scanLoading?"🔍 识别中…":"📊 扫描颜色统计（可选）"}
+                    </button>
+                    {scanErr&&<div style={{fontSize:11,color:T.danger,marginTop:6,fontWeight:600}}>{scanErr}</div>}
+                    {newColorData.length>0&&<div style={{fontSize:11,color:"#4caf50",marginTop:6,fontWeight:700}}>✅ 已识别 {newColorData.length} 个颜色</div>}
+                  </div>
+                )}
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={closeAddModal} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
+                  <button onClick={saveNewTask} disabled={!newName.trim()}
+                    style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                    保存图纸
+                  </button>
+                </div>
+              </>
+            )}
+            {addStep==="scan"&&(
+              <>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+                  <button onClick={()=>setAddStep("info")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:T.textMid}}>←</button>
+                  <div style={{fontSize:15,fontWeight:800,color:T.text}}>✅ 识别结果确认</div>
+                </div>
+                <div style={{fontSize:12,color:T.textMid,marginBottom:12}}>共识别到 {newColorData.length} 个颜色，请确认是否正确：</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>
+                  {newColorData.map(c=>(
+                    <div key={c.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:10,background:T.accentSoft,border:`1.5px solid ${T.border}`}}>
+                      <div style={{width:18,height:18,borderRadius:5,background:c.hex,border:"1px solid rgba(0,0,0,0.1)",flexShrink:0}}/>
+                      <div style={{fontSize:12,fontWeight:700,color:T.text}}>{c.id}</div>
+                      <div style={{fontSize:11,color:T.textMid}}>{c.count}粒</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={()=>{setNewColorData([]);setAddStep("info");}} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新扫描</button>
+                  <button onClick={saveNewTask} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>确认保存 ✓</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 长按删除确认 */}
+      {longPressId&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:998,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}}
+          onClick={()=>setLongPressId(null)}>
+          <div style={{background:T.card,borderRadius:22,padding:"24px 20px",width:"100%",maxWidth:320}} onClick={e=>e.stopPropagation()}>
+            <div style={{textAlign:"center",marginBottom:16}}>
+              <div style={{fontSize:32,marginBottom:8}}>🗑️</div>
+              <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:6}}>删除这个图纸？</div>
+              <div style={{fontSize:12,color:T.textMid}}>「{tasks.find(t=>t.id===longPressId)?.name}」删除后无法恢复</div>
+            </div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>{setShowAddModal(false);setNewTaskName("");}}
-                style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
-              <button onClick={()=>{if(newTaskName.trim()){addTask(newTaskName.trim());setNewTaskName("");setShowAddModal(false);}}}
-                style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newTaskName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>确认</button>
+              <button onClick={()=>setLongPressId(null)} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
+              <button onClick={()=>deleteTask(longPressId)} style={{flex:1,padding:"12px 0",borderRadius:50,border:"none",background:T.danger,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>删除</button>
             </div>
           </div>
         </div>
       )}
-      {/* 顶部进度卡片 */}
-      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 18px 0",borderBottom:`1px solid ${T.border}`}}>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12}}>
+
+      {/* 进度区 */}
+      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 18px 16px",borderBottom:`1px solid ${T.border}`}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:10}}>
           <div>
             <div style={{fontSize:18,fontWeight:900,color:T.accent}}>作品</div>
             <div style={{fontSize:11,color:T.textMid,marginTop:2}}>本月进度 · {now.getMonth()+1}月</div>
           </div>
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:22,fontWeight:900,color:T.text}}>{doneThisMonth.length} <span style={{fontSize:12,fontWeight:600,color:T.textMid}}>件</span></div>
-            <div style={{fontSize:11,color:T.textMid}}>消耗 {totalBeads.toLocaleString()} 粒</div>
           </div>
         </div>
-        <div style={{marginBottom:4}}>
-          {showGoalEdit?(
-            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-              <input value={goalInput} onChange={e=>setGoalInput(e.target.value)} type="number" placeholder="输入目标件数"
-                style={{flex:1,border:`1.5px solid ${T.border}`,borderRadius:12,padding:"6px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none"}}/>
-              <button onClick={()=>{if(goalInput===""){setMonthGoal(0);}else{setMonthGoal(Number(goalInput));}setShowGoalEdit(false);}}
-                style={{padding:"6px 14px",borderRadius:20,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>确认</button>
-              <button onClick={()=>setShowGoalEdit(false)}
-                style={{padding:"6px 14px",borderRadius:20,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>取消</button>
-            </div>
-          ):(
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.textMid,fontWeight:600,marginBottom:5}}>
-              <span>{monthGoal>0?`本月目标 ${monthGoal} 件`:"暂未设置目标"}</span>
-              <button onClick={()=>{setGoalInput(String(monthGoal||""));setShowGoalEdit(true);}}
-                style={{background:"none",border:"none",fontSize:10,color:T.accent,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:0}}>修改目标</button>
-            </div>
-          )}
-          {monthGoal>0&&<div style={{background:T.accentLight,borderRadius:20,height:10,overflow:"hidden",marginBottom:8}}>
-            <div style={{width:`${progress*100}%`,height:"100%",borderRadius:20,background:`linear-gradient(90deg,${T.accent},#72b4ff)`,transition:"width 0.5s"}}/>
-          </div>}
-          <div style={{display:"flex",gap:6,marginBottom:14}}>
-            {[
-              ["✅",doneThisMonth.length,"已完成","#4caf50","#f0fff4"],
-              ["🔥",tasks.filter(t=>t.status==="doing").length,"进行中",T.warn,T.warnBg],
-              ["📋",tasks.filter(t=>t.status==="todo").length,"待开始",T.textMid,T.accentSoft]
-            ].map(([ic,n,lb,col,bg])=>(
-              <div key={lb} style={{flex:1,textAlign:"center",fontSize:10,fontWeight:700,color:col,background:bg,borderRadius:8,padding:"4px 0"}}>{ic} {lb} {n}</div>
-            ))}
+        {showGoalEdit?(
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+            <input value={goalInput} onChange={e=>setGoalInput(e.target.value)} type="number" placeholder="目标件数"
+              style={{flex:1,border:`1.5px solid ${T.border}`,borderRadius:12,padding:"6px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none"}}/>
+            <button onClick={()=>{setMonthGoal(goalInput===""?0:Number(goalInput));setShowGoalEdit(false);localStorage.setItem('pindou_month_goal',goalInput);}}
+              style={{padding:"6px 14px",borderRadius:20,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>确认</button>
+            <button onClick={()=>setShowGoalEdit(false)} style={{padding:"6px 10px",borderRadius:20,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>取消</button>
           </div>
-        </div>
-        {/* Tab切换 */}
+        ):(
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.textMid,fontWeight:600,marginBottom:5}}>
+            <span>{monthGoal>0?`本月目标 ${monthGoal} 件`:"未设置目标"}</span>
+            <button onClick={()=>{setGoalInput(String(monthGoal||""));setShowGoalEdit(true);}} style={{background:"none",border:"none",fontSize:10,color:T.accent,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:0}}>修改目标</button>
+          </div>
+        )}
+        {monthGoal>0&&<div style={{background:T.accentLight,borderRadius:20,height:8,overflow:"hidden",marginBottom:10}}>
+          <div style={{width:`${progress*100}%`,height:"100%",borderRadius:20,background:`linear-gradient(90deg,${T.accent},#a78bff)`,transition:"width 0.5s"}}/>
+        </div>}
         <div style={{display:"flex",gap:6}}>
-          {[["color","🎨 配色"],["diary","📖 日记"]].map(([key,label])=>(
-            <button key={key} onClick={()=>{setTab(key);setColorView("home");}}
-              style={{flex:1,padding:"10px 0",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,background:"transparent",color:tab===key?T.accent:T.textLight,borderBottom:tab===key?`3px solid ${T.accent}`:"3px solid transparent",transition:"all 0.2s"}}>
-              {label}
-            </button>
+          {[["✅",doneThisMonth.length,"已完成","#4caf50","#f0fff4"],["🔥",tasks.filter(t=>t.status==="doing").length,"进行中",T.warn,T.warnBg],["📋",tasks.filter(t=>t.status==="todo").length,"待开始",T.textMid,T.accentSoft]].map(([ic,n,lb,col,bg])=>(
+            <div key={lb} style={{flex:1,textAlign:"center",fontSize:10,fontWeight:700,color:col,background:bg,borderRadius:8,padding:"5px 0"}}>{ic} {lb} {n}</div>
           ))}
         </div>
       </div>
 
-      {/* 配色主页 */}
-      {tab==="color"&&colorView==="home"&&(
-        <div className="fade" style={{padding:"18px 16px"}}>
-          {/* 两张入口卡片 */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-            <div className="cc" onClick={()=>setColorView("missing")}
-              style={{background:T.card,borderRadius:22,padding:"18px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`}}>
-              <div style={{width:48,height:48,borderRadius:16,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}>🔍</div>
-              <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:5}}>缺色替换</div>
-              <div style={{fontSize:11,color:T.textMid,lineHeight:1.5}}>上传图纸，找替代色</div>
-              <div style={{marginTop:12,display:"flex",alignItems:"center",gap:4}}>
-                <div style={{flex:1,height:3,borderRadius:10,background:T.accentLight}}/>
-                <div style={{flex:2,height:3,borderRadius:10,background:T.accent}}/>
-                <div style={{flex:1,height:3,borderRadius:10,background:T.accentLight}}/>
-              </div>
-            </div>
-            <div className="cc" onClick={()=>setColorView("restyle")}
-              style={{background:T.card,borderRadius:22,padding:"18px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`}}>
-              <div style={{width:48,height:48,borderRadius:16,background:"linear-gradient(135deg,#fff8ec,#fde5b0)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}>🌈</div>
-              <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:5}}>重新配色</div>
-              <div style={{fontSize:11,color:T.textMid,lineHeight:1.5}}>改变色调，预览新方案</div>
-              <div style={{marginTop:12,display:"flex",alignItems:"center",gap:3}}>
-                {["#ff8fa3","#ffd166","#4a9eff","#64e0a4","#b37bdc"].map(c=>(
-                  <div key={c} style={{flex:1,height:3,borderRadius:10,background:c}}/>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* 即将出炉 */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-            <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
-            <button onClick={()=>setShowAddModal(true)} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
-          </div>
-          <input ref={taskImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
-            const f=e.target.files[0];if(!f||!addingImg)return;
-            const r=new FileReader();r.onload=ev=>{setTaskImg(addingImg,ev.target.result);setAddingImg(null);};r.readAsDataURL(f);
-            e.target.value="";
-          }}/>
-
-          {activeTasks.length===0&&(
-            <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有任务～点右上角新建一个吧(◕ᴗ◕✿)</div>
-          )}
-          {activeTasks.map(task=>(
-            <div key={task.id} className="cc"
-              style={{background:T.card,border:`1.5px solid ${task.status==="doing"?T.warn:T.border}`,borderRadius:20,padding:"14px 16px",marginBottom:10,boxShadow:T.cardShadow,display:"flex",alignItems:"center",gap:12}}>
-              {/* 封面图 */}
-              <div onClick={()=>{setAddingImg(task.id);taskImgRef.current?.click();}}
-                style={{width:50,height:50,borderRadius:14,background:task.status==="doing"?T.warnBg:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,overflow:"hidden",cursor:"pointer",border:`2px dashed ${task.img?"transparent":T.border}`}}>
-                {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"📷"}
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                  <div style={{fontSize:14,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.name}</div>
-                  <div style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,flexShrink:0,background:task.status==="doing"?T.warnBg:T.accentSoft,color:task.status==="doing"?T.warn:T.textMid}}>
-                    {task.status==="doing"?"🔥 进行中":"📋 待开始"}
-                  </div>
-                </div>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0}}>
-                {task.status==="todo"&&(
-                  <button className="btn" onClick={()=>startTask(task.id)}
-                    style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.accentLight,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>开始</button>
-                )}
-                {task.status==="doing"&&(
-                  <button className="btn" onClick={()=>doneTask(task.id)}
-                    style={{padding:"5px 12px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>✓ 完成</button>
-                )}
-                <button className="btn" onClick={()=>deleteTask(task.id)}
-                  style={{padding:"4px 8px",borderRadius:50,border:`1.5px solid ${T.dangerBorder||T.border}`,background:"none",color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:700,cursor:"pointer"}}>删除</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 缺色替换 */}
-      {tab==="color"&&colorView==="missing"&&(
-        <MissingColorPage T={T} stock={stock} onBack={()=>setColorView("home")}/>
-      )}
-
-      {/* 重新配色 */}
-      {tab==="color"&&colorView==="restyle"&&(
-        <div className="fade" style={{padding:"18px 16px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-            <button onClick={()=>setColorView("home")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
-            <div style={{fontSize:15,fontWeight:800,color:T.text}}>🌈 重新配色</div>
-          </div>
-          <div style={{background:T.warnBg,border:`2px dashed ${T.warn}`,borderRadius:22,padding:36,textAlign:"center"}}>
-            <div style={{fontSize:40,marginBottom:10}}>🚧</div>
-            <div style={{fontSize:14,fontWeight:800,color:T.warn}}>开发中～</div>
-            <div style={{fontSize:11,color:T.textMid,marginTop:6}}>敬请期待！</div>
+      {/* 工具入口 */}
+      <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="cc" onClick={()=>setView("missing")}
+          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
+          <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔍</div>
+          <div>
+            <div style={{fontSize:13,fontWeight:900,color:T.text}}>缺色替换</div>
+            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>找库存替代色</div>
           </div>
         </div>
-      )}
-
-      {/* 日记tab */}
-      {tab==="diary"&&(
-        <div className="fade">
-          <DiaryPage T={T} tn={tn} inWorks={true}/>
+        <div className="cc" onClick={()=>setView("diary")}
+          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
+          <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#fff0f8,#ffd6ee)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>📖</div>
+          <div>
+            <div style={{fontSize:13,fontWeight:900,color:T.text}}>拼豆日记</div>
+            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>记录拼豆时光</div>
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* 即将出炉 */}
+      <div style={{padding:"16px 16px 0"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
+          <button onClick={openAddModal} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
+        </div>
+        <div style={{fontSize:11,color:T.textLight,marginBottom:10,fontWeight:600}}>长按卡片可删除</div>
+
+        {activeTasks.length===0&&(
+          <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有图纸～点右上角新建一个吧 (◕ᴗ◕✿)</div>
+        )}
+
+        {activeTasks.map(task=>(
+          <div key={task.id}
+            onTouchStart={()=>startLongPress(task.id)}
+            onTouchEnd={cancelLongPress}
+            onTouchMove={cancelLongPress}
+            onMouseDown={()=>startLongPress(task.id)}
+            onMouseUp={cancelLongPress}
+            onMouseLeave={cancelLongPress}
+            className="cc"
+            style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"14px",marginBottom:10,boxShadow:T.cardShadow,display:"flex",gap:14,alignItems:"center"}}>
+            {/* 左：图片 */}
+            <div style={{width:64,height:64,borderRadius:16,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>
+              {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
+            </div>
+            {/* 右：名字+按钮 */}
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:14,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:4}}>{task.name}</div>
+              {task.colorData&&task.colorData.length>0&&(
+                <div style={{fontSize:10,color:T.textMid,marginBottom:6}}>{task.colorData.length} 个颜色 · {task.colorData.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
+              )}
+              <button className="btn" onClick={()=>enterFocus(task)}
+                style={{padding:"7px 16px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}>
+                🎯 开始专注
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
     </div>
   );
 }
@@ -1349,7 +1743,7 @@ function WorksPage({T,tn,user,stock,used,resetKey}){
 // ══════════════════════════════════
 //  MinePage（我的页）
 // ══════════════════════════════════
-function MinePage({T,tn,user,onLogout,onExport,onImport}){
+function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
   const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
   const [nickname,setNickname]=useState(()=>localStorage.getItem('pindou_nickname')||"");
   const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
@@ -1397,6 +1791,7 @@ function MinePage({T,tn,user,onLogout,onExport,onImport}){
         ):(
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}} onClick={()=>{setNameInput(nickname);setEditingName(true);}}>
             <div style={{fontSize:16,fontWeight:800,color:T.text}}>{nickname||"点击设置昵称"}</div>
+            {isPro&&<span style={{fontSize:10,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"2px 8px",fontWeight:900}}>Pro ✦</span>}
             <span style={{fontSize:12,color:T.textLight,cursor:"pointer"}}>✏️</span>
           </div>
         )}
@@ -1409,22 +1804,41 @@ function MinePage({T,tn,user,onLogout,onExport,onImport}){
         <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
           <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>📦 数据管理</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div className="cc" onClick={onExport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
+            <div className="cc" onClick={isPro?onExport:onUpgrade} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer",position:"relative"}}>
               <div>
                 <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬇️ 导出数据</div>
                 <div style={{fontSize:11,color:T.textMid,marginTop:2}}>备份库存数据为JSON文件</div>
               </div>
-              <span style={{fontSize:18,color:T.textLight}}>›</span>
+              {isPro?<span style={{fontSize:18,color:T.textLight}}>›</span>:<span style={{fontSize:10,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"2px 8px",fontWeight:900}}>Pro</span>}
             </div>
-            <div className="cc" onClick={onImport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
+            <div className="cc" onClick={isPro?onImport:onUpgrade} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer",position:"relative"}}>
               <div>
                 <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬆️ 导入数据</div>
                 <div style={{fontSize:11,color:T.textMid,marginTop:2}}>从备份文件恢复库存数据</div>
               </div>
-              <span style={{fontSize:18,color:T.textLight}}>›</span>
+              {isPro?<span style={{fontSize:18,color:T.textLight}}>›</span>:<span style={{fontSize:10,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"2px 8px",fontWeight:900}}>Pro</span>}
             </div>
           </div>
         </div>
+
+        {/* 升级/Pro状态 */}
+        {!isPro&&(
+          <div className="cc" onClick={onUpgrade} style={{background:`linear-gradient(135deg,#fff8ec,#f5f0ff)`,border:`1.5px solid #ffd166`,borderRadius:20,padding:"16px",marginBottom:12,cursor:"pointer",boxShadow:"0 4px 16px rgba(255,209,102,0.2)"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:900,color:"#b87c00",marginBottom:4}}>🌟 升级 Pro</div>
+                <div style={{fontSize:11,color:"#9a6a00",lineHeight:1.6}}>解锁专注模式、AI识图<br/>和数据导出备份功能</div>
+              </div>
+              <div style={{background:"linear-gradient(135deg,#ffd166,#ffb347)",borderRadius:14,padding:"8px 14px",fontSize:12,fontWeight:800,color:"#fff",boxShadow:"0 2px 8px rgba(255,180,70,0.4)"}}>查看 ›</div>
+            </div>
+          </div>
+        )}
+        {isPro&&(
+          <div style={{background:"linear-gradient(135deg,#fff8ec,#f5f0ff)",border:"1.5px solid #ffd166",borderRadius:20,padding:"14px 16px",marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#b87c00"}}>✦ Pro 会员</div>
+            <div style={{fontSize:11,color:"#9a6a00",marginTop:3}}>全功能已解锁，享受拼豆乐趣～</div>
+          </div>
+        )}
 
         {/* 退出登录 */}
         <button className="btn" onClick={onLogout}
