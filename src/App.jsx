@@ -1402,16 +1402,21 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     }
   },[activeColor,mapReady,gridCols,gridRows]);
 
-  // 监听canvas显示尺寸（SVG叠加）
+  // 计算canvas固定显示尺寸（适配屏幕，之后不再变化）
   useEffect(()=>{
-    if(!canvasRef.current||!mapReady)return;
-    const obs=new ResizeObserver(entries=>{
-      const e=entries[0];
-      if(e)setCanvasDsp({w:e.contentRect.width,h:e.contentRect.height});
-    });
-    obs.observe(canvasRef.current);
-    setCanvasDsp({w:canvasRef.current.offsetWidth,h:canvasRef.current.offsetHeight});
-    return()=>obs.disconnect();
+    if(!canvasRef.current||!mapReady||!origImgRef.current)return;
+    const img=origImgRef.current;
+    // 容器可用区域（屏幕宽 - 8px，屏幕高 - 顶栏约56px - 底部约140px）
+    const maxW=window.innerWidth-8;
+    const maxH=window.innerHeight-56-140;
+    const ratio=img.naturalWidth/img.naturalHeight;
+    let w=maxW,h=maxW/ratio;
+    if(h>maxH){h=maxH;w=maxH*ratio;}
+    w=Math.floor(w);h=Math.floor(h);
+    setCanvasDsp({w,h});
+    // 同步设置canvas CSS尺寸（固定，不随scale变化）
+    canvasRef.current.style.width=w+"px";
+    canvasRef.current.style.height=h+"px";
   },[mapReady]);
 
   function markDone(colorId){
@@ -1714,11 +1719,22 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
             transformOrigin:"center center",
             transition:"none",
             boxShadow:"0 2px 20px rgba(0,0,0,0.15)",
-            borderRadius:2,willChange:"transform"
+            borderRadius:2,
+            willChange:"transform",
+            WebkitBackfaceVisibility:"hidden",
+            backfaceVisibility:"hidden",
           }}>
             {mapReady?(
               <canvas ref={canvasRef}
-                style={{display:"block",maxWidth:"calc(100vw - 8px)",maxHeight:"calc(100vh - 190px)",imageRendering:"pixelated"}}/>
+                style={{
+                  display:"block",
+                  // 固定初始尺寸适配屏幕，不用max-width/max-height
+                  // 避免mobile browser在高倍缩放时因合成层超限白屏
+                  width: canvasDsp.w||"auto",
+                  height: canvasDsp.h||"auto",
+                  imageRendering:"crisp-edges",
+                  WebkitImageRendering:"-webkit-optimize-contrast",
+                }}/>
             ):(
               <div style={{width:300,height:300,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",color:"#aaa",gap:8,background:"#f5f5f5"}}>
                 <div style={{fontSize:36}}>⏳</div>
