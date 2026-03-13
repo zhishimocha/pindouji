@@ -553,14 +553,13 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
   const [tasksLoaded,setTasksLoaded]=useState(false);
   const tasksTimerRef=useRef(null);
   useEffect(()=>{
-    async function loadTasks(){
+    async function lt(){
       if(user){const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
         if(data?.tasks)setTasks(data.tasks);
         else{try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}}}
       else{try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}}
       setTasksLoaded(true);
-    }
-    loadTasks();
+    }lt();
   },[user]);
   useEffect(()=>{
     if(!tasksLoaded)return;
@@ -1242,8 +1241,8 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const [activeColor,setActiveColor]=useState(null);
   const [drawerOpen,setDrawerOpen]=useState(false);
   const [showGrid,setShowGrid]=useState(true);
-  const [gridCols,setGridCols]=useState(52);  // 用户自填列数
-  const [gridRows,setGridRows]=useState(52);  // 用户自填行数
+  const [gridCols,setGridCols]=useState(52);
+  const [gridRows,setGridRows]=useState(52);
   const [gridColsInput,setGridColsInput]=useState("52");
   const [gridRowsInput,setGridRowsInput]=useState("52");
   const [allDoneConfirm,setAllDoneConfirm]=useState(false);
@@ -1258,15 +1257,17 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const canvasRef=useRef(null);
   const [hlReady,setHlReady]=useState(false);
   const origDataRef=useRef(null);
-  const HIGHLIGHT=[255,220,0];
-  const BG=[242,242,242];
-  const TOLERANCE=55;
+  const cellMapRef=useRef(null); // [row][col] = colorId
+  const [mapReady,setMapReady]=useState(false);
+  const TOLERANCE=35;  // 降低避免误匹配
+  const HIGHLIGHT=[255,220,0]; // 黄色高亮
+  const BG=[255,255,255];      // 纯白背景（避免和浅色混淆）
 
-  // 缩放+平移（双指/单指）
+  // 缩放+平移
   const [scale,setScale]=useState(1);
   const [pan,setPan]=useState({x:0,y:0});
-  const gestureRef=useRef(null); // {type:'pinch'|'pan', lastDist, lastX, lastY, startScale, startPan}
-  const imgContainerRef=useRef(null);
+  const gestureRef=useRef(null);
+  const [canvasDisplaySize,setCanvasDisplaySize]=useState({w:0,h:0});
 
   const colors=useMemo(()=>task.colorData||[],[task.colorData]);
   const sorted=useMemo(()=>{
@@ -1279,20 +1280,19 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   // ── 裁剪确认 ──
   function confirmCrop(){
     const imgEl=cropImgRef.current;
-    if(!imgEl){skipCrop();return;}
+    if(!imgEl||!task.img){enterFocus();return;}
     const sx=imgEl.naturalWidth/imgEl.clientWidth;
     const sy=imgEl.naturalHeight/imgEl.clientHeight;
     const box=cropBox||{x:0,y:0,w:imgEl.clientWidth,h:imgEl.clientHeight};
     const cw=Math.round(box.w*sx),ch=Math.round(box.h*sy);
     const cx=Math.round(box.x*sx),cy=Math.round(box.y*sy);
     const img=new Image();
+    img.crossOrigin="anonymous";
     img.onload=()=>{
-      // 裁剪
       const c1=document.createElement('canvas');
       c1.width=cw;c1.height=ch;
       c1.getContext('2d').drawImage(img,cx,cy,cw,ch,0,0,cw,ch);
-      // 缩小到最宽300px（减少JPEG噪点）
-      const sc=Math.min(1,300/cw);
+      const sc=Math.min(1,320/cw);
       const tw=Math.round(cw*sc),th=Math.round(ch*sc);
       const c2=document.createElement('canvas');
       c2.width=tw;c2.height=th;
@@ -1303,12 +1303,12 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     };
     img.src=task.img;
   }
-
-  function skipCrop(){
+  function enterFocus(){
     if(!task.img){setPhase("focus");if(sorted.length>0)setActiveColor(sorted[0].id);return;}
     const img=new Image();
+    img.crossOrigin="anonymous";
     img.onload=()=>{
-      const sc=Math.min(1,300/img.naturalWidth);
+      const sc=Math.min(1,320/img.naturalWidth);
       const tw=Math.round(img.naturalWidth*sc),th=Math.round(img.naturalHeight*sc);
       const c=document.createElement('canvas');
       c.width=tw;c.height=th;
@@ -1320,23 +1320,47 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     img.src=task.img;
   }
 
-  // ── Canvas加载 ──
+  // ── Canvas加载 + 建格子颜色映射表 ──
   useEffect(()=>{
     if(phase!=="focus"||!croppedSrc||!canvasRef.current)return;
-    setHlReady(false);origDataRef.current=null;
+    setHlReady(false);setMapReady(false);origDataRef.current=null;cellMapRef.current=null;
     const canvas=canvasRef.current;
     const img=new Image();
     img.onload=()=>{
       canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
       const ctx=canvas.getContext('2d');
       ctx.drawImage(img,0,0);
-      origDataRef.current=ctx.getImageData(0,0,canvas.width,canvas.height);
-      setHlReady(true);
+      const origData=ctx.getImageData(0,0,canvas.width,canvas.height);
+      origDataRef.current=origData;
+      // 建格子→颜色映射表（用于放大后显示色号）
+      const cw=canvas.width,ch=canvas.height;
+      const map=[];
+      const cellW=cw/gridCols,cellH=ch/gridRows;
+      for(let r=0;r<gridRows;r++){
+        map[r]=[];
+        for(let c=0;c<gridCols;c++){
+          const px=Math.min(Math.floor((c+0.5)*cellW),cw-1);
+          const py=Math.min(Math.floor((r+0.5)*cellH),ch-1);
+          const i=(py*cw+px)*4;
+          const R=origData.data[i],G=origData.data[i+1],B=origData.data[i+2];
+          let best=null,bestDist=Infinity;
+          for(const col of ALL_COLORS){
+            const tr=parseInt(col.hex.slice(1,3),16);
+            const tg=parseInt(col.hex.slice(3,5),16);
+            const tb=parseInt(col.hex.slice(5,7),16);
+            const d=(R-tr)**2+(G-tg)**2+(B-tb)**2;
+            if(d<bestDist){bestDist=d;best=col.id;}
+          }
+          map[r][c]=bestDist<8000?best:null; // dist²<90²
+        }
+      }
+      cellMapRef.current=map;
+      setHlReady(true);setMapReady(true);
     };
     img.src=croppedSrc;
-  },[phase,croppedSrc]);
+  },[phase,croppedSrc,gridCols,gridRows]);
 
-  // ── 高亮：匹配→黄色，其他→浅灰白 ──
+  // ── 高亮：匹配→黄色，其他→纯白 ──
   useEffect(()=>{
     if(!hlReady||!canvasRef.current||!origDataRef.current)return;
     const canvas=canvasRef.current;
@@ -1360,6 +1384,18 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     ctx.putImageData(copy,0,0);
   },[activeColor,hlReady]);
 
+  // 监听canvas实际显示尺寸（用于SVG叠加计算）
+  useEffect(()=>{
+    if(!canvasRef.current||!hlReady)return;
+    const obs=new ResizeObserver(entries=>{
+      const e=entries[0];
+      if(e)setCanvasDisplaySize({w:e.contentRect.width,h:e.contentRect.height});
+    });
+    obs.observe(canvasRef.current);
+    setCanvasDisplaySize({w:canvasRef.current.offsetWidth,h:canvasRef.current.offsetHeight});
+    return()=>obs.disconnect();
+  },[hlReady]);
+
   function markDone(colorId){
     if(autoDeduct){const c=colors.find(x=>x.id===colorId);if(c&&c.count>0)onDeductStock(colorId,c.count);}
     const newDone=new Set([...doneColors,colorId]);
@@ -1370,22 +1406,14 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   }
   function handleAllDone(){onComplete();onExit();}
 
-  // ── 双指缩放 + 单指平移手势处理 ──
-  function getTouchDist(touches){
-    const dx=touches[0].clientX-touches[1].clientX;
-    const dy=touches[0].clientY-touches[1].clientY;
-    return Math.sqrt(dx*dx+dy*dy);
-  }
-  function getTouchCenter(touches){
-    return{x:(touches[0].clientX+touches[1].clientX)/2,y:(touches[0].clientY+touches[1].clientY)/2};
-  }
-
+  // ── 双指缩放 + 单指平移 ──
   function onTouchStart(ev){
     if(ev.touches.length===2){
       ev.preventDefault();
-      gestureRef.current={type:'pinch',lastDist:getTouchDist(ev.touches),startScale:scale,startPan:{...pan},center:getTouchCenter(ev.touches)};
+      const dx=ev.touches[0].clientX-ev.touches[1].clientX;
+      const dy=ev.touches[0].clientY-ev.touches[1].clientY;
+      gestureRef.current={type:'pinch',lastDist:Math.sqrt(dx*dx+dy*dy)};
     }else if(ev.touches.length===1&&scale>1){
-      // 放大时单指平移
       gestureRef.current={type:'pan',lastX:ev.touches[0].clientX,lastY:ev.touches[0].clientY};
     }
   }
@@ -1393,20 +1421,19 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     if(!gestureRef.current)return;
     if(gestureRef.current.type==='pinch'&&ev.touches.length===2){
       ev.preventDefault();
-      const dist=getTouchDist(ev.touches);
+      const dx=ev.touches[0].clientX-ev.touches[1].clientX;
+      const dy=ev.touches[0].clientY-ev.touches[1].clientY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
       const ratio=dist/gestureRef.current.lastDist;
-      setScale(s=>Math.max(1,Math.min(5,s*ratio)));
+      setScale(s=>Math.max(1,Math.min(6,s*ratio)));
       gestureRef.current.lastDist=dist;
     }else if(gestureRef.current.type==='pan'&&ev.touches.length===1){
-      const dx=ev.touches[0].clientX-gestureRef.current.lastX;
-      const dy=ev.touches[0].clientY-gestureRef.current.lastY;
-      setPan(p=>({x:p.x+dx,y:p.y+dy}));
-      gestureRef.current.lastX=ev.touches[0].clientX;
-      gestureRef.current.lastY=ev.touches[0].clientY;
+      setPan(p=>({x:p.x+ev.touches[0].clientX-gestureRef.current.lastX,y:p.y+ev.touches[0].clientY-gestureRef.current.lastY}));
+      gestureRef.current.lastX=ev.touches[0].clientX;gestureRef.current.lastY=ev.touches[0].clientY;
     }
   }
   function onTouchEnd(ev){
-    if(ev.touches.length===0)gestureRef.current=null;
+    if(ev.touches.length===0){gestureRef.current=null;if(scale<=1)setPan({x:0,y:0});}
     if(ev.touches.length===1&&gestureRef.current?.type==='pinch'){
       gestureRef.current={type:'pan',lastX:ev.touches[0].clientX,lastY:ev.touches[0].clientY};
     }
@@ -1416,89 +1443,141 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const activeInfo=activeColor?ALL_COLORS.find(c=>c.id===activeColor):null;
   const activeData=activeColor?colors.find(c=>c.id===activeColor):null;
 
+  // ── SVG叠加层（网格+行列数+色号标注）──
+  function renderGridSVG(){
+    if(!showGrid||!hlReady||!canvasRef.current)return null;
+    const cw=canvasDisplaySize.w||canvasRef.current.offsetWidth||300;
+    const ch=canvasDisplaySize.h||canvasRef.current.offsetHeight||300;
+    if(!cw||!ch)return null;
+    const stepX=cw/gridCols,stepY=ch/gridRows;
+    const els=[];
+
+    // 格线
+    for(let xi=0;xi<=gridCols;xi++){
+      const x=xi*stepX,maj=xi%10===0;
+      els.push(<line key={"v"+xi} x1={x} y1={0} x2={x} y2={ch}
+        stroke={maj?"rgba(255,50,50,0.85)":"rgba(200,0,0,0.18)"} strokeWidth={maj?1:0.5}/>);
+    }
+    for(let yi=0;yi<=gridRows;yi++){
+      const y=yi*stepY,maj=yi%10===0;
+      els.push(<line key={"h"+yi} x1={0} y1={y} x2={cw} y2={y}
+        stroke={maj?"rgba(255,50,50,0.85)":"rgba(200,0,0,0.18)"} strokeWidth={maj?1:0.5}/>);
+    }
+
+    // 列数字（顶部，每5格）
+    const numSz=Math.max(3,Math.min(stepX*0.55,7));
+    for(let xi=0;xi<gridCols;xi++){
+      if(xi===0||(xi+1)%5===0){
+        els.push(<text key={"cn"+xi} x={(xi+0.5)*stepX} y={numSz+1}
+          textAnchor="middle" fontSize={numSz} fill="rgba(160,0,0,0.65)" fontWeight="700"
+          fontFamily="sans-serif">{xi+1}</text>);
+      }
+    }
+    // 行数字（左侧，每5格）
+    for(let yi=0;yi<gridRows;yi++){
+      if(yi===0||(yi+1)%5===0){
+        els.push(<text key={"rn"+yi} x={numSz} y={(yi+0.5)*stepY}
+          textAnchor="middle" dominantBaseline="middle" fontSize={numSz}
+          fill="rgba(160,0,0,0.65)" fontWeight="700" fontFamily="sans-serif">{yi+1}</text>);
+      }
+    }
+
+    // 格子色号（放大≥2倍且格子足够大时显示）
+    const cellPxSz=stepX*scale; // 放大后每格实际像素
+    if(scale>=2&&mapReady&&cellMapRef.current&&cellPxSz>=14){
+      const lblSz=Math.max(2.5,Math.min(stepX*0.38,5.5));
+      for(let r=0;r<gridRows;r++){
+        for(let c=0;c<gridCols;c++){
+          const cid=cellMapRef.current[r]?.[c];
+          if(!cid)continue;
+          els.push(<text key={`l-${r}-${c}`}
+            x={(c+0.5)*stepX} y={(r+0.5)*stepY}
+            textAnchor="middle" dominantBaseline="middle"
+            fontSize={lblSz} fill="rgba(0,0,0,0.6)" fontWeight="800"
+            fontFamily="sans-serif">{cid}</text>);
+        }
+      }
+    }
+
+    return(
+      <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}
+        viewBox={`0 0 ${cw} ${ch}`} preserveAspectRatio="none">{els}</svg>
+    );
+  }
+
   // ════════════════════════════════
   // 设置页
   // ════════════════════════════════
   if(phase==="start")return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
-      <div style={{padding:"16px 18px 12px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-        <button onClick={onExit} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:T.textMid}}>←</button>
-        <div style={{fontSize:16,fontWeight:800,color:T.text}}>🎯 专注模式</div>
+      <div style={{padding:"14px 18px 10px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+        <button onClick={onExit} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:T.textMid}}>←</button>
+        <div style={{fontSize:16,fontWeight:800,color:T.text}}>🎯 专注模式设置</div>
       </div>
-      <div style={{flex:1,overflowY:"auto",padding:"18px 16px"}}>
-        {/* 任务信息 */}
-        <div style={{background:T.card,borderRadius:18,padding:14,marginBottom:16,display:"flex",gap:12,alignItems:"center",border:`1.5px solid ${T.border}`}}>
-          <div style={{width:52,height:52,borderRadius:12,background:T.accentSoft,overflow:"hidden",flexShrink:0}}>
-            {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
-              :<div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:"100%",fontSize:22}}>🖼️</div>}
+      <div style={{flex:1,overflowY:"auto",padding:"16px"}}>
+        {/* 作品信息 */}
+        <div style={{background:T.card,borderRadius:16,padding:12,marginBottom:12,display:"flex",gap:12,alignItems:"center",border:`1.5px solid ${T.border}`}}>
+          <div style={{width:48,height:48,borderRadius:10,background:T.accentSoft,overflow:"hidden",flexShrink:0}}>
+            {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              :<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",fontSize:20}}>🖼️</div>}
           </div>
           <div>
-            <div style={{fontSize:14,fontWeight:800,color:T.text}}>{task.name}</div>
-            <div style={{fontSize:11,color:T.textMid,marginTop:2}}>{colors.length} 个颜色 · {colors.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
+            <div style={{fontSize:13,fontWeight:800,color:T.text}}>{task.name}</div>
+            <div style={{fontSize:11,color:T.textMid}}>{colors.length} 色 · {colors.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
           </div>
         </div>
-        {colors.length===0&&<div style={{background:T.warnBg,border:`1.5px solid ${T.warnBorder}`,borderRadius:14,padding:"12px 14px",marginBottom:14,fontSize:12,color:T.warn,fontWeight:700}}>⚠️ 还没有颜色数据，建议先扫描颜色统计</div>}
+        {colors.length===0&&<div style={{background:"#fff8e7",border:"1.5px solid #ffd54f",borderRadius:12,padding:"10px 12px",marginBottom:12,fontSize:12,color:"#8a6d00",fontWeight:700}}>⚠️ 还没有颜色数据，建议先扫描颜色统计</div>}
 
-        {/* 颜色排序 */}
-        <div style={{background:T.card,borderRadius:16,padding:"12px 14px",marginBottom:10,border:`1.5px solid ${T.border}`}}>
-          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>颜色排列顺序</div>
-          <div style={{display:"flex",gap:7}}>
-            {[["count-desc","多→少"],["count-asc","少→多"],["id-asc","色号序"]].map(([val,label])=>(
-              <button key={val} onClick={()=>setSortOrder(val)}
-                style={{flex:1,padding:"8px 0",borderRadius:9,border:`1.5px solid ${sortOrder===val?T.accent:T.border}`,background:sortOrder===val?T.accent:T.card,color:sortOrder===val?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>
-                {label}
-              </button>
+        {/* 排序 */}
+        <div style={{background:T.card,borderRadius:14,padding:"10px 12px",marginBottom:10,border:`1.5px solid ${T.border}`}}>
+          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:7}}>颜色排列顺序</div>
+          <div style={{display:"flex",gap:6}}>
+            {[["count-desc","多→少"],["count-asc","少→多"],["id-asc","色号序"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setSortOrder(v)}
+                style={{flex:1,padding:"7px 0",borderRadius:8,border:`1.5px solid ${sortOrder===v?T.accent:T.border}`,background:sortOrder===v?T.accent:T.card,color:sortOrder===v?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>
             ))}
           </div>
         </div>
 
-        {/* 网格尺寸自由输入 */}
-        <div style={{background:T.card,borderRadius:16,padding:"12px 14px",marginBottom:10,border:`1.5px solid ${T.border}`}}>
-          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:10}}>网格尺寸（你的豆板是几格×几格？）</div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <input
-              type="number" inputMode="numeric" value={gridColsInput}
+        {/* 网格尺寸 */}
+        <div style={{background:T.card,borderRadius:14,padding:"10px 12px",marginBottom:10,border:`1.5px solid ${T.border}`}}>
+          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>豆板网格尺寸（列 × 行）</div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+            <input type="number" inputMode="numeric" value={gridColsInput}
               onChange={e=>{setGridColsInput(e.target.value);const v=parseInt(e.target.value);if(v>0&&v<=300)setGridCols(v);}}
-              style={{flex:1,padding:"10px 8px",borderRadius:10,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:16,fontWeight:800,textAlign:"center",outline:"none"}}
-            />
-            <span style={{fontSize:16,color:T.textMid,fontWeight:700}}>×</span>
-            <input
-              type="number" inputMode="numeric" value={gridRowsInput}
+              style={{flex:1,padding:"9px 6px",borderRadius:9,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:900,textAlign:"center",outline:"none"}}/>
+            <span style={{fontSize:18,color:T.textMid,fontWeight:700}}>×</span>
+            <input type="number" inputMode="numeric" value={gridRowsInput}
               onChange={e=>{setGridRowsInput(e.target.value);const v=parseInt(e.target.value);if(v>0&&v<=300)setGridRows(v);}}
-              style={{flex:1,padding:"10px 8px",borderRadius:10,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:16,fontWeight:800,textAlign:"center",outline:"none"}}
-            />
-            <span style={{fontSize:12,color:T.textMid,fontWeight:600}}>格</span>
+              style={{flex:1,padding:"9px 6px",borderRadius:9,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:900,textAlign:"center",outline:"none"}}/>
           </div>
-          <div style={{fontSize:10,color:T.textLight,marginTop:8}}>常见豆板：52×52 · 78×78 · 29×29 · 自定义均可</div>
-          {/* 快速选 */}
-          <div style={{display:"flex",gap:6,marginTop:8}}>
+          <div style={{display:"flex",gap:5}}>
             {[[29,29],[52,52],[78,78],[104,104]].map(([c,r])=>(
               <button key={c} onClick={()=>{setGridCols(c);setGridRows(r);setGridColsInput(String(c));setGridRowsInput(String(r));}}
-                style={{flex:1,padding:"5px 0",borderRadius:8,border:`1.5px solid ${gridCols===c&&gridRows===r?T.accent:T.border}`,background:gridCols===c&&gridRows===r?T.accentLight:T.card,color:gridCols===c&&gridRows===r?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:700,cursor:"pointer"}}>
-                {c}²
-              </button>
+                style={{flex:1,padding:"5px 0",borderRadius:7,border:`1.5px solid ${gridCols===c&&gridRows===r?T.accent:T.border}`,background:gridCols===c&&gridRows===r?T.accentSoft:T.card,color:gridCols===c&&gridRows===r?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:700,cursor:"pointer"}}>{c}²</button>
             ))}
           </div>
+          <div style={{fontSize:10,color:T.textLight,marginTop:6}}>💡 放大后会自动显示每格色号</div>
         </div>
 
         {/* 自动扣库存 */}
-        <div style={{background:T.card,borderRadius:16,padding:"12px 14px",border:`1.5px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div><div style={{fontSize:13,fontWeight:700,color:T.text}}>完成自动扣库存</div>
-          <div style={{fontSize:11,color:T.textMid,marginTop:1}}>完成颜色时自动扣除用量</div></div>
-          <div onClick={()=>setAutoDeduct(v=>!v)}
-            style={{width:44,height:24,borderRadius:12,background:autoDeduct?T.accent:T.barBg,cursor:"pointer",position:"relative",transition:"background 0.2s",flexShrink:0}}>
-            <div style={{position:"absolute",top:2,left:autoDeduct?21:2,width:20,height:20,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,0.25)",transition:"left 0.2s"}}/>
+        <div style={{background:T.card,borderRadius:14,padding:"10px 12px",border:`1.5px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div><div style={{fontSize:13,fontWeight:700,color:T.text}}>完成自动扣库存</div><div style={{fontSize:11,color:T.textMid}}>拼完一色自动扣用量</div></div>
+          <div onClick={()=>setAutoDeduct(v=>!v)} style={{width:42,height:23,borderRadius:12,background:autoDeduct?T.accent:T.barBg,cursor:"pointer",position:"relative",flexShrink:0,transition:"background 0.2s"}}>
+            <div style={{position:"absolute",top:2,left:autoDeduct?20:2,width:19,height:19,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,0.2)",transition:"left 0.2s"}}/>
           </div>
         </div>
       </div>
 
-      <div style={{padding:"14px 16px 34px",borderTop:`1px solid ${T.border}`,flexShrink:0,display:"flex",gap:10}}>
-        {task.img&&<button onClick={()=>setPhase("crop")}
-          style={{flex:1,padding:"14px 0",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.card,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
-          ✂️ 先裁剪
-        </button>}
-        <button onClick={skipCrop}
-          style={{flex:2,padding:"14px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:900,cursor:"pointer"}}>
+      <div style={{padding:"12px 16px 32px",borderTop:`1px solid ${T.border}`,display:"flex",gap:10,flexShrink:0}}>
+        {task.img&&(
+          <button onClick={()=>setPhase("crop")}
+            style={{flex:1,padding:"13px 0",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.card,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+            ✂️ 先裁剪
+          </button>
+        )}
+        <button onClick={enterFocus}
+          style={{flex:2,padding:"13px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:900,cursor:"pointer"}}>
           直接开始 🎯
         </button>
       </div>
@@ -1509,11 +1588,11 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   // 裁剪页
   // ════════════════════════════════
   if(phase==="crop")return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.93)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10,textAlign:"center"}}>
-        拖拽选框 · 只保留图纸部分（去掉下方色标）
+    <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.95)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 10px"}}>
+      <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:8,textAlign:"center"}}>
+        拖动选框选出图纸区域（去掉下方色标）
       </div>
-      <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:10,touchAction:"none"}}
+      <div style={{position:"relative",maxWidth:"100%",maxHeight:"68vh",overflow:"hidden",borderRadius:8,touchAction:"none"}}
         onPointerMove={ev=>{
           if(!cropDrag||!cropImgRef.current)return;
           const el=cropImgRef.current.getBoundingClientRect();
@@ -1534,53 +1613,57 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
           });
           setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
         }}
-        onPointerUp={()=>setCropDrag(null)}
-      >
+        onPointerUp={()=>setCropDrag(null)}>
         <img ref={cropImgRef} src={task.img}
           onLoad={ev=>{
             const{clientWidth:w,clientHeight:h}=ev.target;
+            // 默认选上65%（图纸区），下方35%是色标
             setCropBox({x:0,y:0,w,h:Math.round(h*0.65)});
           }}
-          style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none"}}
-        />
+          style={{display:"block",maxWidth:"100%",maxHeight:"68vh",objectFit:"contain",userSelect:"none",WebkitUserSelect:"none"}}/>
         {cropBox&&<>
-          <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`linear-gradient(to bottom,rgba(0,0,0,0.6) ${cropBox.y}px,transparent ${cropBox.y}px,transparent ${cropBox.y+cropBox.h}px,rgba(0,0,0,0.6) ${cropBox.y+cropBox.h}px)`}}/>
+          {/* 遮罩：上方暗+下方暗，中间亮 */}
+          <div style={{position:"absolute",inset:0,pointerEvents:"none",
+            background:`linear-gradient(to bottom,rgba(0,0,0,0.65) ${cropBox.y}px,transparent ${cropBox.y}px,transparent ${cropBox.y+cropBox.h}px,rgba(0,0,0,0.65) ${cropBox.y+cropBox.h}px)`}}/>
+          {/* 选框 */}
           <div
             onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
-            style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2.5px solid #FFE83A",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
-            {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(255,232,58,0.3)"}}/>)}
-            {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(255,232,58,0.3)"}}/>)}
-            {[{t:"tl",s:{top:-8,left:-8}},{t:"t",s:{top:-8,left:"50%",transform:"translateX(-50%)"}},{t:"tr",s:{top:-8,right:-8}},
-              {t:"r",s:{top:"50%",right:-8,transform:"translateY(-50%)"}},{t:"br",s:{bottom:-8,right:-8}},
-              {t:"b",s:{bottom:-8,left:"50%",transform:"translateX(-50%)"}},{t:"bl",s:{bottom:-8,left:-8}},
-              {t:"l",s:{top:"50%",left:-8,transform:"translateY(-50%)"}}
+            style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #FFE83A",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
+            {/* 三等分辅助线 */}
+            {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(255,232,58,0.28)"}}/>)}
+            {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(255,232,58,0.28)"}}/>)}
+            {/* 8个控制点 */}
+            {[{t:"tl",s:{top:-9,left:-9}},{t:"t",s:{top:-9,left:"50%",transform:"translateX(-50%)"}},
+              {t:"tr",s:{top:-9,right:-9}},{t:"r",s:{top:"50%",right:-9,transform:"translateY(-50%)"}},
+              {t:"br",s:{bottom:-9,right:-9}},{t:"b",s:{bottom:-9,left:"50%",transform:"translateX(-50%)"}},
+              {t:"bl",s:{bottom:-9,left:-9}},{t:"l",s:{top:"50%",left:-9,transform:"translateY(-50%)"}}
             ].map(({t,s})=>(
               <div key={t}
                 onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:t,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
-                style={{position:"absolute",width:18,height:18,background:"#FFE83A",borderRadius:3,touchAction:"none",...s}}/>
+                style={{position:"absolute",width:20,height:20,background:"#FFE83A",borderRadius:4,cursor:"pointer",touchAction:"none",...s}}/>
             ))}
           </div>
         </>}
       </div>
-      <div style={{display:"flex",gap:10,marginTop:14}}>
-        <button onClick={()=>setPhase("start")} style={{padding:"9px 20px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.25)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>← 返回</button>
-        <button onClick={confirmCrop} style={{padding:"9px 28px",borderRadius:50,border:"none",background:"#FFE83A",color:"#1a1a1a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>✓ 确认裁剪</button>
+      <div style={{display:"flex",gap:10,marginTop:12}}>
+        <button onClick={()=>setPhase("start")} style={{padding:"9px 18px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>← 返回</button>
+        <button onClick={confirmCrop} style={{padding:"9px 26px",borderRadius:50,border:"none",background:"#FFE83A",color:"#1a1a1a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>✓ 确认裁剪</button>
       </div>
     </div>
   );
 
   // ════════════════════════════════
-  // 完成确认
+  // 完成确认弹窗
   // ════════════════════════════════
   if(allDoneConfirm)return(
-    <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px",fontFamily:"'Nunito',sans-serif"}}>
-      <div style={{background:T.card,borderRadius:24,padding:"28px 22px",width:"100%",maxWidth:300,textAlign:"center"}}>
-        <div style={{fontSize:52,marginBottom:10}}>🎉</div>
-        <div style={{fontSize:17,fontWeight:900,color:T.text,marginBottom:6}}>全部拼完啦！</div>
-        <div style={{fontSize:12,color:T.textMid,marginBottom:20,lineHeight:1.6}}>恭喜完成「{task.name}」</div>
+    <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px",fontFamily:"'Nunito',sans-serif"}}>
+      <div style={{background:T.card,borderRadius:22,padding:"26px 20px",width:"100%",maxWidth:300,textAlign:"center"}}>
+        <div style={{fontSize:50,marginBottom:8}}>🎉</div>
+        <div style={{fontSize:17,fontWeight:900,color:T.text,marginBottom:4}}>全部拼完啦！</div>
+        <div style={{fontSize:12,color:T.textMid,marginBottom:18,lineHeight:1.6}}>恭喜完成「{task.name}」</div>
         <div style={{display:"flex",gap:8}}>
-          <button onClick={onExit} style={{flex:1,padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>稍后</button>
-          <button onClick={handleAllDone} style={{flex:2,padding:"11px 0",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>✓ 标记完成</button>
+          <button onClick={onExit} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>稍后</button>
+          <button onClick={handleAllDone} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>✓ 标记完成</button>
         </div>
       </div>
     </div>
@@ -1589,92 +1672,65 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   // ════════════════════════════════
   // 专注页
   // ════════════════════════════════
-  const drawerBg=tn==="night"?T.card:"#ffffff";
+  const drawerBg=tn==="night"?T.card:"#fff";
 
   return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:"#f5f5f5",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
 
-      {/* 顶部栏 */}
-      <div style={{padding:"8px 12px",display:"flex",alignItems:"center",gap:8,background:tn==="night"?"rgba(0,0,0,0.9)":"rgba(255,255,255,0.97)",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
-        <div style={{width:32,height:32,borderRadius:9,flexShrink:0,background:activeInfo?activeInfo.hex:"#e0e0e0",border:`2px solid ${T.border}`,boxShadow:activeInfo?`0 2px 8px ${activeInfo.hex}50`:"none"}}/>
+      {/* 顶部 */}
+      <div style={{padding:"7px 10px",display:"flex",alignItems:"center",gap:7,background:tn==="night"?"rgba(0,0,0,0.9)":"rgba(255,255,255,0.97)",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+        <div style={{width:30,height:30,borderRadius:8,flexShrink:0,background:activeInfo?activeInfo.hex:"#eee",border:`2px solid ${T.border}`,boxShadow:activeInfo?`0 1px 6px ${activeInfo.hex}60`:"none"}}/>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:13,fontWeight:900,color:T.text}}>{activeColor?`正在拼：${activeColor}`:"请选择颜色"}</div>
-          <div style={{fontSize:10,color:T.textMid}}>{activeData?`${activeData.count} 粒  ·  `:""}已完成 {doneColors.size}/{colors.length}</div>
+          <div style={{fontSize:12,fontWeight:900,color:T.text}}>{activeColor?`正在拼：${activeColor}`:"请选择颜色"}</div>
+          <div style={{fontSize:10,color:T.textMid}}>{activeData?`${activeData.count} 粒  ·  `:""}完成 {doneColors.size}/{colors.length}</div>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
           <button onClick={()=>setShowGrid(v=>!v)}
-            style={{background:showGrid?T.accent:T.accentSoft,border:"none",borderRadius:10,padding:"4px 8px",color:showGrid?"#fff":T.accent,fontSize:10,fontWeight:700,cursor:"pointer"}}>
+            style={{background:showGrid?T.accent:T.accentSoft,border:"none",borderRadius:9,padding:"4px 8px",color:showGrid?"#fff":T.accent,fontSize:10,fontWeight:700,cursor:"pointer"}}>
             格{showGrid?"✓":""}
           </button>
-          {scale>1&&<button onClick={resetZoom} style={{background:"#ff6b6b22",border:"1px solid #ff6b6b55",borderRadius:10,padding:"4px 8px",color:"#ff6b6b",fontSize:10,fontWeight:700,cursor:"pointer"}}>
+          {scale>1.05&&<button onClick={resetZoom} style={{background:"#ff6b6b18",border:"1px solid #ff6b6b50",borderRadius:9,padding:"4px 7px",color:"#e53935",fontSize:10,fontWeight:700,cursor:"pointer"}}>
             {Math.round(scale*10)/10}× 复位
           </button>}
-          <button onClick={onExit} style={{background:T.accentSoft,border:"none",borderRadius:50,padding:"4px 10px",color:T.accent,fontSize:10,fontWeight:700,cursor:"pointer"}}>退出</button>
+          <button onClick={onExit} style={{background:T.accentSoft,border:"none",borderRadius:50,padding:"4px 9px",color:T.accent,fontSize:10,fontWeight:700,cursor:"pointer"}}>退出</button>
         </div>
       </div>
 
-      {/* 图纸区：支持双指缩放+单指平移 */}
-      <div
-        ref={imgContainerRef}
-        style={{flex:1,overflow:"hidden",background:"#f0f0f0",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
+      {/* 图纸区 */}
+      <div style={{flex:1,overflow:"hidden",background:"#ebebeb",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         {croppedSrc?(
           <div style={{
             position:"relative",lineHeight:0,display:"inline-block",
             transform:`scale(${scale}) translate(${pan.x/scale}px,${pan.y/scale}px)`,
             transformOrigin:"center center",
-            transition:gestureRef.current?"none":"transform 0.1s",
-            boxShadow:"0 2px 20px rgba(0,0,0,0.15)",
-            borderRadius:3,
+            transition:"none",
+            boxShadow:"0 2px 18px rgba(0,0,0,0.14)",
+            borderRadius:2,
             willChange:"transform"
           }}>
             <canvas ref={canvasRef}
-              style={{display:"block",maxWidth:"calc(100vw - 8px)",maxHeight:"calc(100vh - 190px)",imageRendering:"pixelated"}}
+              style={{display:"block",maxWidth:"calc(100vw - 8px)",maxHeight:"calc(100vh - 195px)",imageRendering:"pixelated"}}
             />
-            {/* 网格SVG */}
-            {showGrid&&hlReady&&canvasRef.current&&(()=>{
-              const cw=canvasRef.current.offsetWidth||300;
-              const ch=canvasRef.current.offsetHeight||300;
-              if(!cw||!ch)return null;
-              const stepX=cw/gridCols;
-              const stepY=ch/gridRows;
-              const lines=[];
-              for(let xi=0;xi<=gridCols;xi++){
-                const x=xi*stepX;
-                const maj=xi%10===0;
-                lines.push(<line key={"v"+xi} x1={x} y1={0} x2={x} y2={ch} stroke={maj?"rgba(255,60,60,0.75)":"rgba(200,0,0,0.18)"} strokeWidth={maj?1:0.5}/>);
-              }
-              for(let yi=0;yi<=gridRows;yi++){
-                const y=yi*stepY;
-                const maj=yi%10===0;
-                lines.push(<line key={"h"+yi} x1={0} y1={y} x2={cw} y2={y} stroke={maj?"rgba(255,60,60,0.75)":"rgba(200,0,0,0.18)"} strokeWidth={maj?1:0.5}/>);
-              }
-              return(
-                <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}
-                  viewBox={`0 0 ${cw} ${ch}`} preserveAspectRatio="none">{lines}</svg>
-              );
-            })()}
+            {renderGridSVG()}
           </div>
         ):(
           <div style={{textAlign:"center",color:"#aaa"}}>
-            <div style={{fontSize:40,marginBottom:8}}>⏳</div>
-            <div style={{fontSize:12}}>图片处理中…</div>
+            <div style={{fontSize:38,marginBottom:6}}>⏳</div>
+            <div style={{fontSize:12}}>处理中…</div>
           </div>
         )}
-        {scale===1&&<div style={{position:"absolute",bottom:5,right:8,fontSize:8,color:"rgba(0,0,0,0.2)",pointerEvents:"none"}}>双指捏合可缩放</div>}
+        {scale<=1&&<div style={{position:"absolute",bottom:4,right:6,fontSize:8,color:"rgba(0,0,0,0.22)",pointerEvents:"none"}}>双指捏合可放大</div>}
       </div>
 
       {/* 底部色卡抽屉 */}
-      <div style={{background:drawerBg,borderRadius:"16px 16px 0 0",boxShadow:"0 -3px 12px rgba(0,0,0,0.1)",flexShrink:0,borderTop:`1px solid ${T.border}`}}>
-        <div style={{padding:"7px 12px 5px"}}>
-          <div style={{width:30,height:3,borderRadius:2,background:"rgba(0,0,0,0.1)",margin:"0 auto 7px",cursor:"pointer"}} onClick={()=>setDrawerOpen(v=>!v)}/>
+      <div style={{background:drawerBg,borderRadius:"14px 14px 0 0",boxShadow:"0 -2px 10px rgba(0,0,0,0.09)",flexShrink:0,borderTop:`1px solid ${T.border}`}}>
+        <div style={{padding:"6px 12px 4px"}}>
+          <div style={{width:28,height:3,borderRadius:2,background:"rgba(0,0,0,0.08)",margin:"0 auto 6px",cursor:"pointer"}} onClick={()=>setDrawerOpen(v=>!v)}/>
           {activeColor?(
-            <div style={{display:"flex",alignItems:"center",gap:9}}>
-              <div style={{width:30,height:30,borderRadius:8,background:"#FFE83A",border:`2px solid ${T.border}`,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <span style={{fontSize:8,fontWeight:900,color:"#7a6000"}}>高亮</span>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:28,height:28,borderRadius:7,background:"#FFE83A",border:`2px solid ${T.border}`,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <span style={{fontSize:7,fontWeight:900,color:"#7a6000"}}>高亮</span>
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:800,color:T.text}}>{activeColor}</div>
@@ -1686,13 +1742,13 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
               </button>
             </div>
           ):(
-            <div style={{textAlign:"center",padding:"5px 0",fontSize:12,fontWeight:700,color:sorted.length===0?"#4caf50":T.textMid}}>
-              {sorted.length===0?"🎉 全部拼完啦！":"↓ 点击色卡开始高亮"}
+            <div style={{textAlign:"center",padding:"4px 0",fontSize:12,fontWeight:700,color:sorted.length===0?"#4caf50":T.textMid}}>
+              {sorted.length===0?"🎉 全部完成啦！":"↓ 点色卡开始高亮"}
             </div>
           )}
         </div>
         {!drawerOpen&&(
-          <div style={{padding:"4px 8px 14px",display:"flex",alignItems:"center",gap:4}}>
+          <div style={{padding:"4px 8px 16px",display:"flex",alignItems:"center",gap:4}}>
             <style>{`.fsc::-webkit-scrollbar{display:none}`}</style>
             <div className="fsc" style={{display:"flex",gap:4,overflowX:"auto",flex:1,WebkitOverflowScrolling:"touch"}}>
               {sorted.map(c=>{
@@ -1705,7 +1761,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
                 return(
                   <div key={c.id} onClick={()=>setActiveColor(c.id)}
                     style={{flexShrink:0,width:40,borderRadius:8,overflow:"hidden",border:`2px solid ${isAct?"#FFE83A":T.border}`,cursor:"pointer",transform:isAct?"scale(1.1)":"scale(1)",transition:"transform 0.15s"}}>
-                    <div style={{background:isAct?"#FFE83A":T.accentSoft,padding:"2px 2px",textAlign:"center"}}>
+                    <div style={{background:isAct?"#FFE83A":T.accentSoft,padding:"2px",textAlign:"center"}}>
                       <span style={{fontSize:8,fontWeight:800,color:isAct?"#7a6000":T.accent,whiteSpace:"nowrap"}}>{c.id}</span>
                     </div>
                     <div style={{background:bg,aspectRatio:"1/1",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1716,16 +1772,16 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
               })}
               {sorted.length===0&&<div style={{color:T.textMid,fontSize:11,padding:"4px 6px",fontWeight:700}}>🎉 全部完成！</div>}
             </div>
-            <div onClick={()=>setDrawerOpen(true)} style={{flexShrink:0,width:24,height:24,borderRadius:"50%",background:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:11,color:T.accent,fontWeight:800}}>↑</div>
+            <div onClick={()=>setDrawerOpen(true)} style={{flexShrink:0,width:22,height:22,borderRadius:"50%",background:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:10,color:T.accent,fontWeight:800}}>↑</div>
           </div>
         )}
         {drawerOpen&&(
           <div style={{maxHeight:"40vh",overflowY:"auto"}}>
-            <div style={{padding:"3px 10px 4px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{fontSize:10,color:T.textMid,fontWeight:600}}>剩余 {sorted.length} 个</div>
+            <div style={{padding:"2px 10px 3px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontSize:10,color:T.textMid}}>剩余 {sorted.length} 个</div>
               <button onClick={()=>setDrawerOpen(false)} style={{background:"none",border:"none",fontSize:11,color:T.accent,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700}}>收起 ↓</button>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,padding:"0 8px 16px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,padding:"0 8px 14px"}}>
               {sorted.map(c=>{
                 const inf=ALL_COLORS.find(x=>x.id===c.id);
                 const isAct=c.id===activeColor;
@@ -1735,17 +1791,17 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
                 const txt=bright>145?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
                 return(
                   <div key={c.id} onClick={()=>{setActiveColor(c.id);setDrawerOpen(false);}}
-                    style={{borderRadius:10,overflow:"hidden",border:`2px solid ${isAct?"#FFE83A":T.border}`,cursor:"pointer"}}>
-                    <div style={{background:isAct?"#FFE83A":T.accentSoft,padding:"2px 5px",textAlign:"center"}}>
+                    style={{borderRadius:9,overflow:"hidden",border:`2px solid ${isAct?"#FFE83A":T.border}`,cursor:"pointer"}}>
+                    <div style={{background:isAct?"#FFE83A":T.accentSoft,padding:"2px 4px",textAlign:"center"}}>
                       <span style={{fontSize:10,fontWeight:800,color:isAct?"#7a6000":T.accent,whiteSpace:"nowrap"}}>{c.id}</span>
                     </div>
                     <div style={{background:bg,aspectRatio:"1/1",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <span style={{fontSize:14,fontWeight:900,color:txt}}>{c.count}</span>
+                      <span style={{fontSize:13,fontWeight:900,color:txt}}>{c.count}</span>
                     </div>
                   </div>
                 );
               })}
-              {sorted.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"16px 0",color:T.textMid,fontSize:12}}>🎉 全部完成啦！</div>}
+              {sorted.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"14px 0",color:T.textMid,fontSize:12}}>🎉 全部完成啦！</div>}
             </div>
           </div>
         )}
