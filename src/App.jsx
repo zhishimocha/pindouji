@@ -1362,14 +1362,17 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
 
   // ── 图片加载后建映射表 + 初始渲染 ──
   useEffect(()=>{
-    if(phase!=="focus"||!croppedSrc||!canvasRef.current)return;
+    if(phase!=="focus"||!croppedSrc)return;
     setMapReady(false);cellMapRef.current=null;
     const img=new Image();
     img.onload=()=>{
       origImgRef.current=img;
-      const map=buildCellMap(img,gridCols,gridRows);
-      cellMapRef.current=map;
-      setMapReady(true);
+      // setTimeout(0) 让React先渲染loading状态，再做同步计算
+      setTimeout(()=>{
+        const map=buildCellMap(img,gridCols,gridRows);
+        cellMapRef.current=map;
+        setMapReady(true);
+      },0);
     };
     img.src=croppedSrc;
   },[phase,croppedSrc,gridCols,gridRows]);
@@ -1510,7 +1513,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   // 设置页
   // ════════════════════════════════
   if(phase==="start")return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
+    <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"13px 16px 10px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <button onClick={onExit} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:T.textMid}}>←</button>
         <div style={{fontSize:15,fontWeight:800,color:T.text}}>🎯 专注模式</div>
@@ -1589,7 +1592,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   // 裁剪页
   // ════════════════════════════════
   if(phase==="crop")return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.95)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 10px"}}>
+    <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.95)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 10px",overflow:"hidden"}}>
       <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:8,textAlign:"center"}}>
         拖动选框，框住图纸区域（去掉下方色标）
       </div>
@@ -1669,7 +1672,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const drawerBg=tn==="night"?T.card:"#fff";
 
   return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:"#f0f0f0",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
+    <div style={{position:"fixed",inset:0,zIndex:500,background:"#f0f0f0",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       {/* 顶部 */}
       <div style={{padding:"7px 10px",display:"flex",alignItems:"center",gap:7,background:tn==="night"?"rgba(0,0,0,0.9)":"rgba(255,255,255,0.97)",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
         <div style={{width:30,height:30,borderRadius:8,flexShrink:0,background:activeInfo?activeInfo.hex:"#eee",border:`2px solid ${T.border}`,boxShadow:activeInfo?`0 1px 6px ${activeInfo.hex}60`:"none"}}/>
