@@ -1226,13 +1226,12 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const [doneColors,setDoneColors]=useState(new Set());
   const [activeColor,setActiveColor]=useState(null); // null=原图
   const realCount = useMemo(() => {
-  const map = cellMapRef.current
-  if (!map || !activeColor) return 0
+  if (!task || !task.grid || !activeColor) return 0
 
   let count = 0
 
-  for (let r = 0; r < map.length; r++) {
-    const row = map[r]
+  for (let r = 0; r < task.grid.length; r++) {
+    const row = task.grid[r]
     if (!row) continue
 
     for (let c = 0; c < row.length; c++) {
@@ -1243,7 +1242,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   }
 
   return count
-}, [activeColor])
+}, [task, activeColor])
   const [drawerOpen,setDrawerOpen]=useState(false);
   const [showGrid,setShowGrid]=useState(true);
   const [gridCols,setGridCols]=useState(52);
@@ -1593,8 +1592,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:800,color:T.text}}>{activeColor}</div>
-                <div style={{fontSize:10,color:T.textMid}}>
-{realCount} 粒
+                <div style={{fontSize:10,color:T.textMid}}>{realCount} 粒
 </div>
               </div>
               <button onClick={()=>markDone(activeColor)} style={{padding:"7px 14px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",flexShrink:0}}>✓ 拼完了</button>
