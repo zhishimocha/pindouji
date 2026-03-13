@@ -1322,9 +1322,11 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   function buildCellMap(imgEl,cols,rows){
     const tmp=document.createElement('canvas');
     tmp.width=imgEl.naturalWidth;tmp.height=imgEl.naturalHeight;
-    tmp.getContext('2d').drawImage(imgEl,0,0);
     const ctx=tmp.getContext('2d');
+    ctx.drawImage(imgEl,0,0);
     const cw=tmp.width,ch=tmp.height;
+    // ★ 关键：只读一次，拿到所有像素数据
+    const pixels=ctx.getImageData(0,0,cw,ch).data;
     const cellW=cw/cols,cellH=ch/rows;
     const map=[];
     const palette=ALL_COLORS.map(col=>({
@@ -1336,26 +1338,22 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     for(let r=0;r<rows;r++){
       map[r]=[];
       for(let c=0;c<cols;c++){
-        // 采样格子中心3×3像素取平均（更稳定）
+        // 采样格子中心3×3像素取平均，直接按坐标索引数组（无GPU读取）
         let sr=0,sg=0,sb=0,cnt=0;
         for(let dy=-1;dy<=1;dy++){
           for(let dx=-1;dx<=1;dx++){
-            const px=Math.min(Math.floor((c+0.5)*cellW)+dx,cw-1);
-            const py=Math.min(Math.floor((r+0.5)*cellH)+dy,ch-1);
-            if(px<0||py<0)continue;
+            const px=Math.min(Math.max(Math.floor((c+0.5)*cellW)+dx,0),cw-1);
+            const py=Math.min(Math.max(Math.floor((r+0.5)*cellH)+dy,0),ch-1);
             const i=(py*cw+px)*4;
-            const d=ctx.getImageData(px,py,1,1).data;
-            sr+=d[0];sg+=d[1];sb+=d[2];cnt++;
+            sr+=pixels[i];sg+=pixels[i+1];sb+=pixels[i+2];cnt++;
           }
         }
         sr=Math.round(sr/cnt);sg=Math.round(sg/cnt);sb=Math.round(sb/cnt);
-        // 找最近颜色（欧氏距离²）
         let best=null,bestDist=Infinity;
         for(const p of palette){
           const dist=(sr-p.r)**2+(sg-p.g)**2+(sb-p.b)**2;
           if(dist<bestDist){bestDist=dist;best=p.id;}
         }
-        // dist²阈值：90²=8100，超过说明该格是白色/透明（色标区等）
         map[r][c]=bestDist<8100?best:null;
       }
     }
