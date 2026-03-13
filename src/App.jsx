@@ -1251,23 +1251,19 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const cropImgRef=useRef(null);
   const [cropBox,setCropBox]=useState(null);
   const [cropDrag,setCropDrag]=useState(null);
-  const [croppedSrc,setCroppedSrc]=useState(null);
+  const [croppedSrc,setCroppedSrc]=useState(null); // 裁剪+缩小后的base64
 
-  // Canvas高亮
+  // Canvas & 格子映射表
   const canvasRef=useRef(null);
-  const [hlReady,setHlReady]=useState(false);
-  const origDataRef=useRef(null);
-  const cellMapRef=useRef(null); // [row][col] = colorId
   const [mapReady,setMapReady]=useState(false);
-  const TOLERANCE=35;  // 降低避免误匹配
-  const HIGHLIGHT=[255,220,0]; // 黄色高亮
-  const BG=[255,255,255];      // 纯白背景（避免和浅色混淆）
+  const cellMapRef=useRef(null);   // [row][col] = colorId | null
+  const origImgRef=useRef(null);   // HTMLImageElement，用于重建cellMap
 
-  // 缩放+平移
+  // 缩放平移
   const [scale,setScale]=useState(1);
   const [pan,setPan]=useState({x:0,y:0});
   const gestureRef=useRef(null);
-  const [canvasDisplaySize,setCanvasDisplaySize]=useState({w:0,h:0});
+  const [canvasDsp,setCanvasDsp]=useState({w:0,h:0});
 
   const colors=useMemo(()=>task.colorData||[],[task.colorData]);
   const sorted=useMemo(()=>{
@@ -1289,10 +1285,12 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     const img=new Image();
     img.crossOrigin="anonymous";
     img.onload=()=>{
+      // 裁剪
       const c1=document.createElement('canvas');
       c1.width=cw;c1.height=ch;
       c1.getContext('2d').drawImage(img,cx,cy,cw,ch,0,0,cw,ch);
-      const sc=Math.min(1,320/cw);
+      // 缩小（最宽400px，保留足够细节给格子采样）
+      const sc=Math.min(1,400/cw);
       const tw=Math.round(cw*sc),th=Math.round(ch*sc);
       const c2=document.createElement('canvas');
       c2.width=tw;c2.height=th;
@@ -1308,7 +1306,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     const img=new Image();
     img.crossOrigin="anonymous";
     img.onload=()=>{
-      const sc=Math.min(1,320/img.naturalWidth);
+      const sc=Math.min(1,400/img.naturalWidth);
       const tw=Math.round(img.naturalWidth*sc),th=Math.round(img.naturalHeight*sc);
       const c=document.createElement('canvas');
       c.width=tw;c.height=th;
@@ -1320,81 +1318,105 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     img.src=task.img;
   }
 
-  // ── Canvas加载 + 建格子颜色映射表 ──
+  // ── 建格子映射表（核心：每格采样中心像素 → 找最近色号）──
+  function buildCellMap(imgEl,cols,rows){
+    const tmp=document.createElement('canvas');
+    tmp.width=imgEl.naturalWidth;tmp.height=imgEl.naturalHeight;
+    tmp.getContext('2d').drawImage(imgEl,0,0);
+    const ctx=tmp.getContext('2d');
+    const cw=tmp.width,ch=tmp.height;
+    const cellW=cw/cols,cellH=ch/rows;
+    const map=[];
+    const palette=ALL_COLORS.map(col=>({
+      id:col.id,
+      r:parseInt(col.hex.slice(1,3),16),
+      g:parseInt(col.hex.slice(3,5),16),
+      b:parseInt(col.hex.slice(5,7),16)
+    }));
+    for(let r=0;r<rows;r++){
+      map[r]=[];
+      for(let c=0;c<cols;c++){
+        // 采样格子中心3×3像素取平均（更稳定）
+        let sr=0,sg=0,sb=0,cnt=0;
+        for(let dy=-1;dy<=1;dy++){
+          for(let dx=-1;dx<=1;dx++){
+            const px=Math.min(Math.floor((c+0.5)*cellW)+dx,cw-1);
+            const py=Math.min(Math.floor((r+0.5)*cellH)+dy,ch-1);
+            if(px<0||py<0)continue;
+            const i=(py*cw+px)*4;
+            const d=ctx.getImageData(px,py,1,1).data;
+            sr+=d[0];sg+=d[1];sb+=d[2];cnt++;
+          }
+        }
+        sr=Math.round(sr/cnt);sg=Math.round(sg/cnt);sb=Math.round(sb/cnt);
+        // 找最近颜色（欧氏距离²）
+        let best=null,bestDist=Infinity;
+        for(const p of palette){
+          const dist=(sr-p.r)**2+(sg-p.g)**2+(sb-p.b)**2;
+          if(dist<bestDist){bestDist=dist;best=p.id;}
+        }
+        // dist²阈值：90²=8100，超过说明该格是白色/透明（色标区等）
+        map[r][c]=bestDist<8100?best:null;
+      }
+    }
+    return map;
+  }
+
+  // ── 图片加载后建映射表 + 初始渲染 ──
   useEffect(()=>{
     if(phase!=="focus"||!croppedSrc||!canvasRef.current)return;
-    setHlReady(false);setMapReady(false);origDataRef.current=null;cellMapRef.current=null;
-    const canvas=canvasRef.current;
+    setMapReady(false);cellMapRef.current=null;
     const img=new Image();
     img.onload=()=>{
-      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
-      const ctx=canvas.getContext('2d');
-      ctx.drawImage(img,0,0);
-      const origData=ctx.getImageData(0,0,canvas.width,canvas.height);
-      origDataRef.current=origData;
-      // 建格子→颜色映射表（用于放大后显示色号）
-      const cw=canvas.width,ch=canvas.height;
-      const map=[];
-      const cellW=cw/gridCols,cellH=ch/gridRows;
-      for(let r=0;r<gridRows;r++){
-        map[r]=[];
-        for(let c=0;c<gridCols;c++){
-          const px=Math.min(Math.floor((c+0.5)*cellW),cw-1);
-          const py=Math.min(Math.floor((r+0.5)*cellH),ch-1);
-          const i=(py*cw+px)*4;
-          const R=origData.data[i],G=origData.data[i+1],B=origData.data[i+2];
-          let best=null,bestDist=Infinity;
-          for(const col of ALL_COLORS){
-            const tr=parseInt(col.hex.slice(1,3),16);
-            const tg=parseInt(col.hex.slice(3,5),16);
-            const tb=parseInt(col.hex.slice(5,7),16);
-            const d=(R-tr)**2+(G-tg)**2+(B-tb)**2;
-            if(d<bestDist){bestDist=d;best=col.id;}
-          }
-          map[r][c]=bestDist<8000?best:null; // dist²<90²
-        }
-      }
+      origImgRef.current=img;
+      const map=buildCellMap(img,gridCols,gridRows);
       cellMapRef.current=map;
-      setHlReady(true);setMapReady(true);
+      setMapReady(true);
     };
     img.src=croppedSrc;
   },[phase,croppedSrc,gridCols,gridRows]);
 
-  // ── 高亮：匹配→黄色，其他→纯白 ──
+  // ── 核心渲染：格子级别，画矩形（完全不受JPEG噪点影响）──
   useEffect(()=>{
-    if(!hlReady||!canvasRef.current||!origDataRef.current)return;
+    if(!mapReady||!canvasRef.current||!cellMapRef.current)return;
     const canvas=canvasRef.current;
+    const img=origImgRef.current;
+    if(!img)return;
+    canvas.width=img.naturalWidth;
+    canvas.height=img.naturalHeight;
     const ctx=canvas.getContext('2d');
-    const orig=origDataRef.current;
-    const copy=new ImageData(new Uint8ClampedArray(orig.data),orig.width,orig.height);
-    const d=copy.data;
-    if(!activeColor){
-      for(let i=0;i<d.length;i+=4){d[i]=BG[0];d[i+1]=BG[1];d[i+2]=BG[2];d[i+3]=255;}
-      ctx.putImageData(copy,0,0);return;
-    }
-    const info=ALL_COLORS.find(c=>c.id===activeColor);
-    if(!info){ctx.putImageData(orig,0,0);return;}
-    const tr=parseInt(info.hex.slice(1,3),16),tg=parseInt(info.hex.slice(3,5),16),tb=parseInt(info.hex.slice(5,7),16);
-    for(let i=0;i<d.length;i+=4){
-      const r=d[i],g=d[i+1],b=d[i+2];
-      const dist=Math.sqrt((r-tr)**2+(g-tg)**2+(b-tb)**2);
-      if(dist<=TOLERANCE){d[i]=HIGHLIGHT[0];d[i+1]=HIGHLIGHT[1];d[i+2]=HIGHLIGHT[2];d[i+3]=255;}
-      else{d[i]=BG[0];d[i+1]=BG[1];d[i+2]=BG[2];d[i+3]=255;}
-    }
-    ctx.putImageData(copy,0,0);
-  },[activeColor,hlReady]);
+    const cw=canvas.width,ch=canvas.height;
+    const cellW=cw/gridCols,cellH=ch/gridRows;
+    const map=cellMapRef.current;
 
-  // 监听canvas实际显示尺寸（用于SVG叠加计算）
+    // 全部填白底
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,cw,ch);
+
+    if(activeColor){
+      // 只有目标色格子填黄色
+      ctx.fillStyle='#FFE03A';
+      for(let r=0;r<gridRows;r++){
+        for(let c=0;c<gridCols;c++){
+          if(map[r]&&map[r][c]===activeColor){
+            ctx.fillRect(c*cellW,r*cellH,cellW,cellH);
+          }
+        }
+      }
+    }
+  },[activeColor,mapReady,gridCols,gridRows]);
+
+  // 监听canvas显示尺寸（SVG叠加用）
   useEffect(()=>{
-    if(!canvasRef.current||!hlReady)return;
+    if(!canvasRef.current||!mapReady)return;
     const obs=new ResizeObserver(entries=>{
       const e=entries[0];
-      if(e)setCanvasDisplaySize({w:e.contentRect.width,h:e.contentRect.height});
+      if(e)setCanvasDsp({w:e.contentRect.width,h:e.contentRect.height});
     });
     obs.observe(canvasRef.current);
-    setCanvasDisplaySize({w:canvasRef.current.offsetWidth,h:canvasRef.current.offsetHeight});
+    setCanvasDsp({w:canvasRef.current.offsetWidth,h:canvasRef.current.offsetHeight});
     return()=>obs.disconnect();
-  },[hlReady]);
+  },[mapReady]);
 
   function markDone(colorId){
     if(autoDeduct){const c=colors.find(x=>x.id===colorId);if(c&&c.count>0)onDeductStock(colorId,c.count);}
@@ -1410,8 +1432,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   function onTouchStart(ev){
     if(ev.touches.length===2){
       ev.preventDefault();
-      const dx=ev.touches[0].clientX-ev.touches[1].clientX;
-      const dy=ev.touches[0].clientY-ev.touches[1].clientY;
+      const dx=ev.touches[0].clientX-ev.touches[1].clientX,dy=ev.touches[0].clientY-ev.touches[1].clientY;
       gestureRef.current={type:'pinch',lastDist:Math.sqrt(dx*dx+dy*dy)};
     }else if(ev.touches.length===1&&scale>1){
       gestureRef.current={type:'pan',lastX:ev.touches[0].clientX,lastY:ev.touches[0].clientY};
@@ -1421,11 +1442,9 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     if(!gestureRef.current)return;
     if(gestureRef.current.type==='pinch'&&ev.touches.length===2){
       ev.preventDefault();
-      const dx=ev.touches[0].clientX-ev.touches[1].clientX;
-      const dy=ev.touches[0].clientY-ev.touches[1].clientY;
+      const dx=ev.touches[0].clientX-ev.touches[1].clientX,dy=ev.touches[0].clientY-ev.touches[1].clientY;
       const dist=Math.sqrt(dx*dx+dy*dy);
-      const ratio=dist/gestureRef.current.lastDist;
-      setScale(s=>Math.max(1,Math.min(6,s*ratio)));
+      setScale(s=>Math.max(1,Math.min(6,s*(dist/gestureRef.current.lastDist))));
       gestureRef.current.lastDist=dist;
     }else if(gestureRef.current.type==='pan'&&ev.touches.length===1){
       setPan(p=>({x:p.x+ev.touches[0].clientX-gestureRef.current.lastX,y:p.y+ev.touches[0].clientY-gestureRef.current.lastY}));
@@ -1434,71 +1453,55 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   }
   function onTouchEnd(ev){
     if(ev.touches.length===0){gestureRef.current=null;if(scale<=1)setPan({x:0,y:0});}
-    if(ev.touches.length===1&&gestureRef.current?.type==='pinch'){
+    if(ev.touches.length===1&&gestureRef.current?.type==='pinch')
       gestureRef.current={type:'pan',lastX:ev.touches[0].clientX,lastY:ev.touches[0].clientY};
-    }
   }
   function resetZoom(){setScale(1);setPan({x:0,y:0});}
 
   const activeInfo=activeColor?ALL_COLORS.find(c=>c.id===activeColor):null;
   const activeData=activeColor?colors.find(c=>c.id===activeColor):null;
 
-  // ── SVG叠加层（网格+行列数+色号标注）──
-  function renderGridSVG(){
-    if(!showGrid||!hlReady||!canvasRef.current)return null;
-    const cw=canvasDisplaySize.w||canvasRef.current.offsetWidth||300;
-    const ch=canvasDisplaySize.h||canvasRef.current.offsetHeight||300;
+  // ── SVG叠加：网格线 + 行列数 + 放大时色号 ──
+  function renderGrid(){
+    if(!showGrid||!mapReady||!canvasRef.current)return null;
+    const cw=canvasDsp.w||canvasRef.current.offsetWidth||300;
+    const ch=canvasDsp.h||canvasRef.current.offsetHeight||300;
     if(!cw||!ch)return null;
     const stepX=cw/gridCols,stepY=ch/gridRows;
     const els=[];
-
     // 格线
     for(let xi=0;xi<=gridCols;xi++){
       const x=xi*stepX,maj=xi%10===0;
-      els.push(<line key={"v"+xi} x1={x} y1={0} x2={x} y2={ch}
-        stroke={maj?"rgba(255,50,50,0.85)":"rgba(200,0,0,0.18)"} strokeWidth={maj?1:0.5}/>);
+      els.push(<line key={"v"+xi} x1={x} y1={0} x2={x} y2={ch} stroke={maj?"rgba(255,50,50,0.8)":"rgba(200,0,0,0.2)"} strokeWidth={maj?1:0.4}/>);
     }
     for(let yi=0;yi<=gridRows;yi++){
       const y=yi*stepY,maj=yi%10===0;
-      els.push(<line key={"h"+yi} x1={0} y1={y} x2={cw} y2={y}
-        stroke={maj?"rgba(255,50,50,0.85)":"rgba(200,0,0,0.18)"} strokeWidth={maj?1:0.5}/>);
+      els.push(<line key={"h"+yi} x1={0} y1={y} x2={cw} y2={y} stroke={maj?"rgba(255,50,50,0.8)":"rgba(200,0,0,0.2)"} strokeWidth={maj?1:0.4}/>);
     }
-
-    // 列数字（顶部，每5格）
-    const numSz=Math.max(3,Math.min(stepX*0.55,7));
+    // 行列数字（每5格标一次）
+    const nSz=Math.max(2.5,Math.min(stepX*0.5,7));
     for(let xi=0;xi<gridCols;xi++){
-      if(xi===0||(xi+1)%5===0){
-        els.push(<text key={"cn"+xi} x={(xi+0.5)*stepX} y={numSz+1}
-          textAnchor="middle" fontSize={numSz} fill="rgba(160,0,0,0.65)" fontWeight="700"
-          fontFamily="sans-serif">{xi+1}</text>);
-      }
+      if(xi===0||(xi+1)%5===0)
+        els.push(<text key={"cn"+xi} x={(xi+0.5)*stepX} y={nSz+0.5} textAnchor="middle" fontSize={nSz} fill="rgba(180,0,0,0.7)" fontWeight="700" fontFamily="sans-serif">{xi+1}</text>);
     }
-    // 行数字（左侧，每5格）
     for(let yi=0;yi<gridRows;yi++){
-      if(yi===0||(yi+1)%5===0){
-        els.push(<text key={"rn"+yi} x={numSz} y={(yi+0.5)*stepY}
-          textAnchor="middle" dominantBaseline="middle" fontSize={numSz}
-          fill="rgba(160,0,0,0.65)" fontWeight="700" fontFamily="sans-serif">{yi+1}</text>);
-      }
+      if(yi===0||(yi+1)%5===0)
+        els.push(<text key={"rn"+yi} x={nSz*0.5} y={(yi+0.5)*stepY} textAnchor="middle" dominantBaseline="middle" fontSize={nSz} fill="rgba(180,0,0,0.7)" fontWeight="700" fontFamily="sans-serif">{yi+1}</text>);
     }
-
-    // 格子色号（放大≥2倍且格子足够大时显示）
-    const cellPxSz=stepX*scale; // 放大后每格实际像素
-    if(scale>=2&&mapReady&&cellMapRef.current&&cellPxSz>=14){
-      const lblSz=Math.max(2.5,Math.min(stepX*0.38,5.5));
+    // 格子色号（放大≥2且格够大）
+    const cellPxActual=stepX*scale;
+    if(scale>=2&&cellMapRef.current&&cellPxActual>=14){
+      const lSz=Math.max(2,Math.min(stepX*0.4,6));
       for(let r=0;r<gridRows;r++){
         for(let c=0;c<gridCols;c++){
           const cid=cellMapRef.current[r]?.[c];
           if(!cid)continue;
-          els.push(<text key={`l-${r}-${c}`}
-            x={(c+0.5)*stepX} y={(r+0.5)*stepY}
-            textAnchor="middle" dominantBaseline="middle"
-            fontSize={lblSz} fill="rgba(0,0,0,0.6)" fontWeight="800"
-            fontFamily="sans-serif">{cid}</text>);
+          els.push(<text key={`lb-${r}-${c}`} x={(c+0.5)*stepX} y={(r+0.5)*stepY}
+            textAnchor="middle" dominantBaseline="middle" fontSize={lSz}
+            fill="rgba(0,0,0,0.55)" fontWeight="800" fontFamily="sans-serif">{cid}</text>);
         }
       }
     }
-
     return(
       <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}
         viewBox={`0 0 ${cw} ${ch}`} preserveAspectRatio="none">{els}</svg>
@@ -1510,14 +1513,14 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   // ════════════════════════════════
   if(phase==="start")return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
-      <div style={{padding:"14px 18px 10px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+      <div style={{padding:"13px 16px 10px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <button onClick={onExit} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:T.textMid}}>←</button>
-        <div style={{fontSize:16,fontWeight:800,color:T.text}}>🎯 专注模式设置</div>
+        <div style={{fontSize:15,fontWeight:800,color:T.text}}>🎯 专注模式</div>
       </div>
-      <div style={{flex:1,overflowY:"auto",padding:"16px"}}>
+      <div style={{flex:1,overflowY:"auto",padding:"14px 14px"}}>
         {/* 作品信息 */}
         <div style={{background:T.card,borderRadius:16,padding:12,marginBottom:12,display:"flex",gap:12,alignItems:"center",border:`1.5px solid ${T.border}`}}>
-          <div style={{width:48,height:48,borderRadius:10,background:T.accentSoft,overflow:"hidden",flexShrink:0}}>
+          <div style={{width:46,height:46,borderRadius:10,background:T.accentSoft,overflow:"hidden",flexShrink:0}}>
             {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
               :<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",fontSize:20}}>🖼️</div>}
           </div>
@@ -1541,12 +1544,12 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
 
         {/* 网格尺寸 */}
         <div style={{background:T.card,borderRadius:14,padding:"10px 12px",marginBottom:10,border:`1.5px solid ${T.border}`}}>
-          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>豆板网格尺寸（列 × 行）</div>
+          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>豆板网格（列 × 行）</div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
             <input type="number" inputMode="numeric" value={gridColsInput}
               onChange={e=>{setGridColsInput(e.target.value);const v=parseInt(e.target.value);if(v>0&&v<=300)setGridCols(v);}}
               style={{flex:1,padding:"9px 6px",borderRadius:9,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:900,textAlign:"center",outline:"none"}}/>
-            <span style={{fontSize:18,color:T.textMid,fontWeight:700}}>×</span>
+            <span style={{fontSize:16,color:T.textMid,fontWeight:700}}>×</span>
             <input type="number" inputMode="numeric" value={gridRowsInput}
               onChange={e=>{setGridRowsInput(e.target.value);const v=parseInt(e.target.value);if(v>0&&v<=300)setGridRows(v);}}
               style={{flex:1,padding:"9px 6px",borderRadius:9,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:900,textAlign:"center",outline:"none"}}/>
@@ -1557,7 +1560,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
                 style={{flex:1,padding:"5px 0",borderRadius:7,border:`1.5px solid ${gridCols===c&&gridRows===r?T.accent:T.border}`,background:gridCols===c&&gridRows===r?T.accentSoft:T.card,color:gridCols===c&&gridRows===r?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:700,cursor:"pointer"}}>{c}²</button>
             ))}
           </div>
-          <div style={{fontSize:10,color:T.textLight,marginTop:6}}>💡 放大后会自动显示每格色号</div>
+          <div style={{fontSize:10,color:T.textLight,marginTop:6}}>💡 放大2倍以上时自动显示每格色号</div>
         </div>
 
         {/* 自动扣库存 */}
@@ -1569,7 +1572,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
         </div>
       </div>
 
-      <div style={{padding:"12px 16px 32px",borderTop:`1px solid ${T.border}`,display:"flex",gap:10,flexShrink:0}}>
+      <div style={{padding:"12px 14px 32px",borderTop:`1px solid ${T.border}`,display:"flex",gap:10,flexShrink:0}}>
         {task.img&&(
           <button onClick={()=>setPhase("crop")}
             style={{flex:1,padding:"13px 0",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.card,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
@@ -1590,7 +1593,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   if(phase==="crop")return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.95)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 10px"}}>
       <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:8,textAlign:"center"}}>
-        拖动选框选出图纸区域（去掉下方色标）
+        拖动选框，框住图纸区域（去掉下方色标）
       </div>
       <div style={{position:"relative",maxWidth:"100%",maxHeight:"68vh",overflow:"hidden",borderRadius:8,touchAction:"none"}}
         onPointerMove={ev=>{
@@ -1617,22 +1620,17 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
         <img ref={cropImgRef} src={task.img}
           onLoad={ev=>{
             const{clientWidth:w,clientHeight:h}=ev.target;
-            // 默认选上65%（图纸区），下方35%是色标
             setCropBox({x:0,y:0,w,h:Math.round(h*0.65)});
           }}
           style={{display:"block",maxWidth:"100%",maxHeight:"68vh",objectFit:"contain",userSelect:"none",WebkitUserSelect:"none"}}/>
         {cropBox&&<>
-          {/* 遮罩：上方暗+下方暗，中间亮 */}
           <div style={{position:"absolute",inset:0,pointerEvents:"none",
             background:`linear-gradient(to bottom,rgba(0,0,0,0.65) ${cropBox.y}px,transparent ${cropBox.y}px,transparent ${cropBox.y+cropBox.h}px,rgba(0,0,0,0.65) ${cropBox.y+cropBox.h}px)`}}/>
-          {/* 选框 */}
           <div
             onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
             style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #FFE83A",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
-            {/* 三等分辅助线 */}
             {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(255,232,58,0.28)"}}/>)}
             {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(255,232,58,0.28)"}}/>)}
-            {/* 8个控制点 */}
             {[{t:"tl",s:{top:-9,left:-9}},{t:"t",s:{top:-9,left:"50%",transform:"translateX(-50%)"}},
               {t:"tr",s:{top:-9,right:-9}},{t:"r",s:{top:"50%",right:-9,transform:"translateY(-50%)"}},
               {t:"br",s:{bottom:-9,right:-9}},{t:"b",s:{bottom:-9,left:"50%",transform:"translateX(-50%)"}},
@@ -1640,7 +1638,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
             ].map(({t,s})=>(
               <div key={t}
                 onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:t,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
-                style={{position:"absolute",width:20,height:20,background:"#FFE83A",borderRadius:4,cursor:"pointer",touchAction:"none",...s}}/>
+                style={{position:"absolute",width:20,height:20,background:"#FFE83A",borderRadius:4,touchAction:"none",...s}}/>
             ))}
           </div>
         </>}
@@ -1652,15 +1650,13 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     </div>
   );
 
-  // ════════════════════════════════
   // 完成确认弹窗
-  // ════════════════════════════════
   if(allDoneConfirm)return(
     <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px",fontFamily:"'Nunito',sans-serif"}}>
       <div style={{background:T.card,borderRadius:22,padding:"26px 20px",width:"100%",maxWidth:300,textAlign:"center"}}>
         <div style={{fontSize:50,marginBottom:8}}>🎉</div>
         <div style={{fontSize:17,fontWeight:900,color:T.text,marginBottom:4}}>全部拼完啦！</div>
-        <div style={{fontSize:12,color:T.textMid,marginBottom:18,lineHeight:1.6}}>恭喜完成「{task.name}」</div>
+        <div style={{fontSize:12,color:T.textMid,marginBottom:18}}>恭喜完成「{task.name}」</div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={onExit} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>稍后</button>
           <button onClick={handleAllDone} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>✓ 标记完成</button>
@@ -1675,13 +1671,12 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const drawerBg=tn==="night"?T.card:"#fff";
 
   return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:"#f5f5f5",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
-
+    <div style={{position:"fixed",inset:0,zIndex:500,background:"#f0f0f0",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
       {/* 顶部 */}
       <div style={{padding:"7px 10px",display:"flex",alignItems:"center",gap:7,background:tn==="night"?"rgba(0,0,0,0.9)":"rgba(255,255,255,0.97)",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
         <div style={{width:30,height:30,borderRadius:8,flexShrink:0,background:activeInfo?activeInfo.hex:"#eee",border:`2px solid ${T.border}`,boxShadow:activeInfo?`0 1px 6px ${activeInfo.hex}60`:"none"}}/>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:12,fontWeight:900,color:T.text}}>{activeColor?`正在拼：${activeColor}`:"请选择颜色"}</div>
+          <div style={{fontSize:12,fontWeight:900,color:T.text}}>{activeColor?`正在拼：${activeColor}`:"请在下方选择颜色"}</div>
           <div style={{fontSize:10,color:T.textMid}}>{activeData?`${activeData.count} 粒  ·  `:""}完成 {doneColors.size}/{colors.length}</div>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
@@ -1697,7 +1692,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
       </div>
 
       {/* 图纸区 */}
-      <div style={{flex:1,overflow:"hidden",background:"#ebebeb",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}
+      <div style={{flex:1,overflow:"hidden",background:"#e8e8e8",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         {croppedSrc?(
           <div style={{
@@ -1705,22 +1700,27 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
             transform:`scale(${scale}) translate(${pan.x/scale}px,${pan.y/scale}px)`,
             transformOrigin:"center center",
             transition:"none",
-            boxShadow:"0 2px 18px rgba(0,0,0,0.14)",
-            borderRadius:2,
-            willChange:"transform"
+            boxShadow:"0 2px 20px rgba(0,0,0,0.15)",
+            borderRadius:2,willChange:"transform"
           }}>
-            <canvas ref={canvasRef}
-              style={{display:"block",maxWidth:"calc(100vw - 8px)",maxHeight:"calc(100vh - 195px)",imageRendering:"pixelated"}}
-            />
-            {renderGridSVG()}
+            {mapReady?(
+              <canvas ref={canvasRef}
+                style={{display:"block",maxWidth:"calc(100vw - 8px)",maxHeight:"calc(100vh - 190px)",imageRendering:"pixelated"}}/>
+            ):(
+              <div style={{width:300,height:300,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",color:"#aaa",gap:8}}>
+                <div style={{fontSize:36}}>⏳</div>
+                <div style={{fontSize:12}}>建立格子映射中…</div>
+              </div>
+            )}
+            {mapReady&&renderGrid()}
           </div>
         ):(
           <div style={{textAlign:"center",color:"#aaa"}}>
-            <div style={{fontSize:38,marginBottom:6}}>⏳</div>
+            <div style={{fontSize:36,marginBottom:6}}>⏳</div>
             <div style={{fontSize:12}}>处理中…</div>
           </div>
         )}
-        {scale<=1&&<div style={{position:"absolute",bottom:4,right:6,fontSize:8,color:"rgba(0,0,0,0.22)",pointerEvents:"none"}}>双指捏合可放大</div>}
+        {scale<=1&&<div style={{position:"absolute",bottom:4,right:6,fontSize:8,color:"rgba(0,0,0,0.2)",pointerEvents:"none"}}>双指捏合放大</div>}
       </div>
 
       {/* 底部色卡抽屉 */}
@@ -1729,7 +1729,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
           <div style={{width:28,height:3,borderRadius:2,background:"rgba(0,0,0,0.08)",margin:"0 auto 6px",cursor:"pointer"}} onClick={()=>setDrawerOpen(v=>!v)}/>
           {activeColor?(
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{width:28,height:28,borderRadius:7,background:"#FFE83A",border:`2px solid ${T.border}`,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{width:28,height:28,borderRadius:7,background:"#FFE03A",border:`2px solid ${T.border}`,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <span style={{fontSize:7,fontWeight:900,color:"#7a6000"}}>高亮</span>
               </div>
               <div style={{flex:1}}>
@@ -1760,8 +1760,8 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
                 const txt=bright>145?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
                 return(
                   <div key={c.id} onClick={()=>setActiveColor(c.id)}
-                    style={{flexShrink:0,width:40,borderRadius:8,overflow:"hidden",border:`2px solid ${isAct?"#FFE83A":T.border}`,cursor:"pointer",transform:isAct?"scale(1.1)":"scale(1)",transition:"transform 0.15s"}}>
-                    <div style={{background:isAct?"#FFE83A":T.accentSoft,padding:"2px",textAlign:"center"}}>
+                    style={{flexShrink:0,width:40,borderRadius:8,overflow:"hidden",border:`2px solid ${isAct?"#FFE03A":T.border}`,cursor:"pointer",transform:isAct?"scale(1.1)":"scale(1)",transition:"transform 0.15s"}}>
+                    <div style={{background:isAct?"#FFE03A":T.accentSoft,padding:"2px",textAlign:"center"}}>
                       <span style={{fontSize:8,fontWeight:800,color:isAct?"#7a6000":T.accent,whiteSpace:"nowrap"}}>{c.id}</span>
                     </div>
                     <div style={{background:bg,aspectRatio:"1/1",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1791,8 +1791,8 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
                 const txt=bright>145?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
                 return(
                   <div key={c.id} onClick={()=>{setActiveColor(c.id);setDrawerOpen(false);}}
-                    style={{borderRadius:9,overflow:"hidden",border:`2px solid ${isAct?"#FFE83A":T.border}`,cursor:"pointer"}}>
-                    <div style={{background:isAct?"#FFE83A":T.accentSoft,padding:"2px 4px",textAlign:"center"}}>
+                    style={{borderRadius:9,overflow:"hidden",border:`2px solid ${isAct?"#FFE03A":T.border}`,cursor:"pointer"}}>
+                    <div style={{background:isAct?"#FFE03A":T.accentSoft,padding:"2px 4px",textAlign:"center"}}>
                       <span style={{fontSize:10,fontWeight:800,color:isAct?"#7a6000":T.accent,whiteSpace:"nowrap"}}>{c.id}</span>
                     </div>
                     <div style={{background:bg,aspectRatio:"1/1",display:"flex",alignItems:"center",justifyContent:"center"}}>
