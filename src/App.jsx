@@ -1314,8 +1314,11 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
         sr=Math.round(sr/cnt);sg=Math.round(sg/cnt);sb=Math.round(sb/cnt);
         let best=null,bestDist=Infinity;
         for(const p of pal){const d=(sr-p.r)**2+(sg-p.g)**2+(sb-p.b)**2;if(d<bestDist){bestDist=d;best=p.id;}}
-        // 阈值90²=8100，超过说明是白色/透明区域（色标区、边框等）
-        map[r][c]=bestDist<8100?best:null;
+        // 到白色的距离
+        const distToWhite=(sr-255)**2+(sg-255)**2+(sb-255)**2;
+        // 条件1：到最近色距离<75²=5625（更严格）
+        // 条件2：到最近色距离 < 到白色距离的一半（排除浅色/白色背景误判为灰色系颜色）
+        map[r][c]=(bestDist<5625&&bestDist<distToWhite*0.5)?best:null;
       }
     }
     return map;
