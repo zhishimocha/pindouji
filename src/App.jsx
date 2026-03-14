@@ -779,12 +779,7 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
                     <option value="stock-asc">库存↑</option><option value="stock-desc">库存↓</option>
                     <option value="used-desc">消耗↓</option>
                   </select>
-                  <button className="btn" onClick={()=>{if(!isPro){setShowUpgrade(true);return;}if(focusMode){exitFocusMode();}else{setBatch(false);setSel(new Set());setFocusMode(true);}}}
-                    style={{padding:"10px 12px",borderRadius:50,border:`1.5px solid ${focusMode?T.accent:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,whiteSpace:"nowrap",background:focusMode?T.accent:T.accentSoft,color:focusMode?"#fff":isPro?T.accent:T.textLight,position:"relative"}}>
-                    {focusMode?"✕ 专注":"🎯"}
-                    {!isPro&&<span style={{position:"absolute",top:-4,right:-4,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>Pro</span>}
-                  </button>
-                  <button className="btn" onClick={()=>{if(focusMode)exitFocusMode();setBatch(!batch);setSel(new Set());}} style={{padding:"10px 14px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,whiteSpace:"nowrap",background:batch?T.accent:T.accentLight,color:batch?"#fff":T.accent}}>{batch?"✕ 退出":"批量"}</button>
+                  <button className="btn" onClick={()=>{setBatch(!batch);setSel(new Set());}} style={{padding:"10px 14px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,whiteSpace:"nowrap",background:batch?T.accent:T.accentLight,color:batch?"#fff":T.accent}}>{batch?"✕ 退出":"批量"}</button>
                 </div>
                 {history.length>0&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:8,marginTop:-4}}>
                   <button className="btn" onClick={undoLast} style={{padding:"6px 14px",borderRadius:50,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,background:T.accentLight,color:T.accent,display:"flex",alignItems:"center",gap:4}}>↩️ 撤销<span style={{background:T.accent,color:"#fff",borderRadius:50,fontSize:10,padding:"1px 6px",fontWeight:900}}>{history.length}</span></button>
@@ -1224,7 +1219,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const [autoDeduct,setAutoDeduct]=useState(false);
   const [sortOrder,setSortOrder]=useState("count-desc");
   const [doneColors,setDoneColors]=useState(new Set());
-  const [activeColor,setActiveColor]=useState(null);
+  const [activeColor,setActiveColor]=useState(null); // null=原图
   const [drawerOpen,setDrawerOpen]=useState(false);
   const [showGrid,setShowGrid]=useState(true);
   const [gridCols,setGridCols]=useState(52);
@@ -1232,16 +1227,19 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const [gridColsInput,setGridColsInput]=useState("52");
   const [gridRowsInput,setGridRowsInput]=useState("52");
   const [allDoneConfirm,setAllDoneConfirm]=useState(false);
+
   const cropImgRef=useRef(null);
   const [cropBox,setCropBox]=useState(null);
   const [cropDrag,setCropDrag]=useState(null);
   const [croppedSrc,setCroppedSrc]=useState(null);
+
   const offscreenRef=useRef(null);
   const [displaySrc,setDisplaySrc]=useState(null);
   const [mapReady,setMapReady]=useState(false);
   const cellMapRef=useRef(null);
   const origImgRef=useRef(null);
   const [imgDsp,setImgDsp]=useState({w:0,h:0});
+
   const [scale,setScale]=useState(1);
   const [pan,setPan]=useState({x:0,y:0});
   const gestureRef=useRef(null);
@@ -1264,8 +1262,9 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     img.onload=()=>{
       const c1=document.createElement('canvas');c1.width=cw;c1.height=ch;
       c1.getContext('2d').drawImage(img,cx,cy,cw,ch,0,0,cw,ch);
-      // 保留更高分辨率（800px）以减少相似色误匹配
-      const sc=Math.min(1,800/cw),tw=Math.round(cw*sc),th=Math.round(ch*sc);
+      // 保留足够分辨率：每格至少8px，上限600px
+      const minW=gridCols*8,sc=Math.min(1,Math.max(minW,600)/cw);
+      const tw=Math.round(cw*sc),th=Math.round(ch*sc);
       const c2=document.createElement('canvas');c2.width=tw;c2.height=th;
       c2.getContext('2d').drawImage(c1,0,0,tw,th);
       setCroppedSrc(c2.toDataURL('image/png'));setPhase("focus");setActiveColor(null);
@@ -1275,47 +1274,48 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     if(!task.img){setPhase("focus");setActiveColor(null);return;}
     const img=new Image();img.crossOrigin="anonymous";
     img.onload=()=>{
-      // 800px上限，比之前400px保留更多细节，相近颜色区分更准确
-      const sc=Math.min(1,800/img.naturalWidth),tw=Math.round(img.naturalWidth*sc),th=Math.round(img.naturalHeight*sc);
+      const minW=gridCols*8,sc=Math.min(1,Math.max(minW,600)/img.naturalWidth);
+      const tw=Math.round(img.naturalWidth*sc),th=Math.round(img.naturalHeight*sc);
       const c=document.createElement('canvas');c.width=tw;c.height=th;
       c.getContext('2d').drawImage(img,0,0,tw,th);
       setCroppedSrc(c.toDataURL('image/png'));setPhase("focus");setActiveColor(null);
     };img.src=task.img;
   }
 
+  // ── 建格子映射表：只取格子正中心1像素，彻底避开边缘混色 ──
   function buildCellMap(imgEl,cols,rows){
     const tmp=document.createElement('canvas');tmp.width=imgEl.naturalWidth;tmp.height=imgEl.naturalHeight;
     const ctx=tmp.getContext('2d');ctx.drawImage(imgEl,0,0);
     const cw=tmp.width,ch=tmp.height,pixels=ctx.getImageData(0,0,cw,ch).data;
     const cellW=cw/cols,cellH=ch/rows,map=[];
-    // 只用 task.colorData 里实际存在的颜色
-    const taskColorIds=new Set((task.colorData||[]).map(c=>c.id));
-    const pal=ALL_COLORS.filter(col=>taskColorIds.has(col.id))
-      .map(col=>({id:col.id,r:parseInt(col.hex.slice(1,3),16),g:parseInt(col.hex.slice(3,5),16),b:parseInt(col.hex.slice(5,7),16)}));
-    const palette=pal.length>0?pal:ALL_COLORS.map(col=>({id:col.id,r:parseInt(col.hex.slice(1,3),16),g:parseInt(col.hex.slice(3,5),16),b:parseInt(col.hex.slice(5,7),16)}));
 
-    for(let r=0;r<rows;r++){map[r]=[];
+    // 只用 task.colorData 里的颜色，搜索范围从几百→十几种
+    const taskIds=new Set((task.colorData||[]).map(c=>c.id));
+    const pal=ALL_COLORS.filter(col=>taskIds.has(col.id)).map(col=>({
+      id:col.id,
+      r:parseInt(col.hex.slice(1,3),16),
+      g:parseInt(col.hex.slice(3,5),16),
+      b:parseInt(col.hex.slice(5,7),16)
+    }));
+    const usePal=pal.length>0?pal:ALL_COLORS.map(col=>({id:col.id,r:parseInt(col.hex.slice(1,3),16),g:parseInt(col.hex.slice(3,5),16),b:parseInt(col.hex.slice(5,7),16)}));
+
+    for(let r=0;r<rows;r++){
+      map[r]=[];
       for(let c=0;c<cols;c++){
-        // 采样格子中心1/3区域（避开边界混色带），取所有像素平均
-        const x0=Math.floor((c+1/3)*cellW),x1=Math.ceil((c+2/3)*cellW);
-        const y0=Math.floor((r+1/3)*cellH),y1=Math.ceil((r+2/3)*cellH);
-        let sr=0,sg=0,sb=0,cnt=0;
-        for(let py=y0;py<=y1&&py<ch;py++){
-          for(let px=x0;px<=x1&&px<cw;px++){
-            const i=(py*cw+px)*4;
-            sr+=pixels[i];sg+=pixels[i+1];sb+=pixels[i+2];cnt++;
-          }
-        }
-        if(cnt===0){map[r][c]=null;continue;}
-        sr=Math.round(sr/cnt);sg=Math.round(sg/cnt);sb=Math.round(sb/cnt);
+        // 只取格子正中心的1个像素（避开边缘混色导致的误匹配）
+        const px=Math.min(Math.floor((c+0.5)*cellW),cw-1);
+        const py=Math.min(Math.floor((r+0.5)*cellH),ch-1);
+        const i=(py*cw+px)*4;
+        const sr=pixels[i],sg=pixels[i+1],sb=pixels[i+2];
+
         let best=null,bestDist=Infinity;
-        for(const p of palette){const d=(sr-p.r)**2+(sg-p.g)**2+(sb-p.b)**2;if(d<bestDist){bestDist=d;best=p.id;}}
-        // 到白色的距离
-        const dWhite=(sr-255)**2+(sg-255)**2+(sb-255)**2;
-        // 到黑色的距离（防止黑色边框被匹配）
-        const dBlack=sr**2+sg**2+sb**2;
-        // 条件：到最近色距离 < 70²=4900，且明显比白色/黑色更近
-        map[r][c]=(bestDist<4900&&bestDist<dWhite*0.45&&bestDist<dBlack*0.8)?best:null;
+        for(const p of usePal){
+          const d=(sr-p.r)**2+(sg-p.g)**2+(sb-p.b)**2;
+          if(d<bestDist){bestDist=d;best=p.id;}
+        }
+        // 排除白/浅色背景：到白色的距离必须明显大于到目标色的距离
+        const distToWhite=(sr-255)**2+(sg-255)**2+(sb-255)**2;
+        map[r][c]=(bestDist<5625&&bestDist<distToWhite*0.5)?best:null;
       }
     }
     return map;
@@ -1342,9 +1342,8 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     if(!mapReady||!offscreenRef.current||!origImgRef.current)return;
     const oc=offscreenRef.current,img=origImgRef.current,ctx=oc.getContext('2d');
     const cw=oc.width,ch=oc.height;
-    if(activeColor===null){
-      ctx.drawImage(img,0,0);
-    }else{
+    if(activeColor===null){ctx.drawImage(img,0,0);}
+    else{
       const cellW=cw/gridCols,cellH=ch/gridRows,map=cellMapRef.current;
       ctx.fillStyle='#ffffff';ctx.fillRect(0,0,cw,ch);
       ctx.fillStyle='#FFE03A';
@@ -1414,7 +1413,6 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     return <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} viewBox={`0 0 ${cw} ${ch}`} preserveAspectRatio="none">{els}</svg>;
   }
 
-  // ════ 设置页 ════
   if(phase==="start")return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"13px 16px 10px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
@@ -1468,7 +1466,6 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     </div>
   );
 
-  // ════ 裁剪页 ════
   if(phase==="crop")return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.95)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 10px",overflow:"hidden"}}>
       <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:8,textAlign:"center"}}>拖动选框，框住图纸区域（去掉下方色标）</div>
@@ -1522,7 +1519,6 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     </div>
   );
 
-  // ════ 专注页 ════
   const drawerBg=tn==="night"?T.card:"#fff";
   return(
     <div style={{position:"fixed",inset:0,zIndex:500,background:"#f0f0f0",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",overflow:"hidden"}}>
@@ -1540,6 +1536,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
           <button onClick={onExit} style={{background:T.accentSoft,border:"none",borderRadius:50,padding:"4px 9px",color:T.accent,fontSize:10,fontWeight:700,cursor:"pointer"}}>退出</button>
         </div>
       </div>
+
       <div style={{flex:1,overflow:"hidden",background:"#e8e8e8",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         {displaySrc?(
@@ -1555,6 +1552,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
         )}
         <div style={{position:"absolute",bottom:4,right:6,fontSize:8,color:"rgba(0,0,0,0.2)",pointerEvents:"none"}}>双指缩放(0.3x~10x) · 单指平移</div>
       </div>
+
       <div style={{background:drawerBg,borderRadius:"14px 14px 0 0",boxShadow:"0 -2px 10px rgba(0,0,0,0.09)",flexShrink:0,borderTop:`1px solid ${T.border}`}}>
         <div style={{padding:"6px 12px 4px"}}>
           <div style={{width:28,height:3,borderRadius:2,background:"rgba(0,0,0,0.08)",margin:"0 auto 6px",cursor:"pointer"}} onClick={()=>setDrawerOpen(v=>!v)}/>
@@ -1628,21 +1626,8 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
 //  WorksPage（作品页 重构版）
 // ══════════════════════════════════
 function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded}){
-  const [view,setView]=useState("home");
+  const [view,setView]=useState("home"); // home | missing | diary | focus
   const [focusTask,setFocusTask]=useState(null);
-  const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
-  const [showGoalEdit,setShowGoalEdit]=useState(false);
-  const [goalInput,setGoalInput]=useState("");
-  const [showAddModal,setShowAddModal]=useState(false);
-  const [newName,setNewName]=useState("");
-  const [newImg,setNewImg]=useState(null);
-  const [newColorData,setNewColorData]=useState([]);
-  const [scanLoading,setScanLoading]=useState(false);
-  const [scanErr,setScanErr]=useState("");
-  const [addStep,setAddStep]=useState("info");
-  const newImgRef=useRef(null);
-  const [longPressId,setLongPressId]=useState(null);
-  const longPressTimer=useRef(null);
   useEffect(()=>{if(resetKey===0)return;setTasks([]);},[resetKey]);
 
   const now=new Date();
