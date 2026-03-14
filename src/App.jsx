@@ -1224,7 +1224,7 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const [autoDeduct,setAutoDeduct]=useState(false);
   const [sortOrder,setSortOrder]=useState("count-desc");
   const [doneColors,setDoneColors]=useState(new Set());
-  const [activeColor,setActiveColor]=useState(null); // null=原图
+  const [activeColor,setActiveColor]=useState(null);
   const [drawerOpen,setDrawerOpen]=useState(false);
   const [showGrid,setShowGrid]=useState(true);
   const [gridCols,setGridCols]=useState(52);
@@ -1232,22 +1232,16 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   const [gridColsInput,setGridColsInput]=useState("52");
   const [gridRowsInput,setGridRowsInput]=useState("52");
   const [allDoneConfirm,setAllDoneConfirm]=useState(false);
-
-  // 裁剪
   const cropImgRef=useRef(null);
   const [cropBox,setCropBox]=useState(null);
   const [cropDrag,setCropDrag]=useState(null);
   const [croppedSrc,setCroppedSrc]=useState(null);
-
-  // 渲染用img（根本解决白屏）
-  const offscreenRef=useRef(null);   // 离屏canvas，只用于绘制，不挂DOM
-  const [displaySrc,setDisplaySrc]=useState(null); // toDataURL给<img>显示
+  const offscreenRef=useRef(null);
+  const [displaySrc,setDisplaySrc]=useState(null);
   const [mapReady,setMapReady]=useState(false);
   const cellMapRef=useRef(null);
   const origImgRef=useRef(null);
-  const [imgDsp,setImgDsp]=useState({w:0,h:0}); // img标签固定显示尺寸
-
-  // 缩放平移
+  const [imgDsp,setImgDsp]=useState({w:0,h:0});
   const [scale,setScale]=useState(1);
   const [pan,setPan]=useState({x:0,y:0});
   const gestureRef=useRef(null);
@@ -1270,7 +1264,8 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     img.onload=()=>{
       const c1=document.createElement('canvas');c1.width=cw;c1.height=ch;
       c1.getContext('2d').drawImage(img,cx,cy,cw,ch,0,0,cw,ch);
-      const sc=Math.min(1,400/cw),tw=Math.round(cw*sc),th=Math.round(ch*sc);
+      // 保留更高分辨率（800px）以减少相似色误匹配
+      const sc=Math.min(1,800/cw),tw=Math.round(cw*sc),th=Math.round(ch*sc);
       const c2=document.createElement('canvas');c2.width=tw;c2.height=th;
       c2.getContext('2d').drawImage(c1,0,0,tw,th);
       setCroppedSrc(c2.toDataURL('image/png'));setPhase("focus");setActiveColor(null);
@@ -1280,7 +1275,8 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     if(!task.img){setPhase("focus");setActiveColor(null);return;}
     const img=new Image();img.crossOrigin="anonymous";
     img.onload=()=>{
-      const sc=Math.min(1,400/img.naturalWidth),tw=Math.round(img.naturalWidth*sc),th=Math.round(img.naturalHeight*sc);
+      // 800px上限，比之前400px保留更多细节，相近颜色区分更准确
+      const sc=Math.min(1,800/img.naturalWidth),tw=Math.round(img.naturalWidth*sc),th=Math.round(img.naturalHeight*sc);
       const c=document.createElement('canvas');c.width=tw;c.height=th;
       c.getContext('2d').drawImage(img,0,0,tw,th);
       setCroppedSrc(c.toDataURL('image/png'));setPhase("focus");setActiveColor(null);
@@ -1292,62 +1288,56 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
     const ctx=tmp.getContext('2d');ctx.drawImage(imgEl,0,0);
     const cw=tmp.width,ch=tmp.height,pixels=ctx.getImageData(0,0,cw,ch).data;
     const cellW=cw/cols,cellH=ch/rows,map=[];
-
-    // ★ 只用 task.colorData 里实际存在的颜色建调色板
-    // 搜索范围从几百种缩到十几种，相近颜色不再互相误匹配
+    // 只用 task.colorData 里实际存在的颜色
     const taskColorIds=new Set((task.colorData||[]).map(c=>c.id));
-    const palette=ALL_COLORS
-      .filter(col=>taskColorIds.has(col.id))
+    const pal=ALL_COLORS.filter(col=>taskColorIds.has(col.id))
       .map(col=>({id:col.id,r:parseInt(col.hex.slice(1,3),16),g:parseInt(col.hex.slice(3,5),16),b:parseInt(col.hex.slice(5,7),16)}));
-
-    // 如果没有颜色数据，降级用全色盘
-    const pal=palette.length>0?palette:ALL_COLORS.map(col=>({id:col.id,r:parseInt(col.hex.slice(1,3),16),g:parseInt(col.hex.slice(3,5),16),b:parseInt(col.hex.slice(5,7),16)}));
+    const palette=pal.length>0?pal:ALL_COLORS.map(col=>({id:col.id,r:parseInt(col.hex.slice(1,3),16),g:parseInt(col.hex.slice(3,5),16),b:parseInt(col.hex.slice(5,7),16)}));
 
     for(let r=0;r<rows;r++){map[r]=[];
       for(let c=0;c<cols;c++){
+        // 采样格子中心1/3区域（避开边界混色带），取所有像素平均
+        const x0=Math.floor((c+1/3)*cellW),x1=Math.ceil((c+2/3)*cellW);
+        const y0=Math.floor((r+1/3)*cellH),y1=Math.ceil((r+2/3)*cellH);
         let sr=0,sg=0,sb=0,cnt=0;
-        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-          const px=Math.min(Math.max(Math.floor((c+0.5)*cellW)+dx,0),cw-1);
-          const py=Math.min(Math.max(Math.floor((r+0.5)*cellH)+dy,0),ch-1);
-          const i=(py*cw+px)*4;sr+=pixels[i];sg+=pixels[i+1];sb+=pixels[i+2];cnt++;
+        for(let py=y0;py<=y1&&py<ch;py++){
+          for(let px=x0;px<=x1&&px<cw;px++){
+            const i=(py*cw+px)*4;
+            sr+=pixels[i];sg+=pixels[i+1];sb+=pixels[i+2];cnt++;
+          }
         }
+        if(cnt===0){map[r][c]=null;continue;}
         sr=Math.round(sr/cnt);sg=Math.round(sg/cnt);sb=Math.round(sb/cnt);
         let best=null,bestDist=Infinity;
-        for(const p of pal){const d=(sr-p.r)**2+(sg-p.g)**2+(sb-p.b)**2;if(d<bestDist){bestDist=d;best=p.id;}}
+        for(const p of palette){const d=(sr-p.r)**2+(sg-p.g)**2+(sb-p.b)**2;if(d<bestDist){bestDist=d;best=p.id;}}
         // 到白色的距离
-        const distToWhite=(sr-255)**2+(sg-255)**2+(sb-255)**2;
-        // 条件1：到最近色距离<75²=5625（更严格）
-        // 条件2：到最近色距离 < 到白色距离的一半（排除浅色/白色背景误判为灰色系颜色）
-        map[r][c]=(bestDist<5625&&bestDist<distToWhite*0.5)?best:null;
+        const dWhite=(sr-255)**2+(sg-255)**2+(sb-255)**2;
+        // 到黑色的距离（防止黑色边框被匹配）
+        const dBlack=sr**2+sg**2+sb**2;
+        // 条件：到最近色距离 < 70²=4900，且明显比白色/黑色更近
+        map[r][c]=(bestDist<4900&&bestDist<dWhite*0.45&&bestDist<dBlack*0.8)?best:null;
       }
     }
     return map;
   }
 
-  // 加载图片+建映射表
   useEffect(()=>{
     if(phase!=="focus"||!croppedSrc)return;
     setMapReady(false);setDisplaySrc(null);cellMapRef.current=null;
     const img=new Image();
     img.onload=()=>{
       origImgRef.current=img;
-      // 计算适配屏幕的固定显示尺寸
       const maxW=window.innerWidth-8,maxH=window.innerHeight-56-140;
       const ratio=img.naturalWidth/img.naturalHeight;
       let w=maxW,h=maxW/ratio;if(h>maxH){h=maxH;w=maxH*ratio;}
       setImgDsp({w:Math.floor(w),h:Math.floor(h)});
-      // 建离屏canvas（不挂DOM）
       const oc=document.createElement('canvas');oc.width=img.naturalWidth;oc.height=img.naturalHeight;
       offscreenRef.current=oc;
-      setTimeout(()=>{
-        cellMapRef.current=buildCellMap(img,gridCols,gridRows);
-        setMapReady(true);
-      },0);
+      setTimeout(()=>{cellMapRef.current=buildCellMap(img,gridCols,gridRows);setMapReady(true);},0);
     };
     img.src=croppedSrc;
   },[phase,croppedSrc,gridCols,gridRows]);
 
-  // 渲染到离屏canvas → toDataURL → img标签（无GPU纹理限制，任意倍数不白屏）
   useEffect(()=>{
     if(!mapReady||!offscreenRef.current||!origImgRef.current)return;
     const oc=offscreenRef.current,img=origImgRef.current,ctx=oc.getContext('2d');
@@ -1373,15 +1363,12 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
   }
   function handleAllDone(){onComplete();onExit();}
 
-  // 双指缩放+单指平移，img不白屏，放大上限10x
   function onTouchStart(ev){
     if(ev.touches.length===2){
       ev.preventDefault();
       const dx=ev.touches[0].clientX-ev.touches[1].clientX,dy=ev.touches[0].clientY-ev.touches[1].clientY;
       gestureRef.current={type:'pinch',lastDist:Math.sqrt(dx*dx+dy*dy)};
-    }else{
-      gestureRef.current={type:'pan',lastX:ev.touches[0].clientX,lastY:ev.touches[0].clientY};
-    }
+    }else{gestureRef.current={type:'pan',lastX:ev.touches[0].clientX,lastY:ev.touches[0].clientY};}
   }
   function onTouchMove(ev){
     if(!gestureRef.current)return;
@@ -1553,17 +1540,11 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
           <button onClick={onExit} style={{background:T.accentSoft,border:"none",borderRadius:50,padding:"4px 9px",color:T.accent,fontSize:10,fontWeight:700,cursor:"pointer"}}>退出</button>
         </div>
       </div>
-
-      {/* 图纸区：img标签，彻底无白屏 */}
       <div style={{flex:1,overflow:"hidden",background:"#e8e8e8",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         {displaySrc?(
           <div style={{position:"relative",lineHeight:0,display:"inline-block",transform:`scale(${scale}) translate(${pan.x/scale}px,${pan.y/scale}px)`,transformOrigin:"center center",transition:"none",boxShadow:"0 2px 20px rgba(0,0,0,0.15)",borderRadius:2}}>
-            <img
-              src={displaySrc}
-              draggable={false}
-              style={{display:"block",width:imgDsp.w||"auto",height:imgDsp.h||"auto",userSelect:"none",WebkitUserSelect:"none"}}
-            />
+            <img src={displaySrc} draggable={false} style={{display:"block",width:imgDsp.w||"auto",height:imgDsp.h||"auto",userSelect:"none",WebkitUserSelect:"none"}}/>
             {renderGrid()}
           </div>
         ):(
@@ -1574,8 +1555,6 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
         )}
         <div style={{position:"absolute",bottom:4,right:6,fontSize:8,color:"rgba(0,0,0,0.2)",pointerEvents:"none"}}>双指缩放(0.3x~10x) · 单指平移</div>
       </div>
-
-      {/* 底部色卡抽屉 */}
       <div style={{background:drawerBg,borderRadius:"14px 14px 0 0",boxShadow:"0 -2px 10px rgba(0,0,0,0.09)",flexShrink:0,borderTop:`1px solid ${T.border}`}}>
         <div style={{padding:"6px 12px 4px"}}>
           <div style={{width:28,height:3,borderRadius:2,background:"rgba(0,0,0,0.08)",margin:"0 auto 6px",cursor:"pointer"}} onClick={()=>setDrawerOpen(v=>!v)}/>
