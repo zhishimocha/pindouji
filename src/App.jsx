@@ -1626,8 +1626,21 @@ function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
 //  WorksPage（作品页 重构版）
 // ══════════════════════════════════
 function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded}){
-  const [view,setView]=useState("home"); // home | missing | diary | focus
+  const [view,setView]=useState("home");
   const [focusTask,setFocusTask]=useState(null);
+  const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
+  const [showGoalEdit,setShowGoalEdit]=useState(false);
+  const [goalInput,setGoalInput]=useState("");
+  const [showAddModal,setShowAddModal]=useState(false);
+  const [newName,setNewName]=useState("");
+  const [newImg,setNewImg]=useState(null);
+  const [newColorData,setNewColorData]=useState([]);
+  const [scanLoading,setScanLoading]=useState(false);
+  const [scanErr,setScanErr]=useState("");
+  const [addStep,setAddStep]=useState("info");
+  const newImgRef=useRef(null);
+  const [longPressId,setLongPressId]=useState(null);
+  const longPressTimer=useRef(null);
   useEffect(()=>{if(resetKey===0)return;setTasks([]);},[resetKey]);
 
   const now=new Date();
