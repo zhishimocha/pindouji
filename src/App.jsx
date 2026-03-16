@@ -9,8 +9,7 @@ const supabase = createClient(
 // ══════════════ 升级弹窗 ══════════════
 function UpgradeModal({T,onClose}){
   const perks=[
-    {icon:"🎯",title:"专注模式",desc:"高亮单色逐一拼，再也不拿错"},
-    {icon:"📷",title:"AI识图",desc:"拍照自动识别用量，秒更库存"},
+{icon:"📷",title:"AI识图",desc:"拍照自动识别用量，秒更库存"},
     {icon:"☁️",title:"云同步",desc:"多设备实时同步，数据不丢失"},
   ];
   return(
@@ -549,7 +548,13 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
   }
   const [resetConfirm,setResetConfirm]=useState(false);
   const [resetKey,setResetKey]=useState(0);
-  const [tasks,setTasks]=useState([]);
+  const [tasks,setTasks]=useState(()=>{try{return JSON.parse(localStorage.getItem("tasks")||"[]")}catch(e){return []}});
+
+  useEffect(()=>{
+    try{
+      localStorage.setItem("tasks",JSON.stringify(tasks));
+    }catch(e){}
+  },[tasks]);
   const [tasksLoaded,setTasksLoaded]=useState(false);
   const tasksTimerRef=useRef(null);
   useEffect(()=>{async function lt(){if(user){const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();if(data?.tasks)setTasks(data.tasks);else{try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}}}else{try{const s=localStorage.getItem('pindou_tasks');if(s)setTasks(JSON.parse(s));}catch{}}setTasksLoaded(true);}lt();},[user]);
@@ -1214,429 +1219,16 @@ function MissingColorPage({T,stock,onBack}){
 // ══════════════════════════════════
 //  FocusMode（专注模式全屏）
 // ══════════════════════════════════
-function FocusMode({T,tn,task,onDeductStock,onExit,onComplete}){
-  const [phase,setPhase]=useState("start");
-  const [autoDeduct,setAutoDeduct]=useState(false);
-  const [sortOrder,setSortOrder]=useState("count-desc");
-  const [doneColors,setDoneColors]=useState(new Set());
-  const [activeColor,setActiveColor]=useState(null); // null=原图
-  const [drawerOpen,setDrawerOpen]=useState(false);
-  const [showGrid,setShowGrid]=useState(true);
-  const [gridCols,setGridCols]=useState(52);
-  const [gridRows,setGridRows]=useState(52);
-  const [gridColsInput,setGridColsInput]=useState("52");
-  const [gridRowsInput,setGridRowsInput]=useState("52");
-  const [allDoneConfirm,setAllDoneConfirm]=useState(false);
-
-  const cropImgRef=useRef(null);
-  const [cropBox,setCropBox]=useState(null);
-  const [cropDrag,setCropDrag]=useState(null);
-  const [croppedSrc,setCroppedSrc]=useState(null);
-
-  const offscreenRef=useRef(null);
-  const [displaySrc,setDisplaySrc]=useState(null);
-  const [mapReady,setMapReady]=useState(false);
-  const cellMapRef=useRef(null);
-  const origImgRef=useRef(null);
-  const [imgDsp,setImgDsp]=useState({w:0,h:0});
-
-  const [scale,setScale]=useState(1);
-  const [pan,setPan]=useState({x:0,y:0});
-  const gestureRef=useRef(null);
-
-  const colors=useMemo(()=>task.colorData||[],[task.colorData]);
-  const sorted=useMemo(()=>{
-    const rem=colors.filter(c=>!doneColors.has(c.id));
-    if(sortOrder==="count-asc")return[...rem].sort((a,b)=>a.count-b.count);
-    if(sortOrder==="id-asc")return[...rem].sort((a,b)=>a.id.localeCompare(b.id));
-    return[...rem].sort((a,b)=>b.count-a.count);
-  },[colors,doneColors,sortOrder]);
-
-  function confirmCrop(){
-    const imgEl=cropImgRef.current;
-    if(!imgEl||!task.img){enterFocus();return;}
-    const sx=imgEl.naturalWidth/imgEl.clientWidth,sy=imgEl.naturalHeight/imgEl.clientHeight;
-    const box=cropBox||{x:0,y:0,w:imgEl.clientWidth,h:imgEl.clientHeight};
-    const cw=Math.round(box.w*sx),ch=Math.round(box.h*sy),cx=Math.round(box.x*sx),cy=Math.round(box.y*sy);
-    const img=new Image();img.crossOrigin="anonymous";
-    img.onload=()=>{
-      const c1=document.createElement('canvas');c1.width=cw;c1.height=ch;
-      c1.getContext('2d').drawImage(img,cx,cy,cw,ch,0,0,cw,ch);
-      // 保留足够分辨率：每格至少8px，上限600px
-      const minW=gridCols*8,sc=Math.min(1,Math.max(minW,600)/cw);
-      const tw=Math.round(cw*sc),th=Math.round(ch*sc);
-      const c2=document.createElement('canvas');c2.width=tw;c2.height=th;
-      c2.getContext('2d').drawImage(c1,0,0,tw,th);
-      setCroppedSrc(c2.toDataURL('image/png'));setPhase("focus");setActiveColor(null);
-    };img.src=task.img;
-  }
-  function enterFocus(){
-    if(!task.img){setPhase("focus");setActiveColor(null);return;}
-    const img=new Image();img.crossOrigin="anonymous";
-    img.onload=()=>{
-      const minW=gridCols*8,sc=Math.min(1,Math.max(minW,600)/img.naturalWidth);
-      const tw=Math.round(img.naturalWidth*sc),th=Math.round(img.naturalHeight*sc);
-      const c=document.createElement('canvas');c.width=tw;c.height=th;
-      c.getContext('2d').drawImage(img,0,0,tw,th);
-      setCroppedSrc(c.toDataURL('image/png'));setPhase("focus");setActiveColor(null);
-    };img.src=task.img;
-  }
-
-  // ── 建格子映射表：只取格子正中心1像素，彻底避开边缘混色 ──
-  function buildCellMap(imgEl,cols,rows){
-    const tmp=document.createElement('canvas');tmp.width=imgEl.naturalWidth;tmp.height=imgEl.naturalHeight;
-    const ctx=tmp.getContext('2d');ctx.drawImage(imgEl,0,0);
-    const cw=tmp.width,ch=tmp.height,pixels=ctx.getImageData(0,0,cw,ch).data;
-    const cellW=cw/cols,cellH=ch/rows,map=[];
-
-    // 只用 task.colorData 里的颜色，搜索范围从几百→十几种
-    const taskIds=new Set((task.colorData||[]).map(c=>c.id));
-    const pal=ALL_COLORS.filter(col=>taskIds.has(col.id)).map(col=>({
-      id:col.id,
-      r:parseInt(col.hex.slice(1,3),16),
-      g:parseInt(col.hex.slice(3,5),16),
-      b:parseInt(col.hex.slice(5,7),16)
-    }));
-    const usePal=pal.length>0?pal:ALL_COLORS.map(col=>({id:col.id,r:parseInt(col.hex.slice(1,3),16),g:parseInt(col.hex.slice(3,5),16),b:parseInt(col.hex.slice(5,7),16)}));
-
-    for(let r=0;r<rows;r++){
-      map[r]=[];
-      for(let c=0;c<cols;c++){
-        // 只取格子正中心的1个像素（避开边缘混色导致的误匹配）
-        const px=Math.min(Math.floor((c+0.5)*cellW),cw-1);
-        const py=Math.min(Math.floor((r+0.5)*cellH),ch-1);
-        const i=(py*cw+px)*4;
-        const sr=pixels[i],sg=pixels[i+1],sb=pixels[i+2];
-
-        let best=null,bestDist=Infinity;
-        for(const p of usePal){
-          const d=(sr-p.r)**2+(sg-p.g)**2+(sb-p.b)**2;
-          if(d<bestDist){bestDist=d;best=p.id;}
-        }
-        // 排除白/浅色背景：到白色的距离必须明显大于到目标色的距离
-        const distToWhite=(sr-255)**2+(sg-255)**2+(sb-255)**2;
-        map[r][c]=(bestDist<5625&&bestDist<distToWhite*0.5)?best:null;
-      }
-    }
-    return map;
-  }
-
-  useEffect(()=>{
-    if(phase!=="focus"||!croppedSrc)return;
-    setMapReady(false);setDisplaySrc(null);cellMapRef.current=null;
-    const img=new Image();
-    img.onload=()=>{
-      origImgRef.current=img;
-      const maxW=window.innerWidth-8,maxH=window.innerHeight-56-140;
-      const ratio=img.naturalWidth/img.naturalHeight;
-      let w=maxW,h=maxW/ratio;if(h>maxH){h=maxH;w=maxH*ratio;}
-      setImgDsp({w:Math.floor(w),h:Math.floor(h)});
-      const oc=document.createElement('canvas');oc.width=img.naturalWidth;oc.height=img.naturalHeight;
-      offscreenRef.current=oc;
-      setTimeout(()=>{cellMapRef.current=buildCellMap(img,gridCols,gridRows);setMapReady(true);},0);
-    };
-    img.src=croppedSrc;
-  },[phase,croppedSrc,gridCols,gridRows]);
-
-  useEffect(()=>{
-    if(!mapReady||!offscreenRef.current||!origImgRef.current)return;
-    const oc=offscreenRef.current,img=origImgRef.current,ctx=oc.getContext('2d');
-    const cw=oc.width,ch=oc.height;
-    ctx.drawImage(img,0,0);
-    if(activeColor!==null){
-      const cellW=cw/gridCols,cellH=ch/gridRows,map=cellMapRef.current;
-      ctx.fillStyle='rgba(255,224,58,0.85)';
-      for(let r=0;r<gridRows;r++)for(let c=0;c<gridCols;c++)
-        if(map[r]&&map[r][c]===activeColor)ctx.fillRect(c*cellW,r*cellH,cellW,cellH);
-    }
-    setDisplaySrc(oc.toDataURL('image/png'));
-  },[activeColor,mapReady,gridCols,gridRows]);
-
-  function markDone(colorId){
-    if(autoDeduct){const c=colors.find(x=>x.id===colorId);if(c&&c.count>0)onDeductStock(colorId,c.count);}
-    const newDone=new Set([...doneColors,colorId]);setDoneColors(newDone);
-    const idx=sorted.findIndex(c=>c.id===colorId);
-    setActiveColor(sorted[idx+1]?.id||null);
-    if(colors.filter(c=>!newDone.has(c.id)).length===0)setAllDoneConfirm(true);
-  }
-  function handleAllDone(){onComplete();onExit();}
-
-  function onTouchStart(ev){
-    if(ev.touches.length===2){
-      ev.preventDefault();
-      const dx=ev.touches[0].clientX-ev.touches[1].clientX,dy=ev.touches[0].clientY-ev.touches[1].clientY;
-      gestureRef.current={type:'pinch',lastDist:Math.sqrt(dx*dx+dy*dy)};
-    }else{gestureRef.current={type:'pan',lastX:ev.touches[0].clientX,lastY:ev.touches[0].clientY};}
-  }
-  function onTouchMove(ev){
-    if(!gestureRef.current)return;
-    if(gestureRef.current.type==='pinch'&&ev.touches.length===2){
-      ev.preventDefault();
-      const dx=ev.touches[0].clientX-ev.touches[1].clientX,dy=ev.touches[0].clientY-ev.touches[1].clientY;
-      const dist=Math.sqrt(dx*dx+dy*dy);
-      setScale(s=>Math.max(0.3,Math.min(10,s*(dist/gestureRef.current.lastDist))));
-      gestureRef.current.lastDist=dist;
-    }else if(gestureRef.current.type==='pan'){
-      setPan(p=>({x:p.x+ev.touches[0].clientX-gestureRef.current.lastX,y:p.y+ev.touches[0].clientY-gestureRef.current.lastY}));
-      gestureRef.current.lastX=ev.touches[0].clientX;gestureRef.current.lastY=ev.touches[0].clientY;
-    }
-  }
-  function onTouchEnd(ev){
-    if(ev.touches.length===0){gestureRef.current=null;if(scale<=1)setPan({x:0,y:0});}
-    if(ev.touches.length===1&&gestureRef.current?.type==='pinch')
-      gestureRef.current={type:'pan',lastX:ev.touches[0].clientX,lastY:ev.touches[0].clientY};
-  }
-  function resetZoom(){setScale(1);setPan({x:0,y:0});}
-
-  const activeInfo=activeColor?ALL_COLORS.find(c=>c.id===activeColor):null;
-  const activeData=activeColor?colors.find(c=>c.id===activeColor):null;
-  const isOrigView=activeColor===null;
-
-  function renderGrid(){
-    if(!showGrid||!mapReady||!imgDsp.w)return null;
-    const cw=imgDsp.w,ch=imgDsp.h,stepX=cw/gridCols,stepY=ch/gridRows,els=[];
-    for(let xi=0;xi<=gridCols;xi++){const x=xi*stepX,maj=xi%10===0;els.push(<line key={"v"+xi} x1={x} y1={0} x2={x} y2={ch} stroke={maj?"rgba(255,50,50,0.8)":"rgba(200,0,0,0.2)"} strokeWidth={maj?1:0.4}/>);}
-    for(let yi=0;yi<=gridRows;yi++){const y=yi*stepY,maj=yi%10===0;els.push(<line key={"h"+yi} x1={0} y1={y} x2={cw} y2={y} stroke={maj?"rgba(255,50,50,0.8)":"rgba(200,0,0,0.2)"} strokeWidth={maj?1:0.4}/>);}
-    const nSz=Math.max(2.5,Math.min(stepX*0.5,7));
-    for(let xi=0;xi<gridCols;xi++)if(xi===0||(xi+1)%5===0)
-      els.push(<text key={"cn"+xi} x={(xi+0.5)*stepX} y={nSz+0.5} textAnchor="middle" fontSize={nSz} fill="rgba(180,0,0,0.7)" fontWeight="700" fontFamily="sans-serif">{xi+1}</text>);
-    for(let yi=0;yi<gridRows;yi++)if(yi===0||(yi+1)%5===0)
-      els.push(<text key={"rn"+yi} x={nSz*0.5} y={(yi+0.5)*stepY} textAnchor="middle" dominantBaseline="middle" fontSize={nSz} fill="rgba(180,0,0,0.7)" fontWeight="700" fontFamily="sans-serif">{yi+1}</text>);
-    if(scale>=2&&cellMapRef.current&&stepX*scale>=14){
-      const lSz=Math.max(2,Math.min(stepX*0.4,6));
-      for(let r=0;r<gridRows;r++)for(let c=0;c<gridCols;c++){
-        const cid=cellMapRef.current[r]?.[c];if(!cid)continue;
-        els.push(<text key={`lb-${r}-${c}`} x={(c+0.5)*stepX} y={(r+0.5)*stepY} textAnchor="middle" dominantBaseline="middle" fontSize={lSz} fill="rgba(0,0,0,0.55)" fontWeight="800" fontFamily="sans-serif">{cid}</text>);
-      }
-    }
-    return <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} viewBox={`0 0 ${cw} ${ch}`} preserveAspectRatio="none">{els}</svg>;
-  }
-
-  if(phase==="start")return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:T.bg,fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <div style={{padding:"13px 16px 10px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <button onClick={onExit} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:T.textMid}}>←</button>
-        <div style={{fontSize:15,fontWeight:800,color:T.text}}>🎯 专注模式</div>
-      </div>
-      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"14px"}}>
-        <div style={{background:T.card,borderRadius:16,padding:12,marginBottom:12,display:"flex",gap:12,alignItems:"center",border:`1.5px solid ${T.border}`}}>
-          <div style={{width:46,height:46,borderRadius:10,background:T.accentSoft,overflow:"hidden",flexShrink:0}}>
-            {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",fontSize:20}}>🖼️</div>}
-          </div>
-          <div style={{minWidth:0}}>
-            <div style={{fontSize:13,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task.name}</div>
-            <div style={{fontSize:11,color:T.textMid}}>{colors.length} 色 · {colors.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
-          </div>
-        </div>
-        {colors.length===0&&<div style={{background:"#fff8e7",border:"1.5px solid #ffd54f",borderRadius:12,padding:"10px 12px",marginBottom:12,fontSize:12,color:"#8a6d00",fontWeight:700}}>⚠️ 还没有颜色数据</div>}
-        <div style={{background:T.card,borderRadius:14,padding:"10px 12px",marginBottom:10,border:`1.5px solid ${T.border}`}}>
-          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:7}}>颜色排列顺序</div>
-          <div style={{display:"flex",gap:6}}>
-            {[["count-desc","多→少"],["count-asc","少→多"],["id-asc","色号序"]].map(([v,l])=>(
-              <button key={v} onClick={()=>setSortOrder(v)} style={{flex:1,padding:"7px 0",borderRadius:8,border:`1.5px solid ${sortOrder===v?T.accent:T.border}`,background:sortOrder===v?T.accent:T.card,color:sortOrder===v?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{background:T.card,borderRadius:14,padding:"10px 12px",marginBottom:10,border:`1.5px solid ${T.border}`}}>
-          <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>豆板网格（列 × 行）</div>
-          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-            <input type="number" inputMode="numeric" value={gridColsInput} onChange={e=>{setGridColsInput(e.target.value);const v=parseInt(e.target.value);if(v>0&&v<=300)setGridCols(v);}} style={{flex:1,minWidth:0,padding:"9px 4px",borderRadius:9,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:900,textAlign:"center",outline:"none",boxSizing:"border-box"}}/>
-            <span style={{fontSize:16,color:T.textMid,fontWeight:700,flexShrink:0}}>×</span>
-            <input type="number" inputMode="numeric" value={gridRowsInput} onChange={e=>{setGridRowsInput(e.target.value);const v=parseInt(e.target.value);if(v>0&&v<=300)setGridRows(v);}} style={{flex:1,minWidth:0,padding:"9px 4px",borderRadius:9,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:18,fontWeight:900,textAlign:"center",outline:"none",boxSizing:"border-box"}}/>
-          </div>
-          <div style={{display:"flex",gap:5}}>
-            {[[29,29],[52,52],[78,78],[104,104]].map(([c,r])=>(
-              <button key={c} onClick={()=>{setGridCols(c);setGridRows(r);setGridColsInput(String(c));setGridRowsInput(String(r));}} style={{flex:1,padding:"5px 0",borderRadius:7,border:`1.5px solid ${gridCols===c&&gridRows===r?T.accent:T.border}`,background:gridCols===c&&gridRows===r?T.accentSoft:T.card,color:gridCols===c&&gridRows===r?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:700,cursor:"pointer"}}>{c}²</button>
-            ))}
-          </div>
-          <div style={{fontSize:10,color:T.textLight,marginTop:6}}>💡 放大2倍以上自动显示每格色号</div>
-        </div>
-        <div style={{background:T.card,borderRadius:14,padding:"10px 12px",border:`1.5px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div><div style={{fontSize:13,fontWeight:700,color:T.text}}>完成自动扣库存</div><div style={{fontSize:11,color:T.textMid}}>拼完一色自动扣用量</div></div>
-          <div onClick={()=>setAutoDeduct(v=>!v)} style={{width:42,height:23,borderRadius:12,background:autoDeduct?T.accent:T.barBg,cursor:"pointer",position:"relative",flexShrink:0,transition:"background 0.2s"}}>
-            <div style={{position:"absolute",top:2,left:autoDeduct?20:2,width:19,height:19,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,0.2)",transition:"left 0.2s"}}/>
-          </div>
-        </div>
-      </div>
-      <div style={{padding:"12px 14px 32px",borderTop:`1px solid ${T.border}`,display:"flex",gap:10,flexShrink:0}}>
-        {task.img&&<button onClick={()=>setPhase("crop")} style={{flex:1,padding:"13px 0",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.card,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>✂️ 先裁剪</button>}
-        <button onClick={enterFocus} style={{flex:2,padding:"13px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:900,cursor:"pointer"}}>直接开始 🎯</button>
-      </div>
-    </div>
-  );
-
-  if(phase==="crop")return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.95)",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 10px",overflow:"hidden"}}>
-      <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:8,textAlign:"center"}}>拖动选框，框住图纸区域（去掉下方色标）</div>
-      <div style={{position:"relative",maxWidth:"100%",maxHeight:"68vh",overflow:"hidden",borderRadius:8,touchAction:"none"}}
-        onPointerMove={ev=>{
-          if(!cropDrag||!cropImgRef.current)return;
-          const el=cropImgRef.current.getBoundingClientRect();
-          const cx=Math.max(0,Math.min(ev.clientX-el.left,el.width)),cy=Math.max(0,Math.min(ev.clientY-el.top,el.height));
-          const dx=cx-cropDrag.lastX,dy=cy-cropDrag.lastY;
-          setCropBox(b=>{
-            if(!b)return b;let{x,y,w,h}=b;const ms=30;
-            if(cropDrag.type==="move"){x=Math.max(0,Math.min(x+dx,el.width-w));y=Math.max(0,Math.min(y+dy,el.height-h));}
-            else{
-              if(cropDrag.type.includes("l")){const nx=Math.min(x+dx,x+w-ms);w=w-(nx-x);x=nx;}
-              if(cropDrag.type.includes("r")){w=Math.max(ms,Math.min(w+dx,el.width-x));}
-              if(cropDrag.type.includes("t")){const ny=Math.min(y+dy,y+h-ms);h=h-(ny-y);y=ny;}
-              if(cropDrag.type.includes("b")){h=Math.max(ms,Math.min(h+dy,el.height-y));}
-            }return{x,y,w,h};
-          });setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
-        }} onPointerUp={()=>setCropDrag(null)}>
-        <img ref={cropImgRef} src={task.img} onLoad={ev=>{const{clientWidth:w,clientHeight:h}=ev.target;setCropBox({x:0,y:0,w,h:Math.round(h*0.65)});}} style={{display:"block",maxWidth:"100%",maxHeight:"68vh",objectFit:"contain",userSelect:"none",WebkitUserSelect:"none"}}/>
-        {cropBox&&<>
-          <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`linear-gradient(to bottom,rgba(0,0,0,0.65) ${cropBox.y}px,transparent ${cropBox.y}px,transparent ${cropBox.y+cropBox.h}px,rgba(0,0,0,0.65) ${cropBox.y+cropBox.h}px)`}}/>
-          <div onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}} style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #FFE83A",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
-            {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(255,232,58,0.28)"}}/>)}
-            {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(255,232,58,0.28)"}}/>)}
-            {[{t:"tl",s:{top:-9,left:-9}},{t:"t",s:{top:-9,left:"50%",transform:"translateX(-50%)"}},{t:"tr",s:{top:-9,right:-9}},{t:"r",s:{top:"50%",right:-9,transform:"translateY(-50%)"}},{t:"br",s:{bottom:-9,right:-9}},{t:"b",s:{bottom:-9,left:"50%",transform:"translateX(-50%)"}},{t:"bl",s:{bottom:-9,left:-9}},{t:"l",s:{top:"50%",left:-9,transform:"translateY(-50%)"}}].map(({t,s})=>(
-              <div key={t} onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:t,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}} style={{position:"absolute",width:20,height:20,background:"#FFE83A",borderRadius:4,touchAction:"none",...s}}/>
-            ))}
-          </div>
-        </>}
-      </div>
-      <div style={{display:"flex",gap:10,marginTop:12}}>
-        <button onClick={()=>setPhase("start")} style={{padding:"9px 18px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>← 返回</button>
-        <button onClick={confirmCrop} style={{padding:"9px 26px",borderRadius:50,border:"none",background:"#FFE83A",color:"#1a1a1a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>✓ 确认裁剪</button>
-      </div>
-    </div>
-  );
-
-  if(allDoneConfirm)return(
-    <div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px",fontFamily:"'Nunito',sans-serif"}}>
-      <div style={{background:T.card,borderRadius:22,padding:"26px 20px",width:"100%",maxWidth:300,textAlign:"center"}}>
-        <div style={{fontSize:50,marginBottom:8}}>🎉</div>
-        <div style={{fontSize:17,fontWeight:900,color:T.text,marginBottom:4}}>全部拼完啦！</div>
-        <div style={{fontSize:12,color:T.textMid,marginBottom:18}}>恭喜完成「{task.name}」</div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={onExit} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>稍后</button>
-          <button onClick={handleAllDone} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>✓ 标记完成</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const drawerBg=tn==="night"?T.card:"#fff";
-  return(
-    <div style={{position:"fixed",inset:0,zIndex:500,background:"#f0f0f0",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <div style={{padding:"7px 10px",display:"flex",alignItems:"center",gap:7,background:tn==="night"?"rgba(0,0,0,0.9)":"rgba(255,255,255,0.97)",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
-        <div style={{width:30,height:30,borderRadius:8,flexShrink:0,border:`2px solid ${T.border}`,overflow:"hidden",background:"#eee"}}>
-          {isOrigView&&task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:"100%",height:"100%",background:activeInfo?.hex||"#eee"}}/>}
-        </div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:12,fontWeight:900,color:T.text}}>{isOrigView?"原图参照":"正在拼："+activeColor}</div>
-          <div style={{fontSize:10,color:T.textMid}}>{isOrigView?"点色卡开始高亮":(activeData?`${activeData.count} 粒  ·  `:"")+"完成 "+doneColors.size+"/"+colors.length}</div>
-        </div>
-        <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
-          <button onClick={()=>setShowGrid(v=>!v)} style={{background:showGrid?T.accent:T.accentSoft,border:"none",borderRadius:9,padding:"4px 8px",color:showGrid?"#fff":T.accent,fontSize:10,fontWeight:700,cursor:"pointer"}}>格{showGrid?"✓":""}</button>
-          {scale!==1&&<button onClick={resetZoom} style={{background:"#ff6b6b18",border:"1px solid #ff6b6b50",borderRadius:9,padding:"4px 7px",color:"#e53935",fontSize:10,fontWeight:700,cursor:"pointer"}}>{Math.round(scale*10)/10}× 复位</button>}
-          <button onClick={onExit} style={{background:T.accentSoft,border:"none",borderRadius:50,padding:"4px 9px",color:T.accent,fontSize:10,fontWeight:700,cursor:"pointer"}}>退出</button>
-        </div>
-      </div>
-
-      <div style={{flex:1,overflow:"hidden",background:"#e8e8e8",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}
-        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-        {displaySrc?(
-          <div style={{position:"relative",lineHeight:0,display:"inline-block",transform:`scale(${scale}) translate(${pan.x/scale}px,${pan.y/scale}px)`,transformOrigin:"center center",transition:"none",boxShadow:"0 2px 20px rgba(0,0,0,0.15)",borderRadius:2}}>
-            <img src={displaySrc} draggable={false} style={{display:"block",width:imgDsp.w||"auto",height:imgDsp.h||"auto",userSelect:"none",WebkitUserSelect:"none"}}/>
-            {renderGrid()}
-          </div>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,color:"#aaa"}}>
-            <div style={{fontSize:36}}>⏳</div>
-            <div style={{fontSize:12}}>{croppedSrc?"建立格子映射中…":"处理中…"}</div>
-          </div>
-        )}
-        <div style={{position:"absolute",bottom:4,right:6,fontSize:8,color:"rgba(0,0,0,0.2)",pointerEvents:"none"}}>双指缩放(0.3x~10x) · 单指平移</div>
-      </div>
-
-      <div style={{background:drawerBg,borderRadius:"14px 14px 0 0",boxShadow:"0 -2px 10px rgba(0,0,0,0.09)",flexShrink:0,borderTop:`1px solid ${T.border}`}}>
-        <div style={{padding:"6px 12px 4px"}}>
-          <div style={{width:28,height:3,borderRadius:2,background:"rgba(0,0,0,0.08)",margin:"0 auto 6px",cursor:"pointer"}} onClick={()=>setDrawerOpen(v=>!v)}/>
-          {isOrigView?(
-            <div style={{textAlign:"center",padding:"3px 0",fontSize:12,fontWeight:700,color:T.textMid}}>👇 点色卡开始高亮 · 完成 {doneColors.size}/{colors.length}</div>
-          ):(
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{width:28,height:28,borderRadius:7,background:"#FFE03A",border:`2px solid ${T.border}`,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <span style={{fontSize:7,fontWeight:900,color:"#7a6000"}}>高亮</span>
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:800,color:T.text}}>{activeColor}</div>
-                <div style={{fontSize:10,color:T.textMid}}>{activeData?.count||0} 粒</div>
-              </div>
-              <button onClick={()=>markDone(activeColor)} style={{padding:"7px 14px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",flexShrink:0}}>✓ 拼完了</button>
-            </div>
-          )}
-        </div>
-        {!drawerOpen&&(
-          <div style={{padding:"4px 8px 16px",display:"flex",alignItems:"center",gap:4}}>
-            <style>{`.fsc::-webkit-scrollbar{display:none}`}</style>
-            <div className="fsc" style={{display:"flex",gap:4,overflowX:"auto",flex:1,WebkitOverflowScrolling:"touch"}}>
-              <div onClick={()=>setActiveColor(null)} style={{flexShrink:0,width:40,borderRadius:8,overflow:"hidden",border:`2px solid ${isOrigView?"#4caf50":T.border}`,cursor:"pointer",transform:isOrigView?"scale(1.1)":"scale(1)",transition:"transform 0.15s"}}>
-                <div style={{background:isOrigView?"#e8f5e9":T.accentSoft,padding:"2px",textAlign:"center"}}><span style={{fontSize:7,fontWeight:800,color:isOrigView?"#2e7d32":T.accent}}>原图</span></div>
-                <div style={{aspectRatio:"1/1",overflow:"hidden",background:"#ddd"}}>{task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} draggable={false}/>:<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",fontSize:10}}>🖼️</div>}</div>
-              </div>
-              {sorted.map(c=>{
-                const inf=ALL_COLORS.find(x=>x.id===c.id),isAct=c.id===activeColor,bg=inf?.hex||"#ccc";
-                const rgb=inf?[parseInt(bg.slice(1,3),16),parseInt(bg.slice(3,5),16),parseInt(bg.slice(5,7),16)]:[180,180,180];
-                const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000,txt=bright>145?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
-                return(<div key={c.id} onClick={()=>setActiveColor(c.id)} style={{flexShrink:0,width:40,borderRadius:8,overflow:"hidden",border:`2px solid ${isAct?"#FFE03A":T.border}`,cursor:"pointer",transform:isAct?"scale(1.1)":"scale(1)",transition:"transform 0.15s"}}>
-                  <div style={{background:isAct?"#FFE03A":T.accentSoft,padding:"2px",textAlign:"center"}}><span style={{fontSize:8,fontWeight:800,color:isAct?"#7a6000":T.accent,whiteSpace:"nowrap"}}>{c.id}</span></div>
-                  <div style={{background:bg,aspectRatio:"1/1",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:9,fontWeight:900,color:txt}}>{c.count}</span></div>
-                </div>);
-              })}
-              {sorted.length===0&&<div style={{color:T.textMid,fontSize:11,padding:"4px 6px",fontWeight:700}}>🎉 全部完成！</div>}
-            </div>
-            <div onClick={()=>setDrawerOpen(true)} style={{flexShrink:0,width:22,height:22,borderRadius:"50%",background:T.accentSoft,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:10,color:T.accent,fontWeight:800}}>↑</div>
-          </div>
-        )}
-        {drawerOpen&&(
-          <div style={{maxHeight:"40vh",overflowY:"auto"}}>
-            <div style={{padding:"2px 10px 3px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{fontSize:10,color:T.textMid}}>剩余 {sorted.length} 个</div>
-              <button onClick={()=>setDrawerOpen(false)} style={{background:"none",border:"none",fontSize:11,color:T.accent,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:700}}>收起 ↓</button>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,padding:"0 8px 14px"}}>
-              <div onClick={()=>{setActiveColor(null);setDrawerOpen(false);}} style={{borderRadius:9,overflow:"hidden",border:`2px solid ${isOrigView?"#4caf50":T.border}`,cursor:"pointer"}}>
-                <div style={{background:isOrigView?"#e8f5e9":T.accentSoft,padding:"2px 4px",textAlign:"center"}}><span style={{fontSize:10,fontWeight:800,color:isOrigView?"#2e7d32":T.accent}}>原图</span></div>
-                <div style={{aspectRatio:"1/1",overflow:"hidden",background:"#ddd"}}>{task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} draggable={false}/>:<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",fontSize:14}}>🖼️</div>}</div>
-              </div>
-              {sorted.map(c=>{
-                const inf=ALL_COLORS.find(x=>x.id===c.id),isAct=c.id===activeColor,bg=inf?.hex||"#ccc";
-                const rgb=inf?[parseInt(bg.slice(1,3),16),parseInt(bg.slice(3,5),16),parseInt(bg.slice(5,7),16)]:[180,180,180];
-                const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000,txt=bright>145?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.9)";
-                return(<div key={c.id} onClick={()=>{setActiveColor(c.id);setDrawerOpen(false);}} style={{borderRadius:9,overflow:"hidden",border:`2px solid ${isAct?"#FFE03A":T.border}`,cursor:"pointer"}}>
-                  <div style={{background:isAct?"#FFE03A":T.accentSoft,padding:"2px 4px",textAlign:"center"}}><span style={{fontSize:10,fontWeight:800,color:isAct?"#7a6000":T.accent,whiteSpace:"nowrap"}}>{c.id}</span></div>
-                  <div style={{background:bg,aspectRatio:"1/1",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:13,fontWeight:900,color:txt}}>{c.count}</span></div>
-                </div>);
-              })}
-              {sorted.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"14px 0",color:T.textMid,fontSize:12}}>🎉 全部完成啦！</div>}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════
-//  WorksPage（作品页 重构版）
-// ══════════════════════════════════
 function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded}){
   const [view,setView]=useState("home");
-  const [focusTask,setFocusTask]=useState(null);
   const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
   const [showGoalEdit,setShowGoalEdit]=useState(false);
   const [goalInput,setGoalInput]=useState("");
   const [showAddModal,setShowAddModal]=useState(false);
   const [newName,setNewName]=useState("");
   const [newImg,setNewImg]=useState(null);
-  const [newColorData,setNewColorData]=useState([]);
-  const [scanLoading,setScanLoading]=useState(false);
-  const [scanErr,setScanErr]=useState("");
-  const [addStep,setAddStep]=useState("info");
+  const [pickerOpen,setPickerOpen]=useState(false);
+  const [pickedId,setPickedId]=useState(null);
   const newImgRef=useRef(null);
   const [longPressId,setLongPressId]=useState(null);
   const longPressTimer=useRef(null);
@@ -1647,12 +1239,12 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
 
-  function openAddModal(){setNewName("");setNewImg(null);setNewColorData([]);setScanErr("");setAddStep("info");setShowAddModal(true);}
+  function openAddModal(){setNewName("");setNewImg(null);setShowAddModal(true);}
   function closeAddModal(){setShowAddModal(false);}
 
   function saveNewTask(){
     if(!newName.trim())return;
-    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:newColorData,status:"todo",createdAt:new Date().toISOString(),doneDate:null};
+    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:[],status:"todo",createdAt:new Date().toISOString(),doneDate:null};
     setTasks(prev=>[t,...prev]);
     closeAddModal();
   }
@@ -1663,46 +1255,24 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
     e.target.value="";
   }
 
-  async function scanColors(){
-    if(!newImg){setScanErr("请先上传图纸图片");return;}
-    setScanLoading(true);setScanErr("");
-    try{
-      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({image:newImg,prompt:"请识别图片下方颜色统计区，提取每个色号和对应颗数，格式：色号 颗数，每行一个，例：\nA2 65\nB11 120\n只输出色号和数字，不要其他内容。"})});
-      const data=await resp.json();
-      if(data.result){
-        const lines=data.result.split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
-        const items=lines.map(line=>{
-          const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);
-          if(!m)return null;
-          const id=m[1].toUpperCase();
-          const colorInfo=ALL_COLORS.find(c=>c.id===id);
-          return colorInfo?{id,hex:colorInfo.hex,count:parseInt(m[2])}:null;
-        }).filter(Boolean);
-        if(items.length>0){setNewColorData(items);setAddStep("scan");}
-        else setScanErr("未能识别颜色，建议截取图纸下方统计区再试～");
-      }else setScanErr("识别失败，请重试～");
-    }catch(e){setScanErr("请求失败："+e.message);}
-    finally{setScanLoading(false);}
-  }
-
   function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));setLongPressId(null);}
   function doneTask(id){setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString()}:t));}
 
   function startLongPress(id){longPressTimer.current=setTimeout(()=>setLongPressId(id),600);}
   function cancelLongPress(){clearTimeout(longPressTimer.current);}
-
-  function enterFocus(task){setFocusTask(task);setView("focus");}
-
   const activeTasks=tasks.filter(t=>t.status!=="todo"||true).filter(t=>t.status!=="done");
 
-  // 专注模式全屏
-  if(view==="focus"&&focusTask)return(
-    <FocusMode T={T} tn={tn} task={focusTask} onDeductStock={onDeductStock}
-      onComplete={()=>doneTask(focusTask.id)}
-      onExit={()=>{setView("home");setFocusTask(null);}}/>
-  );
-
+  function pickOne(){
+    const pool=tasks.filter(t=>t.status!=="done");
+    if(pool.length===0){setPickedId(null);return;}
+    // 避免连续翻到同一张
+    let next=pool[Math.floor(Math.random()*pool.length)]?.id;
+    if(pool.length>1 && next===pickedId){
+      next=pool[(pool.findIndex(x=>x.id===next)+1)%pool.length].id;
+    }
+    setPickedId(next);
+  }
+  const pickedTask=pickedId?tasks.find(t=>t.id===pickedId):null;
   // 缺色替换页
   if(view==="missing")return <MissingColorPage T={T} stock={stock} onBack={()=>setView("home")}/>;
 
@@ -1725,73 +1295,41 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:999,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
           onClick={e=>{if(e.target===e.currentTarget)closeAddModal();}}>
           <div style={{background:T.card,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,maxHeight:"90vh",display:"flex",flexDirection:"column"}}>
-            {addStep==="info"&&(
-              <>
-                <div style={{padding:"20px 20px 0",flexShrink:0}}>
-                  <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>🖼️ 新建图纸</div>
-                  <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="图纸名称，比如：草莓蛋糕" autoFocus
-                    style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:14}}/>
-                </div>
-                <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
-                  {/* 图片上传区 */}
-                  <div onClick={()=>newImgRef.current?.click()}
-                    style={{background:T.accentSoft,border:`2px dashed ${T.border}`,borderRadius:16,padding:"20px",textAlign:"center",cursor:"pointer",marginBottom:14,overflow:"hidden",minHeight:80}}>
-                    {newImg?(
-                      <img src={newImg} style={{width:"100%",maxHeight:200,objectFit:"contain",borderRadius:10}} alt=""/>
-                    ):(
-                      <>
-                        <div style={{fontSize:28,marginBottom:6}}>📷</div>
-                        <div style={{fontSize:13,fontWeight:700,color:T.accent}}>点击上传图纸</div>
-                        <div style={{fontSize:11,color:T.textMid,marginTop:4}}>专注模式时会显示此图纸</div>
-                      </>
-                    )}
-                  </div>
-                  <input ref={newImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleNewImg}/>
-                  {/* 扫描颜色（仅上传图后显示） */}
-                  {newImg&&(
-                    <div style={{marginBottom:14}}>
-                      <button onClick={scanColors} disabled={scanLoading}
-                        style={{width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.accentSoft,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:scanLoading?0.7:1,marginBottom:8}}>
-                        {scanLoading?"🔍 识别中…":"📊 扫描颜色统计（可选）"}
-                      </button>
-                      {scanErr&&<div style={{fontSize:11,color:T.danger,marginTop:4,fontWeight:600}}>{scanErr}</div>}
-                      {newColorData.length>0&&<div style={{fontSize:11,color:"#4caf50",marginTop:4,fontWeight:700}}>✅ 已识别 {newColorData.length} 个颜色，点"扫描"可重新识别</div>}
-                    </div>
+                        <>
+              <div style={{padding:"20px 20px 0",flexShrink:0}}>
+                <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>🖼️ 新建图纸</div>
+                <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="图纸名称，比如：草莓蛋糕" autoFocus
+                  style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:14}}/>
+              </div>
+
+              <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
+                <div onClick={()=>newImgRef.current?.click()}
+                  style={{background:T.accentSoft,border:`2px dashed ${T.border}`,borderRadius:16,padding:"20px",textAlign:"center",cursor:"pointer",marginBottom:10,overflow:"hidden",minHeight:80}}>
+                  {newImg?(
+                    <img src={newImg} style={{width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10}} alt=""/>
+                  ):(
+                    <>
+                      <div style={{fontSize:28,marginBottom:6}}>📷</div>
+                      <div style={{fontSize:13,fontWeight:700,color:T.accent}}>点击上传图纸</div>
+                      <div style={{fontSize:11,color:T.textMid,marginTop:4}}>只保存图纸，不进行颜色识别</div>
+                    </>
                   )}
                 </div>
-                <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
-                  <button onClick={closeAddModal} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
-                  <button onClick={saveNewTask} disabled={!newName.trim()}
-                    style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
-                    {newColorData.length>0?"保存图纸 ✓":"保存图纸"}
-                  </button>
+                <input ref={newImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleNewImg}/>
+                <div style={{fontSize:11,color:T.textLight,fontWeight:600,marginBottom:14}}>
+                  💡 保存后会出现在「即将出炉」里，等你开拼再标记完成
                 </div>
-              </>
-            )}
-            {addStep==="scan"&&(
-              <>
-                <div style={{padding:"20px 20px 0",flexShrink:0,display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                  <button onClick={()=>setAddStep("info")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:T.textMid,lineHeight:1}}>←</button>
-                  <div style={{fontSize:15,fontWeight:800,color:T.text}}>✅ 识别结果确认</div>
-                </div>
-                <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
-                  <div style={{fontSize:12,color:T.textMid,marginBottom:12}}>共识别到 {newColorData.length} 个颜色，请确认是否正确：</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
-                    {newColorData.map(c=>(
-                      <div key={c.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:10,background:T.accentSoft,border:`1.5px solid ${T.border}`}}>
-                        <div style={{width:18,height:18,borderRadius:5,background:c.hex,border:"1px solid rgba(0,0,0,0.1)",flexShrink:0}}/>
-                        <div style={{fontSize:12,fontWeight:700,color:T.text}}>{c.id}</div>
-                        <div style={{fontSize:11,color:T.textMid}}>{c.count}粒</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
-                  <button onClick={()=>{setNewColorData([]);setAddStep("info");}} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新扫描</button>
-                  <button onClick={saveNewTask} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>确认保存 ✓</button>
-                </div>
-              </>
-            )}
+              </div>
+
+              <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
+                <button onClick={closeAddModal} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
+                <button onClick={saveNewTask} disabled={!newName.trim()}
+                  style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                  保存图纸 ✓
+                </button>
+              </div>
+            </>
+
           </div>
         </div>
       )}
@@ -1843,7 +1381,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
           <div style={{width:`${progress*100}%`,height:"100%",borderRadius:20,background:`linear-gradient(90deg,${T.accent},#a78bff)`,transition:"width 0.5s"}}/>
         </div>}
         <div style={{display:"flex",gap:6}}>
-          {[["✅",doneThisMonth.length,"已完成","#4caf50","#f0fff4"],["🔥",tasks.filter(t=>t.status==="doing").length,"进行中",T.warn,T.warnBg],["📋",tasks.filter(t=>t.status==="todo").length,"待开始",T.textMid,T.accentSoft]].map(([ic,n,lb,col,bg])=>(
+          {[["📋",tasks.filter(t=>t.status==="todo").length,"待开始",T.textMid,T.accentSoft],["🔥",tasks.filter(t=>t.status==="doing").length,"进行中",T.warn,T.warnBg],["✅",doneThisMonth.length,"已完成","#4caf50","#f0fff4"]].map(([ic,n,lb,col,bg])=>(
             <div key={lb} style={{flex:1,textAlign:"center",fontSize:10,fontWeight:700,color:col,background:bg,borderRadius:8,padding:"5px 0"}}>{ic} {lb} {n}</div>
           ))}
         </div>
@@ -1873,9 +1411,53 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
       <div style={{padding:"16px 16px 0"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
           <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
-          <button onClick={openAddModal} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button onClick={()=>{pickOne();setPickerOpen(true);}} style={{padding:"5px 14px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>🎩 翻一翻</button>
+            <button onClick={openAddModal} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
+          </div>
         </div>
         <div style={{fontSize:11,color:T.textLight,marginBottom:10,fontWeight:600}}>长按卡片可删除</div>
+
+        {/* 翻卡器：随机给你一张待拼图纸 */}
+        {pickerOpen&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
+            onClick={()=>setPickerOpen(false)}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:T.card,borderRadius:24,border:`1.5px solid ${T.border}`,boxShadow:T.floatShadow,overflow:"hidden"}}>
+              <div style={{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:`linear-gradient(135deg,${T.accentSoft},#f5f0ff)`}}>
+                <div style={{fontSize:14,fontWeight:900,color:T.text}}>🎴 翻卡器</div>
+                <button onClick={()=>setPickerOpen(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
+              </div>
+
+              {!pickedTask?(
+                <div style={{padding:"22px 16px",textAlign:"center",color:T.textMid,fontWeight:700}}>
+                  现在没有待拼图纸啦～先去「新建」存几张吧
+                </div>
+              ):(
+                <div style={{padding:"16px"}}>
+                  <div style={{borderRadius:18,overflow:"hidden",border:`1.5px solid ${T.border}`,background:T.bg}}>
+                    <div style={{aspectRatio:"16/11",background:"#ddd",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {pickedTask.img?<img src={pickedTask.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<div style={{fontSize:28}}>🖼️</div>}
+                    </div>
+                    <div style={{padding:"12px 12px 10px"}}>
+                      <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pickedTask.name}</div>
+                      <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>状态：{pickedTask.status==="doing"?"进行中":"待开始"}</div>
+                    </div>
+                  </div>
+
+                  <div style={{display:"flex",gap:10,marginTop:14}}>
+                    <button onClick={()=>{pickOne();}} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>再翻一次</button>
+                    <button onClick={()=>{setPickerOpen(false);}} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>就它了 ✓</button>
+                  </div>
+
+                  <div style={{marginTop:10,fontSize:10,color:T.textLight,fontWeight:600,textAlign:"center"}}>
+                    只会从未完成的图纸里随机翻出一张
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
 
         {activeTasks.length===0&&(
           <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有图纸～点右上角新建一个吧 (◕ᴗ◕✿)</div>
@@ -1901,11 +1483,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
               {task.colorData&&task.colorData.length>0&&(
                 <div style={{fontSize:10,color:T.textMid,marginBottom:6}}>{task.colorData.length} 个颜色 · {task.colorData.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
               )}
-              <button className="btn" onClick={()=>enterFocus(task)}
-                style={{padding:"7px 16px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}}>
-                🎯 开始专注
-              </button>
-            </div>
+</div>
           </div>
         ))}
       </div>
