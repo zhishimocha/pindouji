@@ -1221,10 +1221,8 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const [showAddModal,setShowAddModal]=useState(false);
   const [newName,setNewName]=useState("");
   const [newImg,setNewImg]=useState(null);
-  const [newColorData,setNewColorData]=useState([]);
-  const [scanLoading,setScanLoading]=useState(false);
-  const [scanErr,setScanErr]=useState("");
-  const [addStep,setAddStep]=useState("info");
+  const [pickerOpen,setPickerOpen]=useState(false);
+  const [pickedId,setPickedId]=useState(null);
   const newImgRef=useRef(null);
   const [longPressId,setLongPressId]=useState(null);
   const longPressTimer=useRef(null);
@@ -1235,12 +1233,12 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
 
-  function openAddModal(){setNewName("");setNewImg(null);setNewColorData([]);setScanErr("");setAddStep("info");setShowAddModal(true);}
+  function openAddModal(){setNewName("");setNewImg(null);setShowAddModal(true);}
   function closeAddModal(){setShowAddModal(false);}
 
   function saveNewTask(){
     if(!newName.trim())return;
-    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:newColorData,status:"todo",createdAt:new Date().toISOString(),doneDate:null};
+    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:[],status:"todo",createdAt:new Date().toISOString(),doneDate:null};
     setTasks(prev=>[t,...prev]);
     closeAddModal();
   }
@@ -1251,35 +1249,24 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
     e.target.value="";
   }
 
-  async function scanColors(){
-    if(!newImg){setScanErr("请先上传图纸图片");return;}
-    setScanLoading(true);setScanErr("");
-    try{
-      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({image:newImg,prompt:"请识别图片下方颜色统计区，提取每个色号和对应颗数，格式：色号 颗数，每行一个，例：\nA2 65\nB11 120\n只输出色号和数字，不要其他内容。"})});
-      const data=await resp.json();
-      if(data.result){
-        const lines=data.result.split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
-        const items=lines.map(line=>{
-          const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);
-          if(!m)return null;
-          const id=m[1].toUpperCase();
-          const colorInfo=ALL_COLORS.find(c=>c.id===id);
-          return colorInfo?{id,hex:colorInfo.hex,count:parseInt(m[2])}:null;
-        }).filter(Boolean);
-        if(items.length>0){setNewColorData(items);setAddStep("scan");}
-        else setScanErr("未能识别颜色，建议截取图纸下方统计区再试～");
-      }else setScanErr("识别失败，请重试～");
-    }catch(e){setScanErr("请求失败："+e.message);}
-    finally{setScanLoading(false);}
-  }
-
   function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));setLongPressId(null);}
   function doneTask(id){setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString()}:t));}
 
   function startLongPress(id){longPressTimer.current=setTimeout(()=>setLongPressId(id),600);}
   function cancelLongPress(){clearTimeout(longPressTimer.current);}
   const activeTasks=tasks.filter(t=>t.status!=="todo"||true).filter(t=>t.status!=="done");
+
+  function pickOne(){
+    const pool=tasks.filter(t=>t.status!=="done");
+    if(pool.length===0){setPickedId(null);return;}
+    // 避免连续翻到同一张
+    let next=pool[Math.floor(Math.random()*pool.length)]?.id;
+    if(pool.length>1 && next===pickedId){
+      next=pool[(pool.findIndex(x=>x.id===next)+1)%pool.length].id;
+    }
+    setPickedId(next);
+  }
+  const pickedTask=pickedId?tasks.find(t=>t.id===pickedId):null;
   // 缺色替换页
   if(view==="missing")return <MissingColorPage T={T} stock={stock} onBack={()=>setView("home")}/>;
 
@@ -1302,73 +1289,41 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:999,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
           onClick={e=>{if(e.target===e.currentTarget)closeAddModal();}}>
           <div style={{background:T.card,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,maxHeight:"90vh",display:"flex",flexDirection:"column"}}>
-            {addStep==="info"&&(
-              <>
-                <div style={{padding:"20px 20px 0",flexShrink:0}}>
-                  <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>🖼️ 新建图纸</div>
-                  <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="图纸名称，比如：草莓蛋糕" autoFocus
-                    style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:14}}/>
-                </div>
-                <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
-                  {/* 图片上传区 */}
-                  <div onClick={()=>newImgRef.current?.click()}
-                    style={{background:T.accentSoft,border:`2px dashed ${T.border}`,borderRadius:16,padding:"20px",textAlign:"center",cursor:"pointer",marginBottom:14,overflow:"hidden",minHeight:80}}>
-                    {newImg?(
-                      <img src={newImg} style={{width:"100%",maxHeight:200,objectFit:"contain",borderRadius:10}} alt=""/>
-                    ):(
-                      <>
-                        <div style={{fontSize:28,marginBottom:6}}>📷</div>
-                        <div style={{fontSize:13,fontWeight:700,color:T.accent}}>点击上传图纸</div>
-                        <div style={{fontSize:11,color:T.textMid,marginTop:4}}>专注模式时会显示此图纸</div>
-                      </>
-                    )}
-                  </div>
-                  <input ref={newImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleNewImg}/>
-                  {/* 扫描颜色（仅上传图后显示） */}
-                  {newImg&&(
-                    <div style={{marginBottom:14}}>
-                      <button onClick={scanColors} disabled={scanLoading}
-                        style={{width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.accentSoft,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:scanLoading?0.7:1,marginBottom:8}}>
-                        {scanLoading?"🔍 识别中…":"📊 扫描颜色统计（可选）"}
-                      </button>
-                      {scanErr&&<div style={{fontSize:11,color:T.danger,marginTop:4,fontWeight:600}}>{scanErr}</div>}
-                      {newColorData.length>0&&<div style={{fontSize:11,color:"#4caf50",marginTop:4,fontWeight:700}}>✅ 已识别 {newColorData.length} 个颜色，点"扫描"可重新识别</div>}
-                    </div>
+                        <>
+              <div style={{padding:"20px 20px 0",flexShrink:0}}>
+                <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>🖼️ 新建图纸</div>
+                <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="图纸名称，比如：草莓蛋糕" autoFocus
+                  style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:14}}/>
+              </div>
+
+              <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
+                <div onClick={()=>newImgRef.current?.click()}
+                  style={{background:T.accentSoft,border:`2px dashed ${T.border}`,borderRadius:16,padding:"20px",textAlign:"center",cursor:"pointer",marginBottom:10,overflow:"hidden",minHeight:80}}>
+                  {newImg?(
+                    <img src={newImg} style={{width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10}} alt=""/>
+                  ):(
+                    <>
+                      <div style={{fontSize:28,marginBottom:6}}>📷</div>
+                      <div style={{fontSize:13,fontWeight:700,color:T.accent}}>点击上传图纸</div>
+                      <div style={{fontSize:11,color:T.textMid,marginTop:4}}>只保存图纸，不进行颜色识别</div>
+                    </>
                   )}
                 </div>
-                <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
-                  <button onClick={closeAddModal} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
-                  <button onClick={saveNewTask} disabled={!newName.trim()}
-                    style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
-                    {newColorData.length>0?"保存图纸 ✓":"保存图纸"}
-                  </button>
+                <input ref={newImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleNewImg}/>
+                <div style={{fontSize:11,color:T.textLight,fontWeight:600,marginBottom:14}}>
+                  💡 保存后会出现在「即将出炉」里，等你开拼再标记完成
                 </div>
-              </>
-            )}
-            {addStep==="scan"&&(
-              <>
-                <div style={{padding:"20px 20px 0",flexShrink:0,display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                  <button onClick={()=>setAddStep("info")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:T.textMid,lineHeight:1}}>←</button>
-                  <div style={{fontSize:15,fontWeight:800,color:T.text}}>✅ 识别结果确认</div>
-                </div>
-                <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
-                  <div style={{fontSize:12,color:T.textMid,marginBottom:12}}>共识别到 {newColorData.length} 个颜色，请确认是否正确：</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
-                    {newColorData.map(c=>(
-                      <div key={c.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:10,background:T.accentSoft,border:`1.5px solid ${T.border}`}}>
-                        <div style={{width:18,height:18,borderRadius:5,background:c.hex,border:"1px solid rgba(0,0,0,0.1)",flexShrink:0}}/>
-                        <div style={{fontSize:12,fontWeight:700,color:T.text}}>{c.id}</div>
-                        <div style={{fontSize:11,color:T.textMid}}>{c.count}粒</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
-                  <button onClick={()=>{setNewColorData([]);setAddStep("info");}} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新扫描</button>
-                  <button onClick={saveNewTask} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>确认保存 ✓</button>
-                </div>
-              </>
-            )}
+              </div>
+
+              <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
+                <button onClick={closeAddModal} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
+                <button onClick={saveNewTask} disabled={!newName.trim()}
+                  style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                  保存图纸 ✓
+                </button>
+              </div>
+            </>
+
           </div>
         </div>
       )}
@@ -1450,9 +1405,53 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
       <div style={{padding:"16px 16px 0"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
           <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
-          <button onClick={openAddModal} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button onClick={()=>{pickOne();setPickerOpen(true);}} style={{padding:"5px 14px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>🎴 翻一翻</button>
+            <button onClick={openAddModal} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
+          </div>
         </div>
         <div style={{fontSize:11,color:T.textLight,marginBottom:10,fontWeight:600}}>长按卡片可删除</div>
+
+        {/* 翻卡器：随机给你一张待拼图纸 */}
+        {pickerOpen&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
+            onClick={()=>setPickerOpen(false)}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:T.card,borderRadius:24,border:`1.5px solid ${T.border}`,boxShadow:T.floatShadow,overflow:"hidden"}}>
+              <div style={{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:`linear-gradient(135deg,${T.accentSoft},#f5f0ff)`}}>
+                <div style={{fontSize:14,fontWeight:900,color:T.text}}>🎴 翻卡器</div>
+                <button onClick={()=>setPickerOpen(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
+              </div>
+
+              {!pickedTask?(
+                <div style={{padding:"22px 16px",textAlign:"center",color:T.textMid,fontWeight:700}}>
+                  现在没有待拼图纸啦～先去「新建」存几张吧
+                </div>
+              ):(
+                <div style={{padding:"16px"}}>
+                  <div style={{borderRadius:18,overflow:"hidden",border:`1.5px solid ${T.border}`,background:T.bg}}>
+                    <div style={{aspectRatio:"16/11",background:"#ddd",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {pickedTask.img?<img src={pickedTask.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<div style={{fontSize:28}}>🖼️</div>}
+                    </div>
+                    <div style={{padding:"12px 12px 10px"}}>
+                      <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pickedTask.name}</div>
+                      <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>状态：{pickedTask.status==="doing"?"进行中":"待开始"}</div>
+                    </div>
+                  </div>
+
+                  <div style={{display:"flex",gap:10,marginTop:14}}>
+                    <button onClick={()=>{pickOne();}} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>再翻一次</button>
+                    <button onClick={()=>{setPickerOpen(false);}} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>就它了 ✓</button>
+                  </div>
+
+                  <div style={{marginTop:10,fontSize:10,color:T.textLight,fontWeight:600,textAlign:"center"}}>
+                    只会从未完成的图纸里随机翻出一张
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
 
         {activeTasks.length===0&&(
           <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有图纸～点右上角新建一个吧 (◕ᴗ◕✿)</div>
