@@ -1223,6 +1223,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const [newImg,setNewImg]=useState(null);
   const [pickerOpen,setPickerOpen]=useState(false);
   const [pickedId,setPickedId]=useState(null);
+  const [flipping,setFlipping]=useState(false);
   const newImgRef=useRef(null);
   const [longPressId,setLongPressId]=useState(null);
   const longPressTimer=useRef(null);
@@ -1256,15 +1257,44 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   function cancelLongPress(){clearTimeout(longPressTimer.current);}
   const activeTasks=tasks.filter(t=>t.status!=="todo"||true).filter(t=>t.status!=="done");
 
-  function pickOne(){
+  
+  function pickOneCore(prevId){
     const pool=tasks.filter(t=>t.status!=="done");
-    if(pool.length===0){setPickedId(null);return;}
-    // 避免连续翻到同一张
+    if(pool.length===0)return null;
     let next=pool[Math.floor(Math.random()*pool.length)]?.id;
-    if(pool.length>1 && next===pickedId){
+    if(pool.length>1 && next===prevId){
       next=pool[(pool.findIndex(x=>x.id===next)+1)%pool.length].id;
     }
+    return next;
+  }
+  function pickOne(){
+    const next=pickOneCore(pickedId);
     setPickedId(next);
+  }
+  function flipNext(){
+    if(flipping)return;
+    const pool=tasks.filter(t=>t.status!=="done");
+    if(pool.length<=1){setPickedId(pool[0]?.id||null);return;}
+    setFlipping(true);
+    // 先翻到侧面，再切换内容，再翻回
+    setTimeout(()=>{
+      setPickedId(prev=>pickOneCore(prev));
+      setTimeout(()=>setFlipping(false),220);
+    },260);
+  }
+  function downloadPicked(){
+    if(!pickedTask?.img){alert("这张图纸没有图片，无法导出～");return;}
+    try{
+      const a=document.createElement('a');
+      a.href=pickedTask.img;
+      const safe=(pickedTask.name||"图纸").replace(/[\/:*?"<>|]/g,'_');
+      a.download=`${safe}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }catch(e){
+      alert("导出失败："+e.message);
+    }
   }
   const pickedTask=pickedId?tasks.find(t=>t.id===pickedId):null;
   // 缺色替换页
@@ -1418,7 +1448,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
             onClick={()=>setPickerOpen(false)}>
             <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:T.card,borderRadius:24,border:`1.5px solid ${T.border}`,boxShadow:T.floatShadow,overflow:"hidden"}}>
               <div style={{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:`linear-gradient(135deg,${T.accentSoft},#f5f0ff)`}}>
-                <div style={{fontSize:14,fontWeight:900,color:T.text}}>🎴 翻卡器</div>
+                <div style={{fontSize:14,fontWeight:900,color:T.text}}>🎩 翻卡器</div>
                 <button onClick={()=>setPickerOpen(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
               </div>
 
@@ -1428,23 +1458,18 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
                 </div>
               ):(
                 <div style={{padding:"16px"}}>
-                  <div style={{borderRadius:18,overflow:"hidden",border:`1.5px solid ${T.border}`,background:T.bg}}>
+                  <div onClick={()=>flipNext()} style={{borderRadius:18,overflow:"hidden",border:`1.5px solid ${T.border}`,background:T.bg,cursor:"pointer",transformStyle:"preserve-3d",perspective:900,transition:"transform 0.55s cubic-bezier(.2,.8,.2,1)",transform:`rotateY(${flipping?90:0}deg)`}}>
                     <div style={{aspectRatio:"16/11",background:"#ddd",display:"flex",alignItems:"center",justifyContent:"center"}}>
                       {pickedTask.img?<img src={pickedTask.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<div style={{fontSize:28}}>🖼️</div>}
                     </div>
                     <div style={{padding:"12px 12px 10px"}}>
                       <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pickedTask.name}</div>
-                      <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>状态：{pickedTask.status==="doing"?"进行中":"待开始"}</div>
+                      <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>状态：{pickedTask.status==="doing"?"进行中":"待开始"} · 点卡片翻转</div>
                     </div>
                   </div>
 
-                  <div style={{display:"flex",gap:10,marginTop:14}}>
-                    <button onClick={()=>{pickOne();}} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>再翻一次</button>
-                    <button onClick={()=>{setPickerOpen(false);}} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>就它了 ✓</button>
-                  </div>
-
-                  <div style={{marginTop:10,fontSize:10,color:T.textLight,fontWeight:600,textAlign:"center"}}>
-                    只会从未完成的图纸里随机翻出一张
+                  <div style={{display:"flex",justifyContent:"center",marginTop:14}}>
+                    <button onClick={()=>{downloadPicked();}} style={{width:"78%",maxWidth:260,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"\'Nunito\',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>下载导出</button>
                   </div>
                 </div>
               )}
