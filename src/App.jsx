@@ -1233,7 +1233,6 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const newImgRef=useRef(null);
   const [longPressId,setLongPressId]=useState(null);
   const longPressTimer=useRef(null);
-  useEffect(()=>{if(resetKey===0)return;setTasks([]);},[resetKey]);
 
   const now=new Date();
   const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -1343,9 +1342,6 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
                   )}
                 </div>
                 <input ref={newImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleNewImg}/>
-                <div style={{fontSize:11,color:T.textLight,fontWeight:600,marginBottom:14}}>
-                  💡 保存后会出现在「即将出炉」里，等你开拼再标记完成
-                </div>
               </div>
 
               <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
