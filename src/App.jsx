@@ -1293,9 +1293,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
     const total=(task.elapsedMs||0)+Math.max(0,add);
     let shouldDeduct=false;
     if(task.colorData&&task.colorData.length>0){
-      shouldDeduct=window.confirm("完成这张图纸后，要同步扣除库存吗？
-确定=扣除库存并完成
-取消=仅标记完成");
+      shouldDeduct=window.confirm("完成这张图纸后，要同步扣除库存吗？\n确定=扣除库存并完成\n取消=仅标记完成");
     }
     if(shouldDeduct&&task.colorData&&task.colorData.length>0){
       task.colorData.forEach(c=>{
