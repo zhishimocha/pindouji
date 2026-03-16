@@ -18,7 +18,7 @@ function UpgradeModal({T,onClose}){
       <div style={{background:T.card,borderRadius:28,padding:"28px 22px",width:"100%",maxWidth:380,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Nunito',sans-serif"}}>
         <div style={{textAlign:"center",marginBottom:20}}>
           <div style={{fontSize:40,marginBottom:8}}>🌟</div>
-          <div style={{fontSize:20,fontWeight:900,color:T.accent,marginBottom:6}}>解锁 Pro 功能</div>
+          <div style={{fontSize:18,fontWeight:900,color:T.accent,marginBottom:6}}>解锁 Pro 功能</div>
           <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>升级后立即解锁以下全部功能～</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:22}}>
@@ -255,7 +255,7 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
 
       {/* 菜单 */}
       {mode==="menu"&&<div style={{padding:"8px 6px",display:"flex",gap:5}} onClick={e=>e.stopPropagation()}>
-        <button onClick={startEdit} style={{flex:1,padding:"7px 4px",borderRadius:10,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.accentLight,color:T.accent}}>✏️ 改库存</button>
+        <button onClick={startEdit} style={{flex:1,padding:"7px 4px",borderRadius:10,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:800,background:T.accentLight,color:T.accent}}>✏️ 改库存</button>
         <button onClick={startDeduct} style={{flex:1,padding:"7px 4px",borderRadius:10,border:`1.5px solid ${T.warn}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.warnBg,color:T.warn}}>📦 扣用量</button>
       </div>}
 
@@ -1239,7 +1239,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
   const [,setTimerTick]=useState(0);
-  useEffect(()=>{const id=setInterval(()=>setTimerTick(v=>v+1),30000);return()=>clearInterval(id);},[]);
+  useEffect(()=>{const id=setInterval(()=>setTimerTick(v=>v+1),1000);return()=>clearInterval(id);},[]);
 
   function openAddModal(){setNewName("");setNewImg(null);setShowAddModal(true);}
   function closeAddModal(){setShowAddModal(false);}
@@ -1430,7 +1430,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
             <div style={{fontSize:11,color:T.textMid,marginTop:2}}>本月进度 · {now.getMonth()+1}月</div>
           </div>
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:22,fontWeight:900,color:T.text}}>{doneThisMonth.length} <span style={{fontSize:12,fontWeight:600,color:T.textMid}}>件</span></div>
+            <div style={{fontSize:20,fontWeight:900,color:T.text}}>{doneThisMonth.length} <span style={{fontSize:12,fontWeight:600,color:T.textMid}}>件</span></div>
           </div>
         </div>
         {showGoalEdit?(
@@ -1545,21 +1545,21 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
             onMouseUp={cancelLongPress}
             onMouseLeave={cancelLongPress}
             className="cc"
-            style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"12px",marginBottom:14,boxShadow:T.cardShadow,display:"flex",gap:14,alignItems:"stretch"}}>
-            <div style={{width:112,height:112,borderRadius:22,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>
+            style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"12px",marginBottom:12,boxShadow:T.cardShadow,display:"flex",gap:12,alignItems:"stretch"}}>
+            <div style={{width:96,height:96,borderRadius:18,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>
               {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
             </div>
 
             <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
               <div>
-                <div style={{fontSize:17,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.25,marginBottom:10}}>{task.name}</div>
+                <div style={{fontSize:15,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.25,marginBottom:10}}>{task.name}</div>
 
                 <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
-                  <div style={{padding:"5px 12px",borderRadius:14,background:statusBg,border:`1.5px solid ${statusColor}33`,fontSize:11,fontWeight:800,color:statusColor}}>
+                  <div style={{padding:"4px 10px",borderRadius:12,background:statusBg,border:`1.5px solid ${statusColor}33`,fontSize:11,fontWeight:800,color:statusColor}}>
                     {statusText}
                   </div>
                   {showTime&&(
-                    <div style={{fontSize:12,color:T.textMid,fontWeight:800,letterSpacing:0.3}}>
+                    <div style={{fontSize:11,color:T.textMid,fontWeight:800,letterSpacing:0.2}}>
                       {task.status==="doing"?`计时 ${elapsed}`:task.status==="paused"?`已拼 ${elapsed}`:`用时 ${elapsed}`}
                     </div>
                   )}
@@ -1568,20 +1568,20 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
 
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
                 {task.status==="todo"&&(
-                  <button onClick={()=>startTask(task.id)} style={{flex:1,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:900,cursor:"pointer",boxShadow:`0 6px 16px ${T.accent}33`}}>▶ 开始拼</button>
+                  <button onClick={()=>startTask(task.id)} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:`0 4px 12px ${T.accent}26`}}>▶ 开始拼</button>
                 )}
 
                 {task.status==="doing"&&(
                   <>
-                    <button onClick={()=>pauseTask(task.id)} style={{width:48,height:48,borderRadius:"50%",border:`2px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:20,fontWeight:900,cursor:"pointer",flexShrink:0}}>⏸</button>
-                    <button onClick={()=>finishTask(task.id)} style={{flex:1,padding:"12px 0",borderRadius:50,border:"none",background:"#0cc33c",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:900,cursor:"pointer",boxShadow:"0 6px 18px rgba(12,195,60,0.24)"}}>✓ 完成</button>
+                    <button onClick={()=>pauseTask(task.id)} style={{width:42,height:42,borderRadius:"50%",border:`2px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:18,fontWeight:900,cursor:"pointer",flexShrink:0}}>⏸</button>
+                    <button onClick={()=>finishTask(task.id)} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:"#0cc33c",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:"0 4px 12px rgba(12,195,60,0.18)"}}>✓ 完成</button>
                   </>
                 )}
 
                 {task.status==="paused"&&(
                   <>
-                    <button onClick={()=>finishTask(task.id)} style={{width:48,height:48,borderRadius:"50%",border:"2px solid #c9efd2",background:"#eefbf1",color:"#32b74a",fontSize:22,fontWeight:900,cursor:"pointer",flexShrink:0}}>✓</button>
-                    <button onClick={()=>resumeTask(task.id)} style={{flex:1,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:900,cursor:"pointer",boxShadow:`0 6px 16px ${T.accent}33`}}>▶ 继续拼</button>
+                    <button onClick={()=>finishTask(task.id)} style={{width:42,height:42,borderRadius:"50%",border:"2px solid #c9efd2",background:"#eefbf1",color:"#32b74a",fontSize:20,fontWeight:900,cursor:"pointer",flexShrink:0}}>✓</button>
+                    <button onClick={()=>resumeTask(task.id)} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:`0 4px 12px ${T.accent}26`}}>▶ 继续拼</button>
                   </>
                 )}
 
