@@ -1238,13 +1238,15 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
+  const [,setTimerTick]=useState(0);
+  useEffect(()=>{const id=setInterval(()=>setTimerTick(v=>v+1),30000);return()=>clearInterval(id);},[]);
 
   function openAddModal(){setNewName("");setNewImg(null);setShowAddModal(true);}
   function closeAddModal(){setShowAddModal(false);}
 
   function saveNewTask(){
     if(!newName.trim())return;
-    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:[],status:"todo",createdAt:new Date().toISOString(),doneDate:null};
+    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:[],status:"todo",createdAt:new Date().toISOString(),doneDate:null,elapsedMs:0,startedAt:null};
     setTasks(prev=>[t,...prev]);
     closeAddModal();
   }
@@ -1256,11 +1258,56 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   }
 
   function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));setLongPressId(null);}
-  function doneTask(id){setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString()}:t));}
+  function startTask(id){
+    setTasks(prev=>prev.map(t=>{
+      if(t.id!==id)return t;
+      return {...t,status:"doing",startedAt:new Date().toISOString(),doneDate:null};
+    }));
+  }
+  function pauseTask(id){
+    setTasks(prev=>prev.map(t=>{
+      if(t.id!==id)return t;
+      const add=t.startedAt?(Date.now()-new Date(t.startedAt).getTime()):0;
+      return {...t,status:"paused",elapsedMs:(t.elapsedMs||0)+Math.max(0,add),startedAt:null};
+    }));
+  }
+  function resumeTask(id){
+    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"doing",startedAt:new Date().toISOString()}:t));
+  }
+  function getDisplayElapsedMs(task){
+    const base=task.elapsedMs||0;
+    const running=task.status==="doing"&&task.startedAt ? (Date.now()-new Date(task.startedAt).getTime()) : 0;
+    return Math.max(0,base+running);
+  }
+  function formatElapsed(ms){
+    const totalM=Math.max(0,Math.floor(ms/60000));
+    const h=Math.floor(totalM/60);
+    const m=totalM%60;
+    if(h<=0)return `${m}m`;
+    return `${h}h${String(m).padStart(2,"0")}m`;
+  }
+  function finishTask(id){
+    const task=tasks.find(t=>t.id===id);
+    if(!task)return;
+    const add=task.startedAt?(Date.now()-new Date(task.startedAt).getTime()):0;
+    const total=(task.elapsedMs||0)+Math.max(0,add);
+    let shouldDeduct=false;
+    if(task.colorData&&task.colorData.length>0){
+      shouldDeduct=window.confirm("完成这张图纸后，要同步扣除库存吗？
+确定=扣除库存并完成
+取消=仅标记完成");
+    }
+    if(shouldDeduct&&task.colorData&&task.colorData.length>0){
+      task.colorData.forEach(c=>{
+        if(c?.id&&c?.count>0)onDeductStock(c.id,c.count);
+      });
+    }
+    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString(),elapsedMs:total,startedAt:null}:t));
+  }
 
   function startLongPress(id){longPressTimer.current=setTimeout(()=>setLongPressId(id),600);}
   function cancelLongPress(){clearTimeout(longPressTimer.current);}
-  const activeTasks=tasks.filter(t=>t.status!=="todo"||true).filter(t=>t.status!=="done");
+  const activeTasks=tasks.filter(t=>t.status!=="done");
 
   function pickOneCore(prevId){
     const pool=tasks.filter(t=>t.status!=="done");
@@ -1453,7 +1500,8 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
 
               {!pickedTask?(
                 <div style={{padding:"22px 16px",textAlign:"center",color:T.textMid,fontWeight:700}}>
-                  <span style={{display:"block",lineHeight:1.7}}>现在没有待拼图纸哦~</span><span style={{display:"block",lineHeight:1.7}}>先去「新建」存几张吧</span>
+                  <span style={{display:"block",lineHeight:1.7}}>现在没有待拼图纸哦~</span>
+                  <span style={{display:"block",lineHeight:1.7}}>先去「新建」存几张吧</span>
                 </div>
               ):(
                 <div style={{padding:"16px"}}>
@@ -1465,7 +1513,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
                     </div>
                     <div style={{padding:"12px 12px 10px"}}>
                       <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pickedTask.name}</div>
-                      <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>状态：{pickedTask.status==="doing"?"进行中":"待开始"}</div>
+                      <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>状态：{pickedTask.status==="doing"?"进行中":pickedTask.status==="paused"?"已暂停":"待开始"}</div>
                     </div>
                   </div>
 
@@ -1478,12 +1526,14 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
           </div>
         )}
 
-
         {activeTasks.length===0&&(
           <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有图纸～点右上角新建一个吧 (◕ᴗ◕✿)</div>
         )}
 
-        {activeTasks.map(task=>(
+        {activeTasks.map(task=>{
+          const showTime=task.status==="doing"||task.status==="paused"||task.status==="done";
+          const elapsed=formatElapsed(getDisplayElapsedMs(task));
+          return(
           <div key={task.id}
             onTouchStart={()=>startLongPress(task.id)}
             onTouchEnd={cancelLongPress}
@@ -1492,20 +1542,43 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
             onMouseUp={cancelLongPress}
             onMouseLeave={cancelLongPress}
             className="cc"
-            style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"14px",marginBottom:10,boxShadow:T.cardShadow,display:"flex",gap:14,alignItems:"center"}}>
-            {/* 左：图片 */}
-            <div style={{width:64,height:64,borderRadius:16,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>
+            style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"14px",marginBottom:12,boxShadow:T.cardShadow,display:"flex",gap:14,alignItems:"stretch"}}>
+            <div style={{width:96,height:96,borderRadius:18,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>
               {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
             </div>
-            {/* 右：名字+按钮 */}
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:4}}>{task.name}</div>
-              {task.colorData&&task.colorData.length>0&&(
-                <div style={{fontSize:10,color:T.textMid,marginBottom:6}}>{task.colorData.length} 个颜色 · {task.colorData.reduce((a,c)=>a+c.count,0).toLocaleString()} 粒</div>
-              )}
-</div>
+            <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontSize:26,fontWeight:900,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.15,marginBottom:8}}>{task.name}</div>
+                <div style={{fontSize:12,fontWeight:800,color:task.status==="doing"?T.warn:task.status==="paused"?"#8a6b2f":task.status==="done"?"#4caf50":T.textMid,marginBottom:showTime?6:0}}>
+                  {task.status==="doing"?"进行中":task.status==="paused"?"已暂停":task.status==="done"?"已完成":"待开始"}
+                </div>
+                {showTime&&(
+                  <div style={{fontSize:12,color:T.textMid,fontWeight:700,marginBottom:8}}>
+                    {task.status==="doing"?`计时 ${elapsed}`:task.status==="paused"?`已拼 ${elapsed}`:`用时 ${elapsed}`}
+                  </div>
+                )}
+              </div>
+
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                {task.status==="todo"&&(
+                  <button onClick={()=>startTask(task.id)} style={{padding:"8px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>▶ 开始拼</button>
+                )}
+                {task.status==="doing"&&(
+                  <>
+                    <button onClick={()=>pauseTask(task.id)} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:14,fontWeight:900,cursor:"pointer"}}>⏸</button>
+                    <button onClick={()=>finishTask(task.id)} style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>✓ 完成</button>
+                  </>
+                )}
+                {task.status==="paused"&&(
+                  <>
+                    <button onClick={()=>resumeTask(task.id)} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:14,fontWeight:900,cursor:"pointer"}}>▶</button>
+                    <button onClick={()=>finishTask(task.id)} style={{padding:"8px 14px",borderRadius:50,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>✓ 完成</button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        ))}
+        )})}
       </div>
 
     </div>
