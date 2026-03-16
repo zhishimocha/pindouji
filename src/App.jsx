@@ -1430,7 +1430,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
 
               {!pickedTask?(
                 <div style={{padding:"22px 16px",textAlign:"center",color:T.textMid,fontWeight:700}}>
-                  现在没有待拼图纸啦～先去「新建」存几张吧
+                  现在没有待拼图纸哦~<br/>先去「新建」存几张吧
                 </div>
               ):(
                 <div style={{padding:"16px"}}>
@@ -1445,8 +1445,8 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
                   </div>
 
                   <div style={{display:"flex",gap:10,marginTop:14}}>
-                    <button onClick={()=>{pickOne();}} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>再翻一次</button>
-                    <button onClick={()=>{setPickerOpen(false);}} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>就它了 ✓</button>
+                    <button onClick={()=>{pickOne();}} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}></button>
+                    <button onClick={()=>{setPickerOpen(false);}} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>下载导出</button>
                   </div>
 
                   <div style={{marginTop:10,fontSize:10,color:T.textLight,fontWeight:600,textAlign:"center"}}>
