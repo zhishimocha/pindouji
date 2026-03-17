@@ -8,37 +8,69 @@ const supabase = createClient(
 
 // ══════════════ 升级弹窗 ══════════════
 function UpgradeModal({T,onClose}){
+  const plans=[
+    {name:"月费",price:"¥9.9",sub:"公测限时",tag:"先试试看"},
+    {name:"年费",price:"¥19.9",sub:"公测限时",tag:"推荐"},
+    {name:"终身",price:"¥38.8",sub:"公测限时",tag:"一次买断"},
+  ];
   const perks=[
-{icon:"📷",title:"AI识图",desc:"拍照自动识别用量，秒更库存"},
-    {icon:"☁️",title:"云同步",desc:"多设备实时同步，数据不丢失"},
+    {icon:"🧰",title:"工具箱",desc:"记录豆板、豆针、豆铲规格与备注"},
+    {icon:"📖",title:"拼豆日记",desc:"把每张作品的过程都留住"},
+    {icon:"🔍",title:"缺色替换",desc:"快速找到可替代颜色"},
+    {icon:"🤖",title:"AI识图",desc:"每月 5 次自动识别图纸"},
+    {icon:"☁️",title:"云同步",desc:"换设备也不怕数据丢失"},
   ];
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px"}}
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
       onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:T.card,borderRadius:28,padding:"28px 22px",width:"100%",maxWidth:380,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Nunito',sans-serif"}}>
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:40,marginBottom:8}}>🌟</div>
-          <div style={{fontSize:18,fontWeight:900,color:T.accent,marginBottom:6}}>解锁 Pro 功能</div>
-          <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>升级后立即解锁以下全部功能～</div>
+      <div style={{background:T.card,borderRadius:28,padding:"24px 18px",width:"100%",maxWidth:390,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Nunito',sans-serif",maxHeight:"86vh",overflowY:"auto"}}>
+        <div style={{textAlign:"center",marginBottom:18}}>
+          <div style={{fontSize:36,marginBottom:8}}>🌟</div>
+          <div style={{fontSize:19,fontWeight:900,color:T.accent,marginBottom:6}}>开通 Pro，让拼豆更轻松一点</div>
+          <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>把零碎的记录、工具和库存，都整理得明明白白</div>
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:22}}>
+
+        <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:10}}>🧪 公测限时福利</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
+          {plans.map(p=>(
+            <div key={p.name} style={{background:p.name==="年费"?T.accentSoft:T.bg,border:`1.5px solid ${p.name==="年费"?T.accent:T.border}`,borderRadius:18,padding:"12px 8px",textAlign:"center"}}>
+              <div style={{fontSize:11,fontWeight:900,color:p.name==="年费"?T.accent:T.text}}>{p.name}</div>
+              <div style={{fontSize:18,fontWeight:900,color:T.text,margin:"6px 0 4px"}}>{p.price}</div>
+              <div style={{fontSize:10,color:T.textMid,lineHeight:1.5}}>{p.sub}</div>
+              <div style={{fontSize:10,color:p.name==="年费"?T.accent:T.textLight,fontWeight:800,marginTop:4}}>{p.tag}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{fontSize:10,color:T.textLight,lineHeight:1.6,marginBottom:18,textAlign:"center"}}>
+          公测结束后恢复原价：¥12/月 · ¥38.8/年 · ¥68.8终身
+        </div>
+
+        <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:10}}>开通 Pro 后解锁：</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
           {perks.map(p=>(
-            <div key={p.icon} style={{display:"flex",alignItems:"center",gap:12,background:T.accentSoft,borderRadius:14,padding:"12px 14px"}}>
-              <div style={{fontSize:24,flexShrink:0}}>{p.icon}</div>
+            <div key={p.icon} style={{display:"flex",alignItems:"center",gap:10,background:T.bg,borderRadius:14,padding:"10px 12px",border:`1px solid ${T.border}`}}>
+              <div style={{fontSize:22,flexShrink:0}}>{p.icon}</div>
               <div>
-                <div style={{fontSize:13,fontWeight:800,color:T.text}}>{p.title}</div>
-                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>{p.desc}</div>
+                <div style={{fontSize:12,fontWeight:800,color:T.text}}>{p.title}</div>
+                <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.5}}>{p.desc}</div>
               </div>
             </div>
           ))}
         </div>
-        <div style={{background:`linear-gradient(135deg,#ff8fa3,#ffd166,#4a9eff)`,borderRadius:50,padding:"14px 0",textAlign:"center",marginBottom:10,cursor:"pointer"}}
+
+        <div style={{background:T.bg,border:`1px dashed ${T.border}`,borderRadius:14,padding:"10px 12px",fontSize:11,color:T.textMid,lineHeight:1.7,marginBottom:14}}>
+          免费版也可以使用：图纸管理、即将出炉、基础拼豆进度、本地数据保存
+        </div>
+
+        <div style={{fontSize:11,color:T.textMid,textAlign:"center",marginBottom:12}}>拼豆本来就很快乐，记录它也应该轻松一点</div>
+
+        <div style={{background:`linear-gradient(135deg,#ff8fa3,#ffd166,#4a9eff)`,borderRadius:50,padding:"13px 0",textAlign:"center",marginBottom:10,cursor:"pointer"}}
           onClick={()=>alert("联系大橘：v：daju_laila 开通Pro～")}>
-          <div style={{fontSize:14,fontWeight:900,color:"#fff"}}>🎉 联系开通 Pro</div>
+          <div style={{fontSize:14,fontWeight:900,color:"#fff"}}>立即开通 Pro</div>
         </div>
         <button onClick={onClose}
           style={{width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-          暂不升级
+          先用免费版
         </button>
       </div>
     </div>
@@ -326,8 +358,12 @@ export default function App(){
       // 拉库存
       const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
       // 拉plan
-      const {data:profile}=await supabase.from("profiles").select("plan, role").eq("user_id",user.id).single();
-if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
+      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at").eq("user_id",user.id).single();
+      const now=new Date();
+      const isTesterPro=profile?.plan==="tester_pro" && profile?.pro_expires_at && new Date(profile.pro_expires_at)>now;
+      const isPaidPro=profile?.plan==="pro";
+      const isAdmin=profile?.role==="admin";
+      setIsPro(!!(isAdmin||isPaidPro||isTesterPro));
       if(error){
         setSyncStatus("err");
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
@@ -566,7 +602,7 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
   useEffect(()=>{async function lt(){
     try{
       const localTasks=(()=>{try{const s=localStorage.getItem('pindou_tasks');return s?JSON.parse(s):[]}catch{return []}})();
-      if(user){
+      if(user&&isPro){
         const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
         const cloudTasks=Array.isArray(data?.tasks)?data.tasks:[];
         if(localTasks.length>0 && cloudTasks.length===0){
@@ -583,8 +619,8 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
     }finally{
       setTasksLoaded(true);
     }
-  }lt();},[user]);
-  useEffect(()=>{if(!tasksLoaded)return;try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch{}if(!user)return;clearTimeout(tasksTimerRef.current);tasksTimerRef.current=setTimeout(async()=>{await supabase.from("profiles").update({tasks}).eq("user_id",user.id);},1500);},[tasks,tasksLoaded]);
+  }lt();},[user,isPro]);
+  useEffect(()=>{if(!tasksLoaded)return;try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch{}if(!user||!isPro)return;clearTimeout(tasksTimerRef.current);tasksTimerRef.current=setTimeout(async()=>{await supabase.from("profiles").update({tasks}).eq("user_id",user.id);},1500);},[tasks,tasksLoaded]);
   async function resetData(){
     if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
     setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
@@ -842,7 +878,7 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
           </>}
 
           {/* 作品页 */}
-          {page==="works"&&<WorksPage T={T} tn={tn} user={user} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded}/>}
+          {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded}/>}
 
           {/* 我的页 */}
           {page==="mine"&&<MinePage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()}/>}
@@ -1245,7 +1281,7 @@ function MissingColorPage({T,stock,onBack}){
 // ══════════════════════════════════
 //  FocusMode（专注模式全屏）
 // ══════════════════════════════════
-function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded}){
+function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded}){
   const [view,setView]=useState("home");
   const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
   const [showGoalEdit,setShowGoalEdit]=useState(false);
@@ -1582,19 +1618,19 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
 
       {/* 工具入口 */}
       <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <div className="cc" onClick={()=>setView("missing")}
+        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setView("missing");}}
           style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
           <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔍</div>
           <div>
-            <div style={{fontSize:13,fontWeight:900,color:T.text}}>缺色替换</div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>缺色替换</div><span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span></div>
             <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>找库存替代色</div>
           </div>
         </div>
-        <div className="cc" onClick={()=>setView("diary")}
+        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setView("diary");}}
           style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
           <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#fff0f8,#ffd6ee)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>📖</div>
           <div>
-            <div style={{fontSize:13,fontWeight:900,color:T.text}}>拼豆日记</div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>拼豆日记</div><span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span></div>
             <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>记录拼豆时光</div>
           </div>
         </div>
@@ -1606,7 +1642,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
           <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
             <button onClick={()=>{pickOne();setPickerOpen(true);}} style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>🎩 翻一翻</button>
-            <button onClick={()=>setShowToolbox(true)} style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>🧰 工具箱</button>
+            <button onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}} style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>🧰 工具箱 · Pro</button>
             <button onClick={openAddModal} style={{padding:"5px 12px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
           </div>
         </div>
