@@ -367,8 +367,14 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
   const [sort,setSort]=useState("id-asc");
   const [fSeries,setFSeries]=useState(null);
 
-  const [wL,setWL]=useState(500);
-  const [wC,setWC]=useState(200);
+  const [wL,setWL]=useState(()=>{try{const v=localStorage.getItem('pindou_warn_low');return v?Number(v):500}catch{return 500}});
+  const [wC,setWC]=useState(()=>{try{const v=localStorage.getItem('pindou_warn_crit');return v?Number(v):200}catch{return 200}});
+  useEffect(()=>{
+    try{
+      localStorage.setItem('pindou_warn_low',String(wL));
+      localStorage.setItem('pindou_warn_crit',String(wC));
+    }catch{}
+  },[wL,wC]);
   const [history,setHistory]=useState([]); // [{stock,used}]
   const MAX_HISTORY=20;
   const [batch,setBatch]=useState(false);
@@ -563,7 +569,6 @@ if(profile?.plan==="pro" || profile?.role==="admin")setIsPro(true);
       if(user){
         const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
         const cloudTasks=Array.isArray(data?.tasks)?data.tasks:[];
-        // 只要本地有内容而云端为空，就保留本地；避免“刚保存返回/刷新就被空云端覆盖”
         if(localTasks.length>0 && cloudTasks.length===0){
           setTasks(localTasks);
         }else if(cloudTasks.length>0){
@@ -1251,6 +1256,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const [pickerOpen,setPickerOpen]=useState(false);
   const [pickedId,setPickedId]=useState(null);
   const [flipAnimating,setFlipAnimating]=useState(false);
+  const [showDoneList,setShowDoneList]=useState(false);
   const newImgRef=useRef(null);
   const [longPressId,setLongPressId]=useState(null);
   const longPressTimer=useRef(null);
@@ -1258,6 +1264,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const now=new Date();
   const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
+  const doneTasks=tasks.filter(t=>t.status==="done");
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
   const [,setTimerTick]=useState(0);
   useEffect(()=>{const id=setInterval(()=>setTimerTick(v=>v+1),1000);return()=>clearInterval(id);},[]);
@@ -1324,6 +1331,9 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
       });
     }
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString(),elapsedMs:total,startedAt:null}:t));
+  }
+  function restoreTask(id){
+    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"paused",startedAt:null}:t));
   }
 
   function startLongPress(id){longPressTimer.current=setTimeout(()=>setLongPressId(id),600);}
@@ -1472,9 +1482,14 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
           <div style={{width:`${progress*100}%`,height:"100%",borderRadius:20,background:`linear-gradient(90deg,${T.accent},#a78bff)`,transition:"width 0.5s"}}/>
         </div>}
         <div style={{display:"flex",gap:6}}>
-          {[["📋",tasks.filter(t=>t.status==="todo").length,"待开始",T.textMid,T.accentSoft],["🔥",tasks.filter(t=>t.status==="doing").length,"进行中",T.warn,T.warnBg],["✅",doneThisMonth.length,"已完成","#4caf50","#f0fff4"]].map(([ic,n,lb,col,bg])=>(
+          {[["📋",tasks.filter(t=>t.status==="todo").length,"待开始",T.textMid,T.accentSoft],["🔥",tasks.filter(t=>t.status==="doing").length,"进行中",T.warn,T.warnBg],["✅",doneTasks.length,"已完成","#4caf50","#f0fff4"]].map(([ic,n,lb,col,bg])=>(
             <div key={lb} style={{flex:1,textAlign:"center",fontSize:10,fontWeight:700,color:col,background:bg,borderRadius:8,padding:"5px 0"}}>{ic} {lb} {n}</div>
           ))}
+        </div>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+          <button onClick={()=>setShowDoneList(v=>!v)} style={{background:"none",border:"none",fontSize:11,color:T.accent,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:0}}>
+            {showDoneList?`收起已完成 ${doneTasks.length}`:`查看已完成 ${doneTasks.length}`}
+          </button>
         </div>
       </div>
 
@@ -1615,6 +1630,34 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
             </div>
           </div>
         )})}
+
+        {showDoneList&&doneTasks.length>0&&(
+          <div style={{paddingTop:4}}>
+            <div style={{fontSize:12,fontWeight:800,color:T.textMid,marginBottom:10}}>✅ 已完成</div>
+            {doneTasks.map(task=>{
+              const elapsed=formatElapsed(task.elapsedMs||0);
+              return(
+              <div key={`done-${task.id}`} style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:22,padding:"12px",marginBottom:12,boxShadow:T.cardShadow,display:"flex",gap:12,alignItems:"stretch",opacity:0.96}}>
+                <div style={{width:80,height:80,borderRadius:16,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
+                  {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
+                </div>
+                <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:8}}>{task.name}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                      <div style={{padding:"4px 10px",borderRadius:12,background:"#f0fff4",border:"1.5px solid #bfe9c6",fontSize:10,fontWeight:800,color:"#4caf50"}}>已完成</div>
+                      <div style={{fontSize:11,color:T.textMid,fontWeight:800}}>用时 {elapsed}</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:10}}>
+                    <button onClick={()=>restoreTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>↩ 恢复</button>
+                    <button onClick={()=>deleteTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:"none",background:T.dangerBg,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>删除</button>
+                  </div>
+                </div>
+              </div>
+            )})}
+          </div>
+        )}
       </div>
 
     </div>
