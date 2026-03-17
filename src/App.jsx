@@ -1259,6 +1259,7 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const [showDoneList,setShowDoneList]=useState(false);
   const [showToolbox,setShowToolbox]=useState(false);
   const [pendingFinishId,setPendingFinishId]=useState(null);
+  const [undoInfo,setUndoInfo]=useState(null);
   const [toolbox,setToolbox]=useState(()=>{try{const s=localStorage.getItem('pindou_toolbox');return s?JSON.parse(s):{
     boards:{"52×52":{qty:0,note:""},"78×78":{qty:0,note:""},"104×104":{qty:0,note:""}},
     needles:{"60针":{qty:0,note:""},"70针":{qty:0,note:""},"80针":{qty:0,note:""}},
@@ -1363,14 +1364,61 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
     if(!task){setPendingFinishId(null);return;}
     const add=task.startedAt?(Date.now()-new Date(task.startedAt).getTime()):0;
     const total=(task.elapsedMs||0)+Math.max(0,add);
+
     if(deduct&&task.colorData&&task.colorData.length>0){
       task.colorData.forEach(c=>{
         if(c?.id&&c?.count>0)onDeductStock(c.id,c.count);
       });
+      setUndoInfo({
+        taskId:id,
+        deducted:true,
+        colorData:task.colorData,
+        prevStatus:task.status,
+        prevElapsed:task.elapsedMs||0,
+        prevStartedAt:task.startedAt||null,
+        expiresAt:Date.now()+10000
+      });
+    }else{
+      setUndoInfo({
+        taskId:id,
+        deducted:false,
+        colorData:[],
+        prevStatus:task.status,
+        prevElapsed:task.elapsedMs||0,
+        prevStartedAt:task.startedAt||null,
+        expiresAt:Date.now()+10000
+      });
     }
+
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString(),elapsedMs:total,startedAt:null}:t));
     setPendingFinishId(null);
   }
+
+  function undoFinish(){
+    if(!undoInfo)return;
+    const task=tasks.find(t=>t.id===undoInfo.taskId);
+    if(!task){setUndoInfo(null);return;}
+    if(undoInfo.deducted&&undoInfo.colorData?.length){
+      undoInfo.colorData.forEach(c=>{
+        if(c?.id&&c?.count>0)onDeductStock(c.id,-c.count);
+      });
+    }
+    setTasks(prev=>prev.map(t=>t.id===undoInfo.taskId?{
+      ...t,
+      status:undoInfo.prevStatus||"paused",
+      doneDate:null,
+      elapsedMs:undoInfo.prevElapsed||0,
+      startedAt:undoInfo.prevStartedAt||null
+    }:t));
+    setUndoInfo(null);
+  }
+  useEffect(()=>{
+    if(!undoInfo)return;
+    const ms=Math.max(0,undoInfo.expiresAt-Date.now());
+    const t=setTimeout(()=>setUndoInfo(null),ms);
+    return()=>clearTimeout(t);
+  },[undoInfo]);
+
   function restoreTask(id){
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"paused",startedAt:null}:t));
   }
@@ -1691,6 +1739,18 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
                 <button onClick={()=>confirmFinishTask(false)} style={{padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>仅标记完成</button>
                 <button onClick={()=>setPendingFinishId(null)} style={{padding:"11px 0",borderRadius:50,border:"none",background:"#f3f4f6",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>取消</button>
               </div>
+            </div>
+          </div>
+        )}
+
+
+        {undoInfo&&(
+          <div style={{position:"fixed",left:16,right:16,bottom:86,zIndex:1300}}>
+            <div style={{background:"rgba(34,34,34,0.92)",color:"#fff",borderRadius:18,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,boxShadow:"0 8px 24px rgba(0,0,0,0.22)"}}>
+              <div style={{fontSize:12,fontWeight:700,lineHeight:1.5}}>
+                已标记完成{undoInfo.deducted?"，并已扣除库存":""}
+              </div>
+              <button onClick={undoFinish} style={{background:"none",border:"none",color:"#7ec8ff",fontSize:13,fontWeight:900,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>撤销</button>
             </div>
           </div>
         )}
