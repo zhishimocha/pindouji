@@ -33,11 +33,11 @@ function UpgradeModal({T,onClose}){
         <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:10}}>🧪 公测限时福利</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
           {plans.map(p=>(
-            <div key={p.name} style={{background:p.name==="年费"?T.accentSoft:T.bg,border:`1.5px solid ${p.name==="年费"?T.accent:T.border}`,borderRadius:18,padding:"12px 8px",textAlign:"center"}}>
-              <div style={{fontSize:11,fontWeight:900,color:p.name==="年费"?T.accent:T.text}}>{p.name}</div>
+            <div key={p.name} style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 8px",textAlign:"center"}}>
+              <div style={{fontSize:11,fontWeight:900,color:T.text}}>{p.name}</div>
               <div style={{fontSize:18,fontWeight:900,color:T.text,margin:"6px 0 4px"}}>{p.price}</div>
               <div style={{fontSize:10,color:T.textMid,lineHeight:1.5}}>{p.sub}</div>
-              <div style={{fontSize:10,color:p.name==="年费"?T.accent:T.textLight,fontWeight:800,marginTop:4}}>{p.tag}</div>
+              <div style={{fontSize:10,color:T.textLight,fontWeight:800,marginTop:4}}>{p.tag}</div>
             </div>
           ))}
         </div>
@@ -58,8 +58,9 @@ function UpgradeModal({T,onClose}){
           ))}
         </div>
 
-        <div style={{background:T.bg,border:`1px dashed ${T.border}`,borderRadius:14,padding:"10px 12px",fontSize:11,color:T.textMid,lineHeight:1.7,marginBottom:14}}>
-          免费版也可以使用：图纸管理、即将出炉、基础拼豆进度、本地数据保存
+        <div style={{background:T.bg,border:`1px dashed ${T.border}`,borderRadius:14,padding:"10px 12px",marginBottom:14}}>
+          <div style={{fontSize:11,color:T.textMid,fontWeight:800,marginBottom:4}}>免费版本可使用</div>
+          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>图纸管理、即将出炉、基础拼豆进度、本地数据保存</div>
         </div>
 
         <div style={{fontSize:11,color:T.textMid,textAlign:"center",marginBottom:12}}>拼豆本来就很快乐，记录它也应该轻松一点</div>
