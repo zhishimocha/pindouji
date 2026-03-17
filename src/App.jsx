@@ -1257,6 +1257,22 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const [pickedId,setPickedId]=useState(null);
   const [flipAnimating,setFlipAnimating]=useState(false);
   const [showDoneList,setShowDoneList]=useState(false);
+  const [showToolbox,setShowToolbox]=useState(false);
+  const [pendingFinishId,setPendingFinishId]=useState(null);
+  const [toolbox,setToolbox]=useState(()=>{try{const s=localStorage.getItem('pindou_toolbox');return s?JSON.parse(s):{
+    boards:{"52×52":{qty:0,note:""},"78×78":{qty:0,note:""},"104×104":{qty:0,note:""}},
+    needles:{"60针":{qty:0,note:""},"70针":{qty:0,note:""},"80针":{qty:0,note:""}},
+    shovels:{"6道":{qty:0,note:""},"7道":{qty:0,note:""},"10道":{qty:0,note:""},"12道":{qty:0,note:""},"15道":{qty:0,note:""}},
+    devices:{'熨斗':{owned:false,note:""},'烫画机':{owned:false,note:""},'打孔器':{owned:false,note:""}},
+    supplies:{'钥匙扣':{qty:0,note:""},'澡巾':{qty:0,note:""},'挂件':{qty:0,note:""},'烘焙布':{qty:0,note:""},'烫纸':{qty:0,note:""}}
+  }}catch{return {
+    boards:{"52×52":{qty:0,note:""},"78×78":{qty:0,note:""},"104×104":{qty:0,note:""}},
+    needles:{"60针":{qty:0,note:""},"70针":{qty:0,note:""},"80针":{qty:0,note:""}},
+    shovels:{"6道":{qty:0,note:""},"7道":{qty:0,note:""},"10道":{qty:0,note:""},"12道":{qty:0,note:""},"15道":{qty:0,note:""}},
+    devices:{'熨斗':{owned:false,note:""},'烫画机':{owned:false,note:""},'打孔器':{owned:false,note:""}},
+    supplies:{'钥匙扣':{qty:0,note:""},'澡巾':{qty:0,note:""},'挂件':{qty:0,note:""},'烘焙布':{qty:0,note:""},'烫纸':{qty:0,note:""}}
+  }}}); 
+  const [toolOpen,setToolOpen]=useState({boards:true,needles:false,shovels:false,devices:false,supplies:false});
   const newImgRef=useRef(null);
   const [longPressId,setLongPressId]=useState(null);
   const longPressTimer=useRef(null);
@@ -1266,11 +1282,33 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
   const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
   const doneTasks=tasks.filter(t=>t.status==="done");
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
+  useEffect(()=>{
+    try{localStorage.setItem('pindou_toolbox',JSON.stringify(toolbox));}catch{}
+  },[toolbox]);
   const [,setTimerTick]=useState(0);
   useEffect(()=>{const id=setInterval(()=>setTimerTick(v=>v+1),1000);return()=>clearInterval(id);},[]);
 
   function openAddModal(){setNewName("");setNewImg(null);setShowAddModal(true);}
   function closeAddModal(){setShowAddModal(false);}
+
+  function updateToolQty(group,key,delta){
+    setToolbox(prev=>{
+      const cur=prev[group][key]||{qty:0,note:""};
+      return {...prev,[group]:{...prev[group],[key]:{...cur,qty:Math.max(0,(cur.qty||0)+delta)}}};
+    });
+  }
+  function updateToolNote(group,key,val){
+    setToolbox(prev=>{
+      const cur=prev[group][key]||{qty:0,note:""};
+      return {...prev,[group]:{...prev[group],[key]:{...cur,note:val}}};
+    });
+  }
+  function toggleToolOwned(key){
+    setToolbox(prev=>{
+      const cur=prev.devices[key]||{owned:false,note:""};
+      return {...prev,devices:{...prev.devices,[key]:{...cur,owned:!cur.owned}}};
+    });
+  }
 
   function saveNewTask(){
     if(!newName.trim())return;
@@ -1317,20 +1355,21 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
     return `${s}s`;
   }
   function finishTask(id){
+    setPendingFinishId(id);
+  }
+  function confirmFinishTask(deduct){
+    const id=pendingFinishId;
     const task=tasks.find(t=>t.id===id);
-    if(!task)return;
+    if(!task){setPendingFinishId(null);return;}
     const add=task.startedAt?(Date.now()-new Date(task.startedAt).getTime()):0;
     const total=(task.elapsedMs||0)+Math.max(0,add);
-    let shouldDeduct=false;
-    if(task.colorData&&task.colorData.length>0){
-      shouldDeduct=window.confirm("完成这张图纸后，要同步扣除库存吗？\n确定=扣除库存并完成\n取消=仅标记完成");
-    }
-    if(shouldDeduct&&task.colorData&&task.colorData.length>0){
+    if(deduct&&task.colorData&&task.colorData.length>0){
       task.colorData.forEach(c=>{
         if(c?.id&&c?.count>0)onDeductStock(c.id,c.count);
       });
     }
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString(),elapsedMs:total,startedAt:null}:t));
+    setPendingFinishId(null);
   }
   function restoreTask(id){
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"paused",startedAt:null}:t));
@@ -1562,6 +1601,100 @@ function WorksPage({T,tn,user,stock,used,resetKey,onDeductStock,tasks,setTasks,t
           </div>
         )}
 
+
+        {showToolbox&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+            onClick={()=>setShowToolbox(false)}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,maxHeight:"85vh",background:T.card,borderRadius:"24px 24px 0 0",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+              <div style={{padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${T.border}`}}>
+                <div style={{fontSize:15,fontWeight:900,color:T.text}}>🧰 工具箱</div>
+                <button onClick={()=>setShowToolbox(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
+              </div>
+              <div style={{padding:"14px 16px 24px",overflowY:"auto"}}>
+
+                {[
+                  ["boards","豆板",toolbox.boards],
+                  ["needles","豆针",toolbox.needles],
+                  ["shovels","豆铲",toolbox.shovels],
+                ].map(([group,title,items])=>(
+                  <div key={group} style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
+                    <div onClick={()=>setToolOpen(v=>({...v,[group]:!v[group]}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen[group]?10:0}}>
+                      <div style={{fontSize:13,fontWeight:900,color:T.text}}>{title}</div>
+                      <div style={{fontSize:14,color:T.textMid}}>{toolOpen[group]?"▾":"▸"}</div>
+                    </div>
+                    {toolOpen[group]&&Object.entries(items).map(([key,val])=>(
+                      <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
+                        <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                          <button onClick={()=>updateToolQty(group,key,-1)} style={{width:28,height:28,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
+                          <div style={{minWidth:34,textAlign:"center",fontSize:13,fontWeight:900,color:T.text}}>{val.qty||0}</div>
+                          <button onClick={()=>updateToolQty(group,key,1)} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
+                        </div>
+                        <input value={val.note||""} onChange={e=>updateToolNote(group,key,e.target.value)} placeholder="备注，比如：2块A店买的，2块B店买的"
+                          style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+
+                <div style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
+                  <div onClick={()=>setToolOpen(v=>({...v,devices:!v.devices}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen.devices?10:0}}>
+                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>固定设备</div>
+                    <div style={{fontSize:14,color:T.textMid}}>{toolOpen.devices?"▾":"▸"}</div>
+                  </div>
+                  {toolOpen.devices&&Object.entries(toolbox.devices).map(([key,val])=>(
+                    <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
+                      <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
+                      <button onClick={()=>toggleToolOwned(key)} style={{padding:"8px 14px",borderRadius:50,border:`1.5px solid ${val.owned?T.accent:T.border}`,background:val.owned?T.accentSoft:T.card,color:val.owned?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",marginBottom:8}}>
+                        {val.owned?"已拥有":"未拥有"}
+                      </button>
+                      <input value={val.note||""} onChange={e=>updateToolNote('devices',key,e.target.value)} placeholder="备注"
+                        style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
+                  <div onClick={()=>setToolOpen(v=>({...v,supplies:!v.supplies}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen.supplies?10:0}}>
+                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>配件 / 耗材</div>
+                    <div style={{fontSize:14,color:T.textMid}}>{toolOpen.supplies?"▾":"▸"}</div>
+                  </div>
+                  {toolOpen.supplies&&Object.entries(toolbox.supplies).map(([key,val])=>(
+                    <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
+                      <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                        <button onClick={()=>updateToolQty('supplies',key,-1)} style={{width:28,height:28,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
+                        <div style={{minWidth:34,textAlign:"center",fontSize:13,fontWeight:900,color:T.text}}>{val.qty||0}</div>
+                        <button onClick={()=>updateToolQty('supplies',key,1)} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
+                      </div>
+                      <input value={val.note||""} onChange={e=>updateToolNote('supplies',key,e.target.value)} placeholder="备注"
+                        style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pendingFinishId&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
+            onClick={()=>setPendingFinishId(null)}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:340,background:T.card,borderRadius:24,padding:"22px 18px",boxShadow:T.floatShadow}}>
+              <div style={{fontSize:15,fontWeight:900,color:T.text,textAlign:"center",marginBottom:8}}>完成这张图纸？</div>
+              <div style={{fontSize:12,color:T.textMid,textAlign:"center",lineHeight:1.7,marginBottom:16}}>
+                这次完成后，要不要同步扣除库存里的豆子数量
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                <button onClick={()=>confirmFinishTask(true)} style={{padding:"11px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>扣除库存并完成</button>
+                <button onClick={()=>confirmFinishTask(false)} style={{padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>仅标记完成</button>
+                <button onClick={()=>setPendingFinishId(null)} style={{padding:"11px 0",borderRadius:50,border:"none",background:"#f3f4f6",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>取消</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTasks.length===0&&(
           <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有图纸～点右上角新建一个吧 (◕ᴗ◕✿)</div>
         )}
@@ -1673,7 +1806,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
   const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
   const [editingName,setEditingName]=useState(false);
   const [nameInput,setNameInput]=useState("");
-  const avatarInputId="pindou-avatar-input";
+  const avatarRef=useRef(null);
 
   function saveNickname(){
     localStorage.setItem('pindou_nickname',nameInput);
@@ -1681,15 +1814,11 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
     setEditingName(false);
   }
   function handleAvatar(e){
-    const f=e.target.files?.[0];
-    if(!f)return;
+    const f=e.target.files[0];if(!f)return;
     const r=new FileReader();
     r.onload=ev=>{
-      const result=ev.target?.result;
-      if(typeof result==="string"){
-        try{localStorage.setItem('pindou_avatar',result);}catch{}
-        setAvatar(result);
-      }
+      localStorage.setItem('pindou_avatar',ev.target.result);
+      setAvatar(ev.target.result);
     };
     r.readAsDataURL(f);
     e.target.value="";
@@ -1700,13 +1829,13 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
       {/* 头部 */}
       <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"32px 20px 24px",display:"flex",flexDirection:"column",alignItems:"center"}}>
         {/* 头像 */}
-        <label htmlFor={avatarInputId} style={{position:"relative",marginBottom:12,cursor:"pointer",display:"block"}}>
+        <div onClick={()=>avatarRef.current?.click()} style={{position:"relative",marginBottom:12,cursor:"pointer"}}>
           <div style={{width:76,height:76,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,overflow:"hidden",boxShadow:`0 4px 16px ${T.accent}44`}}>
             {avatar?<img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🧑"}
           </div>
           <div style={{position:"absolute",bottom:-2,right:-2,width:22,height:22,borderRadius:"50%",background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",border:`2px solid ${T.card}`}}>📷</div>
-        </label>
-        <input id={avatarInputId} type="file" accept="image/*" style={{display:"none"}} onClick={e=>{e.target.value="";}} onChange={handleAvatar}/>
+        </div>
+        <input ref={avatarRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatar}/>
 
         {/* 昵称 */}
         {editingName?(
@@ -1723,6 +1852,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
             <span style={{fontSize:12,color:T.textLight,cursor:"pointer"}}>✏️</span>
           </div>
         )}
+        <div style={{fontSize:11,color:T.textMid}}>{user?.email}</div>
         <div style={{fontSize:11,color:T.textLight,marginTop:2}}>加入于 {joinDate}</div>
       </div>
 
