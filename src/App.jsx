@@ -17,7 +17,7 @@ function UpgradeModal({T,onClose}){
     {icon:"🧰",title:"工具箱",desc:"记录豆板、豆针、豆铲规格与备注"},
     {icon:"📖",title:"拼豆日记",desc:"把每张作品的过程都留住"},
     {icon:"🔍",title:"缺色替换",desc:"快速找到可替代颜色"},
-    {icon:"🤖",title:"AI识图",desc:"每月 5 次自动识别图纸"},
+    {icon:"🤖",title:"AI识图",desc:"免费版限 5 次，Pro 无限识别"},
     {icon:"☁️",title:"云同步",desc:"换设备也不怕数据丢失"},
   ];
   return(
@@ -337,6 +337,8 @@ export default function App(){
 
   const [isPro,setIsPro]=useState(false);
   const [showUpgrade,setShowUpgrade]=useState(false);
+  const FREE_AI_LIMIT=5;
+  const [freeAiUsed,setFreeAiUsed]=useState(()=>{try{const v=localStorage.getItem('pindou_free_ai_used');return v?Number(v):0}catch{return 0}});
 
   const [stock,setStock]=useState(INIT_STOCK);
   const [used,setUsed]=useState(INIT_USED);
@@ -344,6 +346,7 @@ export default function App(){
   const [syncStatus,setSyncStatus]=useState(""); // "ok" | "err" | ""
   const [cloudReady,setCloudReady]=useState(false);
   const [page,setPage]=useState("home");
+  useEffect(()=>{try{localStorage.setItem('pindou_free_ai_used',String(freeAiUsed));}catch{}},[freeAiUsed]);
 
   // 专注模式
   const [focusMode,setFocusMode]=useState(false);
@@ -500,8 +503,10 @@ export default function App(){
 
   async function confirmCrop(){
     if(!cropImg)return;
+    if(!isPro&&freeAiUsed>=FREE_AI_LIMIT){setShowUpgrade(true);return;}
     setImgLoading(true);setImgErr("");
     try{
+      if(!isPro)setFreeAiUsed(v=>Math.min(FREE_AI_LIMIT,v+1));
       let finalB64=cropImg;
       if(cropBox&&cropImgRef.current){
         const el=cropImgRef.current;
@@ -938,13 +943,14 @@ export default function App(){
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 手动输入：A15-200、全部+100</div>
-                <button className="btn" onClick={()=>{if(!isPro){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
+                <button className="btn" onClick={()=>{if(!isPro&&freeAiUsed>=FREE_AI_LIMIT){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
                   style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap",position:"relative"}}>
                   {imgLoading?"识别中…":"📷 识图"}
-                  {!isPro&&<span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>Pro</span>}
+                  {!isPro&&<span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>{Math.max(0,FREE_AI_LIMIT-freeAiUsed)}次</span>}
                 </button>
                 <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
               </div>
+              {!isPro&&<div style={{fontSize:10,color:T.textLight,fontWeight:700,marginTop:-2}}>免费版剩余 AI 识图 {Math.max(0,FREE_AI_LIMIT-freeAiUsed)} 次，Pro 无限次</div>}
               <textarea value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
                 placeholder={"A15-200, B3+500, 全部-100"}
                 rows={2}
@@ -1949,7 +1955,6 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
             <span style={{fontSize:12,color:T.textLight,cursor:"pointer"}}>✏️</span>
           </div>
         )}
-        <div style={{fontSize:11,color:T.textMid}}>{user?.email}</div>
         <div style={{fontSize:11,color:T.textLight,marginTop:2}}>加入于 {joinDate}</div>
       </div>
 
@@ -1960,7 +1965,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
               <div>
                 <div style={{fontSize:13,fontWeight:900,color:"#b87c00",marginBottom:4}}>🌟 升级 Pro</div>
-                <div style={{fontSize:11,color:"#9a6a00",lineHeight:1.6}}>解锁专注模式、AI识图<br/>和云同步功能</div>
+                <div style={{fontSize:11,color:"#9a6a00",lineHeight:1.6}}>解锁工具箱、AI识图<br/>和云同步功能</div>
               </div>
               <div style={{background:"linear-gradient(135deg,#ffd166,#ffb347)",borderRadius:14,padding:"8px 14px",fontSize:12,fontWeight:800,color:"#fff",boxShadow:"0 2px 8px rgba(255,180,70,0.4)"}}>查看 ›</div>
             </div>
