@@ -1622,7 +1622,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
           style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
           <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔍</div>
           <div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>缺色替换</div><span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>缺色替换</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
             <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>找库存替代色</div>
           </div>
         </div>
@@ -1630,7 +1630,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
           style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
           <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#fff0f8,#ffd6ee)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>📖</div>
           <div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>拼豆日记</div><span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>拼豆日记</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
             <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>记录拼豆时光</div>
           </div>
         </div>
@@ -1638,12 +1638,12 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
       {/* 即将出炉 */}
       <div style={{padding:"16px 16px 0"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:10}}>
           <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
-          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"flex-end"}}>
-            <button onClick={()=>{pickOne();setPickerOpen(true);}} style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>🎩 翻一翻</button>
-            <button onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}} style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>🧰 工具箱 · Pro</button>
-            <button onClick={openAddModal} style={{padding:"5px 12px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</button>
+          <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"flex-end",flexShrink:0}}>
+            <button onClick={()=>{pickOne();setPickerOpen(true);}} style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>🎩 翻一翻</button>
+            <button onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}} style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>{isPro?"🧰 工具箱":"🧰 工具箱 · Pro"}</button>
+            <button onClick={openAddModal} style={{padding:"5px 10px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>＋ 新建</button>
           </div>
         </div>
         <div style={{fontSize:11,color:T.textLight,marginBottom:10,fontWeight:600}}>长按卡片可删除</div>
