@@ -354,7 +354,7 @@ export default function App(){
 
   // 登录后从云端拉数据
   useEffect(()=>{
-    if(!user){setCloudReady(false);setIsPro(false);return;}
+    if(!user){setCloudReady(false);setIsPro(false);setSyncStatus("");return;}
     setCloudReady(false);
     async function loadCloud(){
       setSyncLoading(true);
@@ -366,7 +366,9 @@ export default function App(){
       const isTesterPro=profile?.plan==="tester_pro" && profile?.pro_expires_at && new Date(profile.pro_expires_at)>now;
       const isPaidPro=profile?.plan==="pro";
       const isAdmin=profile?.role==="admin";
-      setIsPro(!!(isAdmin||isPaidPro||isTesterPro));
+      const nextIsPro=!!(isAdmin||isPaidPro||isTesterPro);
+      setIsPro(nextIsPro);
+      if(!nextIsPro)setSyncStatus("");
       if(error){
         setSyncStatus("err");
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
@@ -393,7 +395,7 @@ export default function App(){
   // 云端写回（stock+used一起）
   const syncTimer=useRef(null);
   useEffect(()=>{
-    if(!user||!cloudReady)return;
+    if(!user||!cloudReady||!isPro)return;
     clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(async()=>{
       const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity,used:used[color]||0}));
@@ -777,10 +779,18 @@ export default function App(){
             <JarLogo accent={T.accent} size={44}/>
             <div style={{display:"flex",alignItems:"center",gap:5}}>
               <div style={{fontSize:18,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:"44px"}}>拼豆记</div>
-              {isPro&&syncLoading&&<div style={{fontSize:9,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>}
-              {isPro&&!syncLoading&&syncStatus==="err"&&<div style={{fontSize:9,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>}
-              {isPro&&!syncLoading&&syncStatus==="ok"&&<div style={{fontSize:9,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>}
-              {!isPro&&<div style={{fontSize:9,color:"#7aa37a",fontWeight:600}}>📱 本地保存</div>}
+              {(() => {
+                if (!isPro) {
+                  return <div style={{fontSize:9,color:"#7aa37a",fontWeight:600}}>📱 本地保存</div>;
+                }
+                if (syncLoading) {
+                  return <div style={{fontSize:9,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>;
+                }
+                if (syncStatus === "err") {
+                  return <div style={{fontSize:9,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>;
+                }
+                return <div style={{fontSize:9,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>;
+              })()}
             </div>
           </div>
           <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
