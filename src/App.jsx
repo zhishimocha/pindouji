@@ -1673,7 +1673,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
   const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
   const [editingName,setEditingName]=useState(false);
   const [nameInput,setNameInput]=useState("");
-  const avatarRef=useRef(null);
+  const avatarInputId="pindou-avatar-input";
 
   function saveNickname(){
     localStorage.setItem('pindou_nickname',nameInput);
@@ -1681,11 +1681,15 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
     setEditingName(false);
   }
   function handleAvatar(e){
-    const f=e.target.files[0];if(!f)return;
+    const f=e.target.files?.[0];
+    if(!f)return;
     const r=new FileReader();
     r.onload=ev=>{
-      localStorage.setItem('pindou_avatar',ev.target.result);
-      setAvatar(ev.target.result);
+      const result=ev.target?.result;
+      if(typeof result==="string"){
+        try{localStorage.setItem('pindou_avatar',result);}catch{}
+        setAvatar(result);
+      }
     };
     r.readAsDataURL(f);
     e.target.value="";
@@ -1696,13 +1700,13 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
       {/* 头部 */}
       <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"32px 20px 24px",display:"flex",flexDirection:"column",alignItems:"center"}}>
         {/* 头像 */}
-        <div onClick={()=>avatarRef.current?.click()} style={{position:"relative",marginBottom:12,cursor:"pointer"}}>
+        <label htmlFor={avatarInputId} style={{position:"relative",marginBottom:12,cursor:"pointer",display:"block"}}>
           <div style={{width:76,height:76,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,overflow:"hidden",boxShadow:`0 4px 16px ${T.accent}44`}}>
             {avatar?<img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🧑"}
           </div>
           <div style={{position:"absolute",bottom:-2,right:-2,width:22,height:22,borderRadius:"50%",background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",border:`2px solid ${T.card}`}}>📷</div>
-        </div>
-        <input ref={avatarRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatar}/>
+        </label>
+        <input id={avatarInputId} type="file" accept="image/*" style={{display:"none"}} onClick={e=>{e.target.value="";}} onChange={handleAvatar}/>
 
         {/* 昵称 */}
         {editingName?(
@@ -1719,7 +1723,6 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
             <span style={{fontSize:12,color:T.textLight,cursor:"pointer"}}>✏️</span>
           </div>
         )}
-        <div style={{fontSize:11,color:T.textMid}}>{user?.email}</div>
         <div style={{fontSize:11,color:T.textLight,marginTop:2}}>加入于 {joinDate}</div>
       </div>
 
