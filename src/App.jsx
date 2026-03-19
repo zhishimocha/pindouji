@@ -426,6 +426,10 @@ export default function App(){
   const [cmdText,setCmdText]=useState("");
   const [cmdErr,setCmdErr]=useState("");
   const [cmdTags,setCmdTags]=useState([]); // [{id,dir,amt}] 识图结果tag模式
+  const [showTagLink,setShowTagLink]=useState(false);
+  const [tagLinkMode,setTagLinkMode]=useState(null); // "new" | "link" | null
+  const [newDoneName,setNewDoneName]=useState("");
+  const [linkedTaskId,setLinkedTaskId]=useState(null);
   const [imgLoading,setImgLoading]=useState(false);
   const [imgErr,setImgErr]=useState("");
   const imgRef=useRef(null);
@@ -477,6 +481,95 @@ export default function App(){
     pushHistory(stock,used);
     setStock(ns);setUsed(nu);
     setCmdTags([]);setBatch(false);setSel(new Set());
+  }
+
+  function getDefaultDoneName(){
+    const d=new Date();
+    const mm=String(d.getMonth()+1).padStart(2,"0");
+    const dd=String(d.getDate()).padStart(2,"0");
+    return `完成作品 ${mm}/${dd}`;
+  }
+
+  function openTagLinkFlow(){
+    if(cmdTags.length===0)return;
+    setShowTagLink(true);
+    setTagLinkMode(null);
+    setNewDoneName(getDefaultDoneName());
+    setLinkedTaskId(null);
+  }
+
+  function finishTagDeduction(mode){
+    if(cmdTags.length===0)return;
+
+    const colorData=cmdTags
+      .filter(t=>t.dir==="-")
+      .map(t=>({id:t.id,count:parseFloat(t.amt)||0}))
+      .filter(t=>t.id&&t.count>0&&t.id!=="全部");
+
+    const ns={...stock},nu={...used};
+    colorData.forEach(({id,count})=>{
+      const d=Math.min(ns[id]||0,count);
+      nu[id]=(nu[id]||0)+d;
+      ns[id]=Math.max(0,(ns[id]||0)-count);
+    });
+    pushHistory(stock,used);
+    setStock(ns);setUsed(nu);
+
+    if(mode==="new"){
+      const name=(newDoneName||"").trim()||getDefaultDoneName();
+      const createdId=`done_${Date.now()}`;
+      setUndoInfo({
+        type:"quick_new_done",
+        deducted:true,
+        colorData,
+        createdTaskId:createdId,
+        expiresAt:Date.now()+10000
+      });
+      setTasks(prev=>[
+        {
+          id:createdId,
+          name,
+          img:null,
+          status:"done",
+          doneDate:new Date().toISOString(),
+          elapsedMs:0,
+          startedAt:null,
+          colorData,
+          sourceType:"quick_done"
+        },
+        ...prev
+      ]);
+    }else if(mode==="link"&&linkedTaskId){
+      const prevTask=tasks.find(t=>t.id===linkedTaskId);
+      setUndoInfo({
+        type:"link_existing_done",
+        deducted:true,
+        colorData,
+        linkedTaskId,
+        prevTaskSnapshot:prevTask?{
+          status:prevTask.status,
+          doneDate:prevTask.doneDate||null,
+          elapsedMs:prevTask.elapsedMs||0,
+          startedAt:prevTask.startedAt||null,
+          colorData:prevTask.colorData||[]
+        }:null,
+        expiresAt:Date.now()+10000
+      });
+      setTasks(prev=>prev.map(t=>t.id===linkedTaskId?{
+        ...t,
+        status:"done",
+        doneDate:new Date().toISOString(),
+        startedAt:null,
+        colorData: colorData.length>0 ? colorData : (t.colorData||[])
+      }:t));
+    }
+
+    setCmdTags([]);
+    setBatch(false);
+    setSel(new Set());
+    setShowTagLink(false);
+    setTagLinkMode(null);
+    setLinkedTaskId(null);
   }
 
   const [cropImg,setCropImg]=useState(null); // 裁剪用的原图base64
@@ -1449,6 +1542,36 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
   function undoFinish(){
     if(!undoInfo)return;
+
+    if(undoInfo.type==="quick_new_done"){
+      if(undoInfo.deducted&&undoInfo.colorData?.length){
+        undoInfo.colorData.forEach(c=>{
+          if(c?.id&&c?.count>0)onDeductStock(c.id,-c.count);
+        });
+      }
+      setTasks(prev=>prev.filter(t=>t.id!==undoInfo.createdTaskId));
+      setUndoInfo(null);
+      return;
+    }
+
+    if(undoInfo.type==="link_existing_done"){
+      if(undoInfo.deducted&&undoInfo.colorData?.length){
+        undoInfo.colorData.forEach(c=>{
+          if(c?.id&&c?.count>0)onDeductStock(c.id,-c.count);
+        });
+      }
+      setTasks(prev=>prev.map(t=>t.id===undoInfo.linkedTaskId?{
+        ...t,
+        status:undoInfo.prevTaskSnapshot?.status||"paused",
+        doneDate:undoInfo.prevTaskSnapshot?.doneDate||null,
+        elapsedMs:undoInfo.prevTaskSnapshot?.elapsedMs||0,
+        startedAt:undoInfo.prevTaskSnapshot?.startedAt||null,
+        colorData:undoInfo.prevTaskSnapshot?.colorData||[]
+      }:t));
+      setUndoInfo(null);
+      return;
+    }
+
     const task=tasks.find(t=>t.id===undoInfo.taskId);
     if(!task){setUndoInfo(null);return;}
     if(undoInfo.deducted&&undoInfo.colorData?.length){
@@ -1802,7 +1925,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
           <div style={{position:"fixed",left:16,right:16,bottom:86,zIndex:1300}}>
             <div style={{background:"rgba(34,34,34,0.92)",color:"#fff",borderRadius:18,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,boxShadow:"0 8px 24px rgba(0,0,0,0.22)"}}>
               <div style={{fontSize:12,fontWeight:700,lineHeight:1.5}}>
-                已标记完成{undoInfo.deducted?"，并已扣除库存":""}
+                {undoInfo?.type==="quick_new_done"?"已新建完成作品":undoInfo?.type==="link_existing_done"?"已关联到作品": "已标记完成"}{undoInfo.deducted?"，并已扣除库存":""}
               </div>
               <button onClick={undoFinish} style={{background:"none",border:"none",color:"#7ec8ff",fontSize:13,fontWeight:900,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>撤销</button>
             </div>
