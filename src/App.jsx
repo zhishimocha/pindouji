@@ -1066,9 +1066,9 @@ export default function App(){
 
             <div style={{display:"flex",gap:8,marginTop:2}}>
               <button className="btn" onClick={exitBatch} style={{...inp({flex:1,padding:"10px 0",borderRadius:50,cursor:"pointer",fontSize:13,color:T.textMid,fontWeight:700})}}>取消</button>
-              <button className="btn" onClick={cmdTags.length>0?applyTags:applyCmd}
+              <button className="btn" onClick={cmdTags.length>0?openTagLinkFlow:applyCmd}
                 style={{flex:3,padding:"10px 0",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>
-                {cmdTags.length>0?"✓ 执行识图结果":"执行"}
+                {cmdTags.length>0?"确认并继续":"执行"}
               </button>
             </div>
           </div>
