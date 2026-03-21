@@ -487,7 +487,7 @@ export default function App(){
     const d=new Date();
     const mm=String(d.getMonth()+1).padStart(2,"0");
     const dd=String(d.getDate()).padStart(2,"0");
-    return `完成作品 ${mm}/${dd}`;
+    return `${mm}/${dd}`;
   }
 
   function openTagLinkFlow(){
@@ -1963,8 +1963,23 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
               const elapsed=formatElapsed(task.elapsedMs||0);
               return(
               <div key={`done-${task.id}`} style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:22,padding:"12px",marginBottom:12,boxShadow:T.cardShadow,display:"flex",gap:12,alignItems:"stretch",opacity:0.96}}>
-                <div style={{width:80,height:80,borderRadius:16,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
+                <div
+                  onClick={()=>{
+                    const inp=document.createElement('input');
+                    inp.type='file';inp.accept='image/*';
+                    inp.onchange=e=>{
+                      const f=e.target.files[0];if(!f)return;
+                      const r=new FileReader();
+                      r.onload=ev=>setTasks(prev=>prev.map(t=>t.id===task.id?{...t,img:ev.target.result}:t));
+                      r.readAsDataURL(f);
+                    };
+                    inp.click();
+                  }}
+                  style={{width:80,height:80,borderRadius:16,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:"pointer",position:"relative"}}>
                   {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
+                  <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.0)",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:4,opacity:1}}>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.85)",background:"rgba(0,0,0,0.32)",borderRadius:6,padding:"1px 6px",fontWeight:700,fontFamily:"'Nunito',sans-serif"}}>换封面</div>
+                  </div>
                 </div>
                 <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
                   <div>
