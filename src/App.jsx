@@ -1074,6 +1074,59 @@ export default function App(){
           </div>
         </div>}
 
+
+        {showTagLink&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
+            onClick={()=>{setShowTagLink(false);setTagLinkMode(null);}}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:T.card,borderRadius:24,padding:"18px 16px",boxShadow:"0 20px 60px rgba(0,0,0,0.18)"}}>
+              <div style={{fontSize:15,fontWeight:900,color:T.text,textAlign:"center",marginBottom:14}}>这次扣豆要怎么记入作品？</div>
+
+              {!tagLinkMode&&(
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <button onClick={()=>setTagLinkMode("new")} style={{padding:"12px 0",borderRadius:16,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>新建完成作品</button>
+                  <button onClick={()=>setTagLinkMode("link")} style={{padding:"12px 0",borderRadius:16,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>关联已有作品</button>
+                  <button onClick={()=>setShowTagLink(false)} style={{padding:"11px 0",borderRadius:50,border:"none",background:"#f3f4f6",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>返回</button>
+                </div>
+              )}
+
+              {tagLinkMode==="new"&&(
+                <div>
+                  <input value={newDoneName} onChange={e=>setNewDoneName(e.target.value)} placeholder="完成作品 03/20"
+                    style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"10px 12px",fontSize:13,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>setTagLinkMode(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>上一步</button>
+                    <button onClick={()=>finishTagDeduction("new")} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>确认扣豆</button>
+                  </div>
+                </div>
+              )}
+
+              {tagLinkMode==="link"&&(
+                <div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:280,overflowY:"auto",marginBottom:12}}>
+                    {tasks.filter(t=>t.status!=="done").length===0&&(
+                      <div style={{fontSize:12,color:T.textMid,textAlign:"center",padding:"12px 0"}}>当前没有可关联的作品</div>
+                    )}
+                    {tasks.filter(t=>t.status!=="done").map(t=>(
+                      <button key={t.id} onClick={()=>setLinkedTaskId(t.id)}
+                        style={{display:"flex",alignItems:"center",gap:10,padding:"10px",borderRadius:16,border:`1.5px solid ${linkedTaskId===t.id?T.accent:T.border}`,background:linkedTaskId===t.id?T.accentSoft:T.bg,cursor:"pointer",textAlign:"left"}}>
+                        <div style={{width:44,height:44,borderRadius:12,background:T.card,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>
+                          {t.img?<img src={t.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
+                        </div>
+                        <div style={{fontSize:12,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>setTagLinkMode(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>上一步</button>
+                    <button onClick={()=>finishTagDeduction("link")} disabled={!linkedTaskId}
+                      style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:linkedTaskId?T.accent:"#cfd8e3",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:linkedTaskId?"pointer":"not-allowed"}}>确认扣豆</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 专注模式浮动导航条 */}
         {focusMode&&page==="stock"&&!batch&&(
           <div style={{position:"fixed",bottom:70,left:0,right:0,zIndex:250,display:"flex",justifyContent:"center",padding:"0 14px",pointerEvents:"none"}}>
