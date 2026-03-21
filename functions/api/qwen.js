@@ -52,7 +52,7 @@ export async function onRequest(context) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "qwen-vl-plus",
+          model: "qwen-vl-max",
           input: {
             messages: [
               {
@@ -60,7 +60,16 @@ export async function onRequest(context) {
                 content: [
                   { image: image },
                   {
-                    text: "这是一张拼豆图纸。图纸底部有色号统计表，请直接读取统计表里的色号和数量。输出格式：色号-粒数，多个用逗号分隔，例如：A1-20,B3-150,H2-67。只输出数据，不要其他文字。如果找不到统计表就回复：无法识别"
+                    text: `这是一张拼豆图纸的色号统计表。请仔细读取统计表中每个色号和对应的粒数。
+
+规则：
+1. 色号格式为"字母前缀+数字"，字母前缀只能是以下之一：A、B、C、D、E、F、G、H、M。例如：A7、B14、G18、H2、M3。
+2. 字母容易混淆，请特别注意区分：G和E、G和C、H和N、B和P，以图中实际字母为准。
+3. 色号后面紧跟的那个独立整数才是粒数，粒数可能是1位到4位数字（如9、37、156、1280），不要截断或遗漏数字。
+4. 统计表中色号和粒数是配对出现的，一一对应。
+
+输出格式：色号-粒数，多个用逗号分隔。例如：A7-24,B14-93,G18-9,H2-156
+只输出数据，不要任何解释。找不到统计表就回复：无法识别`
                   }
                 ]
               }
@@ -127,4 +136,4 @@ export async function onRequest(context) {
       }
     );
   }
-                }
+}
