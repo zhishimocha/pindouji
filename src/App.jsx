@@ -425,6 +425,9 @@ export default function App(){
       const isTrialPro=profile?.trial_expires_at && new Date(profile.trial_expires_at)>now;
       const nextIsPro=!!(isAdmin||isPaidPro||isTesterPro||isTrialPro);
       setIsPro(nextIsPro);
+      // 临时调试
+      console.log("DEBUG profile:", JSON.stringify(profile));
+      console.log("DEBUG isAdmin:", isAdmin, "isPaidPro:", isPaidPro, "isTrialPro:", isTrialPro, "nextIsPro:", nextIsPro);
       // 邀请码不存在时自动生成
       if(!profile?.invite_code){
         const myCode=genInviteCode(user.id);
