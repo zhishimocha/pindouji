@@ -439,6 +439,7 @@ export default function App(){
       if(!nextIsPro)setSyncStatus("");
       if(error){
         setSyncStatus("err");
+        // 出错时才读本地缓存兜底
         try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
         try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
       }else if(data&&data.length>0){
@@ -450,8 +451,8 @@ export default function App(){
         setStock(ns);setUsed(nu);
         setSyncStatus("ok");
       }else{
-        try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
-        try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
+        // 云端无数据（新账号）：用初始值，不读本地缓存
+        setStock(INIT_STOCK);setUsed(INIT_USED);
         setSyncStatus("ok");
       }
       setSyncLoading(false);
@@ -1030,9 +1031,6 @@ export default function App(){
                 </div>
               </div>}
 
-            </div>
-            <div className="tt" style={{textAlign:"center",padding:"10px 0 24px",fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
-              由 大橘来啦（v：daju_laila）制作 · 禁私售
             </div>
           </>}
 
@@ -2115,7 +2113,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteIn
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",padding:"0 0 20px"}}>
       {/* 头部 */}
-      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"32px 20px 24px",display:"flex",flexDirection:"column",alignItems:"center"}}>
+      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 20px 16px",display:"flex",flexDirection:"column",alignItems:"center"}}>
         {/* 头像 */}
         <div onClick={()=>avatarRef.current?.click()} style={{position:"relative",marginBottom:12,cursor:"pointer"}}>
           <div style={{width:76,height:76,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,overflow:"hidden",boxShadow:`0 4px 16px ${T.accent}44`}}>
@@ -2196,9 +2194,6 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteIn
           style={{width:"100%",padding:"14px 0",borderRadius:20,border:`1.5px solid ${T.border}`,background:T.card,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:T.cardShadow}}>
           退出登录
         </button>
-        <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.textLight,fontWeight:600,letterSpacing:0.3}}>
-          由 大橘来啦（v：daju_laila）制作 · 禁私售
-        </div>
       </div>
     </div>
   );
