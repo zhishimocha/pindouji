@@ -436,7 +436,6 @@ export default function App(){
         bonus: profile?.bonus_ai_count || 0,
         trialExp: profile?.trial_expires_at || null,
       });
-      if(!nextIsPro)setSyncStatus("");
       if(error){
         setSyncStatus("err");
         // 出错时才读本地缓存兜底
