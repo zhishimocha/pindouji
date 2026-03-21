@@ -393,23 +393,16 @@ export default function App(){
   const [showUpgrade,setShowUpgrade]=useState(false);
   const [inviteInfo,setInviteInfo]=useState({code:"",count:0,bonus:0,trialExp:null});
   const FREE_AI_LIMIT=5;
-  const [freeAiUsed,setFreeAiUsed]=useState(0);
+  const [freeAiUsed,setFreeAiUsed]=useState(()=>{try{const v=localStorage.getItem('pindou_free_ai_used');return v?Number(v):0}catch{return 0}});
   const totalAiLimit = FREE_AI_LIMIT + (inviteInfo.bonus || 0);
 
   const [stock,setStock]=useState(INIT_STOCK);
   const [used,setUsed]=useState(INIT_USED);
   const [syncLoading,setSyncLoading]=useState(false);
-  const [syncStatus,setSyncStatus]=useState(""); // "ok" | "err" | ""
+  const [syncStatus,setSyncStatus]=useState("");
   const [cloudReady,setCloudReady]=useState(false);
   const [page,setPage]=useState("home");
-  // freeAiUsed变化时同步到云端（非Pro才需要）
-  useEffect(()=>{
-    if(!user||isPro)return;
-    const t=setTimeout(async()=>{
-      await supabase.from("profiles").update({free_ai_used:freeAiUsed}).eq("user_id",user.id);
-    },1000);
-    return()=>clearTimeout(t);
-  },[freeAiUsed,user,isPro]);
+  useEffect(()=>{try{localStorage.setItem('pindou_free_ai_used',String(freeAiUsed));}catch{}},[freeAiUsed]);
 
   // 专注模式
   const [focusMode,setFocusMode]=useState(false);
@@ -424,7 +417,7 @@ export default function App(){
       // 拉库存
       const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
       // 拉plan
-      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at, trial_expires_at, bonus_ai_count, invite_code, invite_count, free_ai_used").eq("user_id",user.id).single();
+      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at, trial_expires_at, bonus_ai_count, invite_code, invite_count").eq("user_id",user.id).single();
       const now=new Date();
       const isTesterPro=profile?.plan==="tester_pro" && profile?.pro_expires_at && new Date(profile.pro_expires_at)>now;
       const isPaidPro=profile?.plan==="pro";
@@ -443,10 +436,6 @@ export default function App(){
         bonus: profile?.bonus_ai_count || 0,
         trialExp: profile?.trial_expires_at || null,
       });
-      // 从云端加载已用识图次数（非Pro才需要）
-      if(!nextIsPro){
-        setFreeAiUsed(profile?.free_ai_used || 0);
-      }
       if(!nextIsPro)setSyncStatus("");
       if(error){
         setSyncStatus("err");
