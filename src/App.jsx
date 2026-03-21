@@ -2141,28 +2141,15 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteIn
           </div>
         )}
         <div style={{fontSize:11,color:T.textLight,marginTop:2}}>加入于 {joinDate}</div>
+        {/* Pro状态小横幅 */}
+        {isPro?(
+          <div style={{marginTop:10,padding:"6px 16px",borderRadius:50,background:"linear-gradient(90deg,#ffd166,#ffb347)",fontSize:11,fontWeight:900,color:"#7a4000"}}>✦ Pro 会员 · 全功能已解锁</div>
+        ):(
+          <div className="cc" onClick={onUpgrade} style={{marginTop:10,padding:"7px 18px",borderRadius:50,background:"linear-gradient(135deg,#fff8ec,#ffe0a0)",border:"1.5px solid #ffd166",fontSize:12,fontWeight:900,color:"#b87c00",cursor:"pointer",boxShadow:"0 2px 8px rgba(255,209,102,0.25)"}}>🌟 升级 Pro · 解锁全功能</div>
+        )}
       </div>
 
       <div style={{padding:"16px 16px 0"}}>
-        {/* 升级/Pro状态 — 放在最上面 */}
-        {!isPro&&(
-          <div className="cc" onClick={onUpgrade} style={{background:`linear-gradient(135deg,#fff8ec,#f5f0ff)`,border:`1.5px solid #ffd166`,borderRadius:20,padding:"16px",marginBottom:12,cursor:"pointer",boxShadow:"0 4px 16px rgba(255,209,102,0.2)"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div>
-                <div style={{fontSize:13,fontWeight:900,color:"#b87c00",marginBottom:4}}>🌟 升级 Pro</div>
-                <div style={{fontSize:11,color:"#9a6a00",lineHeight:1.6}}>解锁工具箱、AI识图<br/>和云同步功能</div>
-              </div>
-              <div style={{background:"linear-gradient(135deg,#ffd166,#ffb347)",borderRadius:14,padding:"8px 14px",fontSize:12,fontWeight:800,color:"#fff",boxShadow:"0 2px 8px rgba(255,180,70,0.4)"}}>查看 ›</div>
-            </div>
-          </div>
-        )}
-        {isPro&&(
-          <div style={{background:"linear-gradient(135deg,#fff8ec,#f5f0ff)",border:"1.5px solid #ffd166",borderRadius:20,padding:"14px 16px",marginBottom:12}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#b87c00"}}>✦ Pro 会员</div>
-            <div style={{fontSize:11,color:"#9a6a00",marginTop:3}}>全功能已解锁，享受拼豆乐趣～</div>
-          </div>
-        )}
-
         {/* 邀请好友 */}
         <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
           <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🎁 邀请好友</div>
