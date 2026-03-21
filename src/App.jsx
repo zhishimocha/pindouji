@@ -1,2534 +1,2484 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+<!DOCTYPE html><!-- Last Published: Fri Mar 20 2026 21:08:42 GMT+0000 (Coordinated Universal Time) --><html data-wf-domain="websitemain.claude.com" data-wf-page="68bd5cf2687bfe3893fd2b7f" data-wf-site="6889473510b50328dbb70ae6" data-wf-intellimize-customer-id="117902971" lang="en-US"><head><meta charset="utf-8"/><title>App unavailable in region | Claude</title><link rel="alternate" hrefLang="x-default" href="https://claude.com/app-unavailable-in-region"/><link rel="alternate" hrefLang="en-US" href="https://claude.com/app-unavailable-in-region"/><link rel="alternate" hrefLang="ja-JP" href="https://claude.com/ja-jp/app-unavailable-in-region"/><link rel="alternate" hrefLang="de-DE" href="https://claude.com/de-de/app-unavailable-in-region"/><link rel="alternate" hrefLang="fr-FR" href="https://claude.com/fr-fr/app-unavailable-in-region"/><link rel="alternate" hrefLang="ko-KR" href="https://claude.com/ko-kr/app-unavailable-in-region"/><meta content="Unfortunately, Claude isn&#x27;t available here." name="description"/><meta content="App unavailable in region | Claude" property="og:title"/><meta content="Unfortunately, Claude isn&#x27;t available here." property="og:description"/><meta content="https://cdn.prod.website-files.com/6889473510b50328dbb70ae6/68c469d23594abeb9ab6ee48_og-claude-generic.jpg" property="og:image"/><meta content="App unavailable in region | Claude" property="twitter:title"/><meta content="Unfortunately, Claude isn&#x27;t available here." property="twitter:description"/><meta property="og:type" content="website"/><meta content="summary_large_image" name="twitter:card"/><meta content="width=device-width, initial-scale=1" name="viewport"/><meta content="tPMMBQMBzgZlNmCBal5cMPAx3nhO2iyM4rT9nxuRcdk" name="google-site-verification"/><link href="https://cdn.prod.website-files.com/6889473510b50328dbb70ae6/css/claude-brand.shared.e1c3addac.min.css" rel="stylesheet" type="text/css" integrity="sha384-4cOt2sOCB8umzY27E8CaMtj5IHLMtcRrdxJWvOpV3Q6MjS2oKhU131waB+p1gTXi" crossorigin="anonymous"/><script type="text/javascript">!function(o,c){var n=c.documentElement,t=" w-mod-";n.className+=t+"js",("ontouchstart"in o||o.DocumentTouch&&c instanceof DocumentTouch)&&(n.className+=t+"touch")}(window,document);</script><link href="https://cdn.prod.website-files.com/6889473510b50328dbb70ae6/689f4a9aff1f63fde75cf733_favicon.png" rel="shortcut icon" type="image/x-icon"/><link href="https://cdn.prod.website-files.com/6889473510b50328dbb70ae6/68c33859cc6cd903686c66a2_apple-touch-icon.png" rel="apple-touch-icon"/><link href="https://claude.com/app-unavailable-in-region" rel="canonical"/><style>.anti-flicker, .anti-flicker * {visibility: hidden !important; opacity: 0 !important;}</style><style>[data-wf-hidden-variation], [data-wf-hidden-variation] * {
+        display: none !important;
+      }</style><script type="text/javascript">if (localStorage.getItem('intellimize_data_tracking_type') !== 'optOut') { localStorage.removeItem('intellimize_opt_out_117902971'); } if (localStorage.getItem('intellimize_data_tracking_type') !== 'optOut') { localStorage.setItem('intellimize_data_tracking_type', 'optOut'); }</script><script type="text/javascript">(function(e){var s={r:[]};e.wf={r:s.r,ready:t=>{s.r.push(t)}}})(window)</script><script type="text/javascript">(function(e,t,p){var n=document.documentElement,s={p:[],r:[]},u={p:s.p,r:s.r,push:function(e){s.p.push(e)},ready:function(e){s.r.push(e)}};e.intellimize=u,n.className+=" "+p,setTimeout(function(){n.className=n.className.replace(RegExp(" ?"+p),"")},t)})(window, 4000, 'anti-flicker')</script><link href="https://cdn.intellimize.co/snippet/117902971.js" rel="preload" as="script"/><script type="text/javascript">var wfClientScript=document.createElement("script");wfClientScript.src="https://cdn.intellimize.co/snippet/117902971.js",wfClientScript.async=!0,wfClientScript.onerror=function(){document.documentElement.className=document.documentElement.className.replace(RegExp(" ?anti-flicker"),"")},document.head.appendChild(wfClientScript);</script><link href="https://api.intellimize.co" rel="preconnect" crossorigin="true"/><link href="https://log.intellimize.co" rel="preconnect" crossorigin="true"/><link href="https://117902971.intellimizeio.com" rel="preconnect"/><meta property="og:site_name" content="Claude" />
 
-const supabase = createClient(
-  "https://xqteklgmxdslndswaftn.supabase.co",
-  "sb_publishable_FFxfIZn_lbYyA2ZUTNBlOw_NB-MFhyP"
-);
+<!------- Social & Sharing ------->
+<meta property="og:image" content="https://cdn.prod.website-files.com/6889473510b50328dbb70ae6/68c469d23594abeb9ab6ee48_og-claude-generic.jpg"/>
+<meta name="twitter:site" content="@claudeai"/>
+<meta name="twitter:creator" content="@claudeai"/>
+<meta name="apple-itunes-app" content="app-id=6473753684">
 
-// ══════════════ 升级弹窗 ══════════════
-function UpgradeModal({T,onClose}){
-  const plans=[
-    {name:"月费",price:"¥9.9",sub:"公测限时",tag:"先试试看"},
-    {name:"年费",price:"¥19.9",sub:"公测限时",tag:"推荐"},
-    {name:"终身",price:"¥38.8",sub:"公测限时",tag:"一次买断"},
-  ];
-  const perks=[
-    {icon:"🧰",title:"工具箱",desc:"记录豆板、豆针、豆铲规格与备注"},
-    {icon:"📖",title:"拼豆日记",desc:"把每张作品的过程都留住"},
-    {icon:"🔍",title:"缺色替换",desc:"快速找到可替代颜色"},
-    {icon:"🤖",title:"AI识图",desc:"免费版限 5 次，Pro 无限识别"},
-    {icon:"☁️",title:"云同步",desc:"换设备也不怕数据丢失"},
-  ];
-  return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
-      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:T.card,borderRadius:28,padding:"24px 18px",width:"100%",maxWidth:390,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Nunito',sans-serif",maxHeight:"86vh",overflowY:"auto"}}>
-        <div style={{textAlign:"center",marginBottom:18}}>
-          <div style={{fontSize:36,marginBottom:8}}>🌟</div>
-          <div style={{fontSize:19,fontWeight:900,color:T.accent,marginBottom:6}}>开通 Pro，让拼豆更轻松一点</div>
-          <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>把零碎的记录、工具和库存，都整理得明明白白</div>
-        </div>
+<!-- Swiper CSS for Slider component -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
-        <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:10}}>🧪 公测限时福利</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          {plans.map(p=>(
-            <div key={p.name} style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 8px",textAlign:"center"}}>
-              <div style={{fontSize:11,fontWeight:900,color:T.text}}>{p.name}</div>
-              <div style={{fontSize:18,fontWeight:900,color:T.text,margin:"6px 0 4px"}}>{p.price}</div>
-              <div style={{fontSize:10,color:T.textMid,lineHeight:1.5}}>{p.sub}</div>
-              <div style={{fontSize:10,color:T.textLight,fontWeight:800,marginTop:4}}>{p.tag}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{fontSize:10,color:T.textLight,lineHeight:1.6,marginBottom:18,textAlign:"center"}}>
-          公测结束后恢复原价：¥12/月 · ¥38.8/年 · ¥68.8终身
-        </div>
-
-        <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:10}}>开通 Pro 后解锁：</div>
-        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
-          {perks.map(p=>(
-            <div key={p.icon} style={{display:"flex",alignItems:"center",gap:10,background:T.bg,borderRadius:14,padding:"10px 12px",border:`1px solid ${T.border}`}}>
-              <div style={{fontSize:22,flexShrink:0}}>{p.icon}</div>
-              <div>
-                <div style={{fontSize:12,fontWeight:800,color:T.text}}>{p.title}</div>
-                <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.5}}>{p.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{background:T.bg,border:`1px dashed ${T.border}`,borderRadius:14,padding:"10px 12px",marginBottom:14}}>
-          <div style={{fontSize:11,color:T.textMid,fontWeight:800,marginBottom:4}}>免费版本可使用</div>
-          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>图纸管理、即将出炉、基础拼豆进度、本地数据保存</div>
-        </div>
-
-        <div style={{fontSize:11,color:T.textMid,textAlign:"center",marginBottom:12}}>拼豆本来就很快乐，记录它也应该轻松一点</div>
-
-        <div style={{background:`linear-gradient(135deg,#ff8fa3,#ffd166,#4a9eff)`,borderRadius:50,padding:"13px 0",textAlign:"center",marginBottom:10,cursor:"pointer"}}
-          onClick={()=>alert("联系大橘：v：daju_laila 开通Pro～")}>
-          <div style={{fontSize:14,fontWeight:900,color:"#fff"}}>立即开通 Pro</div>
-        </div>
-        <button onClick={onClose}
-          style={{width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-          先用免费版
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ══════════════ 登录/注册页 ══════════════
-function JarLogo({ accent, size=110 }) {
-  const [bouncing, setBouncing] = useState(null);
-  const beads = [
-    { cx: 44, cy: 72, r: 9, color: "#ff8fa3", id: 0 },
-    { cx: 62, cy: 78, r: 8, color: "#4a9eff", id: 1 },
-    { cx: 56, cy: 62, r: 7, color: "#ffd166", id: 2 },
-    { cx: 38, cy: 60, r: 7, color: "#64e0a4", id: 3 },
-    { cx: 70, cy: 65, r: 6, color: "#b37bdc", id: 4 },
-  ];
-  return (
-    <div style={{ position: "relative", width: size, height: size, margin: "0 auto", cursor: "pointer" }}>
-      <style>{`
-        @keyframes beadBounce { 0%,100%{transform:translateY(0)} 30%{transform:translateY(-18px)} 60%{transform:translateY(-8px)} 80%{transform:translateY(-3px)} }
-        .bead-bounce { animation: beadBounce 0.55s cubic-bezier(.36,.07,.19,.97) both; }
-      `}</style>
-      <svg viewBox="0 0 110 110" width={size} height={size}>
-        {/* 罐子底部 */}
-        <rect x="18" y="60" width="74" height="38" rx="10" fill={accent} opacity="0.18"/>
-        {/* 罐子主体 */}
-        <rect x="20" y="38" width="70" height="60" rx="12" fill="white" stroke={accent} strokeWidth="2.5"/>
-        {/* 罐子高光 */}
-        <rect x="26" y="44" width="12" height="40" rx="6" fill={accent} opacity="0.08"/>
-        {/* 罐口 */}
-        <rect x="26" y="32" width="58" height="14" rx="7" fill={accent} opacity="0.25"/>
-        <rect x="30" y="34" width="50" height="10" rx="5" fill={accent} opacity="0.35"/>
-        {/* 豆豆 */}
-        {beads.map(b => (
-          <circle
-            key={b.id}
-            className={bouncing === b.id ? "bead-bounce" : ""}
-            cx={b.cx} cy={b.cy} r={b.r}
-            fill={b.color}
-            style={{ cursor: "pointer", filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.15))" }}
-            onMouseDown={() => { setBouncing(b.id); setTimeout(() => setBouncing(null), 600); }}
-            onClick={() => { setBouncing(b.id); setTimeout(() => setBouncing(null), 600); }}
-          />
-        ))}
-        {/* 豆豆高光 */}
-        {beads.map(b => (
-          <circle key={"h"+b.id} cx={b.cx - b.r*0.3} cy={b.cy - b.r*0.3} r={b.r*0.35} fill="rgba(255,255,255,0.55)" style={{pointerEvents:"none"}}/>
-        ))}
-      </svg>
-    </div>
-  );
-}
-
-const MASTER_INVITE_CODE = "PINDOU"; // 总推广码
-const INVITE_LIMIT = 5;              // 每人最多邀请人数
-const INVITE_BONUS = 2;              // 每邀请1人得识图次数
-const TRIAL_DAYS = 3;                // 试用天数
-
-function genInviteCode(uid) {
-  // 用uid生成6位邀请码
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[parseInt(uid.replace(/-/g,"").slice(i*4, i*4+4), 16) % chars.length];
+<!-- Prevent flicker from global GSAP animations -->
+<style>
+  html:not(.gsap-not-found) [data-prevent-flicker='true'] { visibility: hidden; }
+  .line-mask, .word-mask, .char-mask { padding-block: 0.1em; margin-block: -0.1em; }
+</style>
+<noscript><style>[data-prevent-flicker='true'] { visibility: visible !important; }</style></noscript>
+<style>
+  .transition_wrap {
+    display: block;
   }
-  return code;
-}
+</style>
+<script>
+  // Hide the transition_wrap in Webflow preview mode w/ custom code enabled
+  if (window.location.hostname.includes('.canvas.webflow.com')) {
+    document.write('<style>.transition_wrap{display:none!important}[data-prevent-flicker="true"]{visibility:visible!important}</style>');
+  }
+</script>
 
-function AuthPage({ T, tn, onLogin }) {
-  const [mode, setMode] = useState("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [inviteInput, setInviteInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
+<!-- set locale based on user's OS/browser language settings (CM)
+<script>
+  (function() {
+    const localeMap = {
+      'ja': '/ja-jp',
+      'ja-JP': '/ja-jp',
+      'de': '/de-de',
+      'de-DE': '/de-de',
+      'fr': '/fr-fr',
+      'fr-FR': '/fr-fr',
+      'ko': '/ko-kr',
+      'ko-KR': '/ko-kr'
+    };
+    const localePaths = ['/ja-jp', '/de-de', '/fr-fr', '/ko-kr'];
+    const currentPath = window.location.pathname;
 
-  const inp = (ex = {}) => ({
-    fontFamily: "'Nunito',sans-serif",
-    border: `1.5px solid ${T.border}`,
-    borderRadius: 12,
-    background: tn === "sky" ? "#f8fbff" : T.card,
-    color: T.text,
-    outline: "none",
-    padding: "12px 16px",
-    fontSize: 14,
-    width: "100%",
-    boxSizing: "border-box",
-    ...ex,
-  });
+    // Don't redirect if already on a locale path
+    if (localePaths.some(p => currentPath.startsWith(p))) return;
 
-  async function handleSubmit() {
-    setErr(""); setMsg("");
-    if (!email || !password) { setErr("请填写邮箱和密码～"); return; }
-    setLoading(true);
-    if (mode === "signup") {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) { setErr(error.message); setLoading(false); return; }
-      const uid = data.user?.id;
-      if (uid) {
-        const myCode = genInviteCode(uid);
-        const code = inviteInput.trim().toUpperCase();
-        let profileUpdate = { invite_code: myCode, invite_count: 0, bonus_ai_count: 0 };
-
-        if (code) {
-          const isMaster = code === MASTER_INVITE_CODE;
-          if (isMaster) {
-            // 总推广码：直接给试用
-            const trialExp = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
-            profileUpdate.trial_expires_at = trialExp;
-            profileUpdate.invited_by = MASTER_INVITE_CODE;
-          } else {
-            // 普通邀请码：找邀请人
-            const { data: inviterRow } = await supabase.from("profiles")
-              .select("user_id, invite_count, bonus_ai_count")
-              .eq("invite_code", code)
-              .single();
-            if (inviterRow && inviterRow.invite_count < INVITE_LIMIT) {
-              // 给新用户试用
-              const trialExp = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
-              profileUpdate.trial_expires_at = trialExp;
-              profileUpdate.invited_by = code;
-              // 给邀请人加次数
-              await supabase.from("profiles").update({
-                invite_count: inviterRow.invite_count + 1,
-                bonus_ai_count: (inviterRow.bonus_ai_count || 0) + INVITE_BONUS
-              }).eq("user_id", inviterRow.user_id);
-            }
-          }
+    // Check if user manually switched (came from a locale path on this site)
+    try {
+      const referrer = new URL(document.referrer);
+      if (referrer.hostname === window.location.hostname) {
+        if (localePaths.some(p => referrer.pathname.startsWith(p))) {
+          localStorage.setItem('locale-manual-override', 'true');
         }
-        await supabase.from("profiles").upsert({ user_id: uid, ...profileUpdate });
       }
-      setMsg("注册成功！直接登录就可以啦～");
+    } catch (e) {}
+
+    // Respect manual override
+    if (localStorage.getItem('locale-manual-override')) return;
+
+    // Only check the PRIMARY browser language (first in the list)
+    const primaryLang = navigator.languages?.[0] || navigator.language;
+    let targetPath = null;
+
+    // Check exact match first
+    if (localeMap[primaryLang]) {
+      targetPath = localeMap[primaryLang];
     } else {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setErr("邮箱或密码错误，请重试～");
-      else onLogin(data.user);
-    }
-    setLoading(false);
-  }
-
-  return (
-    <div style={{ position:"fixed", inset:0, background: T.bg, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "8vh", padding: "8vh 24px 24px", fontFamily: "'Nunito',sans-serif", overflow:"hidden" }}>
-      <div style={{ width: "100%", maxWidth: 360 }}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <JarLogo accent={T.accent} />
-          <div style={{ fontSize: 24, fontWeight: 900, color: T.accent, marginTop: 8, letterSpacing: 1 }}>拼豆记</div>
-        </div>
-        <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 24, padding: 24, boxShadow: T.cardShadow }}>
-          <div style={{ display: "flex", marginBottom: 20, background: T.accentSoft, borderRadius: 12, padding: 3, gap: 3 }}>
-            {[["login", "登录"], ["signup", "注册"]].map(([m, l]) => (
-              <button key={m} onClick={() => { setMode(m); setErr(""); setMsg(""); }}
-                style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "'Nunito',sans-serif", fontSize: 13, fontWeight: 700, background: mode === m ? T.accent : "transparent", color: mode === m ? "#fff" : T.textMid, transition: "all 0.18s" }}>{l}</button>
-            ))}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="邮箱地址" type="email" style={inp()} />
-            <input value={password} onChange={e => setPassword(e.target.value)} placeholder="密码（至少6位）" type="password" style={inp()}
-              onKeyDown={e => e.key === "Enter" && handleSubmit()} />
-            {mode==="signup"&&(
-              <input value={inviteInput} onChange={e=>setInviteInput(e.target.value)} placeholder="邀请码（选填）" style={inp({borderStyle:"dashed"})}/>
-            )}
-          </div>
-          {err && <div style={{ marginTop: 10, fontSize: 12, color: T.danger, fontWeight: 600 }}>{err}</div>}
-          {msg && <div style={{ marginTop: 10, fontSize: 12, color: "#4caf50", fontWeight: 600 }}>{msg}</div>}
-          <button onClick={handleSubmit} disabled={loading}
-            style={{ marginTop: 16, width: "100%", padding: "12px 0", borderRadius: 50, border: "none", cursor: "pointer", fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 800, background: T.accent, color: "#fff", opacity: loading ? 0.7 : 1 }}>
-            {loading ? "处理中…" : mode === "login" ? "登录" : "注册"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const ALL_COLORS = [
-  {id:"A1",hex:"#faf5cd"},{id:"A2",hex:"#fcfed6"},{id:"A3",hex:"#fcff92"},{id:"A4",hex:"#f7ec5c"},{id:"A5",hex:"#f0d83a"},{id:"A6",hex:"#fda951"},{id:"A7",hex:"#fa8c4f"},{id:"A8",hex:"#fdbda4"},{id:"A9",hex:"#f79d5f"},{id:"A10",hex:"#f47e38"},{id:"A11",hex:"#fedb99"},{id:"A12",hex:"#fda276"},{id:"A13",hex:"#fec667"},{id:"A14",hex:"#f75842"},{id:"A15",hex:"#fbf65e"},{id:"A16",hex:"#feff97"},{id:"A17",hex:"#fde173"},{id:"A18",hex:"#fcbf80"},{id:"A19",hex:"#fd7e77"},{id:"A20",hex:"#f9d66e"},{id:"A21",hex:"#fae393"},{id:"A22",hex:"#b38c9f"},{id:"A23",hex:"#e4c8ba"},{id:"A24",hex:"#f3f6a9"},{id:"A25",hex:"#ffd785"},{id:"A26",hex:"#ffc734"},
-  {id:"B1",hex:"#dff13b"},{id:"B2",hex:"#64f343"},{id:"B3",hex:"#a1f586"},{id:"B4",hex:"#5ffd34"},{id:"B5",hex:"#39e158"},{id:"B6",hex:"#64e0a4"},{id:"B7",hex:"#3eae7c"},{id:"B8",hex:"#1d9b54"},{id:"B9",hex:"#2a5037"},{id:"B10",hex:"#9ad1ba"},{id:"B11",hex:"#627032"},{id:"B12",hex:"#1a6e3d"},{id:"B13",hex:"#c8e87d"},{id:"B14",hex:"#abe84f"},{id:"B15",hex:"#305335"},{id:"B16",hex:"#c0ed9c"},{id:"B17",hex:"#9eb33e"},{id:"B18",hex:"#e6ed4f"},{id:"B19",hex:"#26b78e"},{id:"B20",hex:"#cbeccf"},{id:"B21",hex:"#18616a"},{id:"B22",hex:"#0a4241"},{id:"B23",hex:"#343b1a"},{id:"B24",hex:"#e8faa6"},{id:"B25",hex:"#4e846d"},{id:"B26",hex:"#907c35"},{id:"B27",hex:"#d0e0af"},{id:"B28",hex:"#9ee5bb"},{id:"B29",hex:"#c6df5f"},{id:"B30",hex:"#e3fbb1"},{id:"B31",hex:"#b4e691"},{id:"B32",hex:"#92ad60"},
-  {id:"C1",hex:"#f0fee4"},{id:"C2",hex:"#abf8fe"},{id:"C3",hex:"#a2e0f7"},{id:"C4",hex:"#44cdfb"},{id:"C5",hex:"#06aadf"},{id:"C6",hex:"#54a7e9"},{id:"C7",hex:"#3977ca"},{id:"C8",hex:"#0f52bd"},{id:"C9",hex:"#3349c3"},{id:"C10",hex:"#3cbce3"},{id:"C11",hex:"#2aded3"},{id:"C12",hex:"#1e334e"},{id:"C13",hex:"#cde7fe"},{id:"C14",hex:"#d5fcf7"},{id:"C15",hex:"#21c5c4"},{id:"C16",hex:"#1858a2"},{id:"C17",hex:"#02d1f3"},{id:"C18",hex:"#213244"},{id:"C19",hex:"#18869d"},{id:"C20",hex:"#1a70a9"},{id:"C21",hex:"#bcddfc"},{id:"C22",hex:"#6bb1bb"},{id:"C23",hex:"#c8e2fd"},{id:"C24",hex:"#7ec5f9"},{id:"C25",hex:"#a9e8e0"},{id:"C26",hex:"#42adcf"},{id:"C27",hex:"#d0def9"},{id:"C28",hex:"#bdcee8"},{id:"C29",hex:"#364a89"},
-  {id:"D1",hex:"#acb7ef"},{id:"D2",hex:"#868dd3"},{id:"D3",hex:"#3554af"},{id:"D4",hex:"#162d7b"},{id:"D5",hex:"#b34ec6"},{id:"D6",hex:"#b37bdc"},{id:"D7",hex:"#8758a9"},{id:"D8",hex:"#e3d2fe"},{id:"D9",hex:"#d5b9f4"},{id:"D10",hex:"#301a49"},{id:"D11",hex:"#beb9e2"},{id:"D12",hex:"#dc99ce"},{id:"D13",hex:"#b5038d"},{id:"D14",hex:"#862993"},{id:"D15",hex:"#2f1f8c"},{id:"D16",hex:"#e2e4f0"},{id:"D17",hex:"#c7d3f9"},{id:"D18",hex:"#9a64b8"},{id:"D19",hex:"#d8c2d9"},{id:"D20",hex:"#9a35ad"},{id:"D21",hex:"#940595"},{id:"D22",hex:"#38389a"},{id:"D23",hex:"#eadbf8"},{id:"D24",hex:"#768ae1"},{id:"D25",hex:"#4950c2"},{id:"D26",hex:"#d4c6eb"},
-  {id:"E1",hex:"#f6d4cb"},{id:"E2",hex:"#fcc1dd"},{id:"E3",hex:"#f6bde8"},{id:"E4",hex:"#e8649e"},{id:"E5",hex:"#f0569f"},{id:"E6",hex:"#eb4172"},{id:"E7",hex:"#c53674"},{id:"E8",hex:"#fddbe9"},{id:"E9",hex:"#e376c7"},{id:"E10",hex:"#d13b95"},{id:"E11",hex:"#f7dad4"},{id:"E12",hex:"#f693bf"},{id:"E13",hex:"#b5026a"},{id:"E14",hex:"#fad4bf"},{id:"E15",hex:"#f5c9ca"},{id:"E16",hex:"#fbf4ec"},{id:"E17",hex:"#f7e3ec"},{id:"E18",hex:"#f9c8db"},{id:"E19",hex:"#f6bbd1"},{id:"E20",hex:"#d7c6ce"},{id:"E21",hex:"#c09da4"},{id:"E22",hex:"#b38c9f"},{id:"E23",hex:"#937d8a"},{id:"E24",hex:"#debee5"},
-  {id:"F1",hex:"#fe9381"},{id:"F2",hex:"#f63d4b"},{id:"F3",hex:"#ee4e3e"},{id:"F4",hex:"#f2a440"},{id:"F5",hex:"#e10328"},{id:"F6",hex:"#913635"},{id:"F7",hex:"#911932"},{id:"F8",hex:"#bb0126"},{id:"F9",hex:"#e0677a"},{id:"F10",hex:"#874628"},{id:"F11",hex:"#592323"},{id:"F12",hex:"#f3536b"},{id:"F13",hex:"#f45c45"},{id:"F14",hex:"#fcadb2"},{id:"F15",hex:"#d50527"},{id:"F16",hex:"#f8c0a9"},{id:"F17",hex:"#e89b7d"},{id:"F18",hex:"#d07f4a"},{id:"F19",hex:"#be454a"},{id:"F20",hex:"#c69495"},{id:"F21",hex:"#f2b8c6"},{id:"F22",hex:"#f7c3d0"},{id:"F23",hex:"#ed806c"},{id:"F24",hex:"#e09daf"},{id:"F25",hex:"#e84854"},
-  {id:"G1",hex:"#ffe4d3"},{id:"G2",hex:"#fcc6ac"},{id:"G3",hex:"#f1c4a5"},{id:"G4",hex:"#dcb87f"},{id:"G5",hex:"#e7b34e"},{id:"G6",hex:"#e3a014"},{id:"G7",hex:"#985c3a"},{id:"G8",hex:"#713d2f"},{id:"G9",hex:"#e4b685"},{id:"G10",hex:"#da8c42"},{id:"G11",hex:"#dac898"},{id:"G12",hex:"#fec993"},{id:"G13",hex:"#b2714b"},{id:"G14",hex:"#8b684c"},{id:"G15",hex:"#f6f8e3"},{id:"G16",hex:"#f2d8c1"},{id:"G17",hex:"#77544e"},{id:"G18",hex:"#ffe3d5"},{id:"G19",hex:"#dd7d41"},{id:"G20",hex:"#a5452f"},{id:"G21",hex:"#b38561"},
-  {id:"H1",hex:"#ffffff"},{id:"H2",hex:"#fbfbfb"},{id:"H3",hex:"#b4b4b4"},{id:"H4",hex:"#878787"},{id:"H5",hex:"#464648"},{id:"H6",hex:"#2c2c2c"},{id:"H7",hex:"#010101"},{id:"H8",hex:"#e7d6dc"},{id:"H9",hex:"#efedee"},{id:"H10",hex:"#ebebeb"},{id:"H11",hex:"#cdcdcd"},{id:"H12",hex:"#fdf6ee"},{id:"H13",hex:"#f4efd1"},{id:"H14",hex:"#ced7d4"},{id:"H15",hex:"#9aa6a6"},{id:"H16",hex:"#1b1213"},{id:"H17",hex:"#f0eeef"},{id:"H18",hex:"#fcfff6"},{id:"H19",hex:"#f2eee5"},{id:"H20",hex:"#96a09f"},{id:"H21",hex:"#f8fbe6"},{id:"H22",hex:"#cacad2"},{id:"H23",hex:"#9b9c94"},
-  {id:"M1",hex:"#bbc6b6"},{id:"M2",hex:"#909994"},{id:"M3",hex:"#697e81"},{id:"M4",hex:"#e0d4bc"},{id:"M5",hex:"#d1ccaf"},{id:"M6",hex:"#b0aa86"},{id:"M7",hex:"#b0a796"},{id:"M8",hex:"#ae8082"},{id:"M9",hex:"#a68862"},{id:"M10",hex:"#c4b3bb"},{id:"M11",hex:"#9d7693"},{id:"M12",hex:"#644b51"},{id:"M13",hex:"#c79266"},{id:"M14",hex:"#c27563"},{id:"M15",hex:"#747d7a"},
-];
-
-const SERIES=["A","B","C","D","E","F","G","H","M"];
-const INIT_STOCK=ALL_COLORS.reduce((a,c)=>({...a,[c.id]:1000}),{});
-const INIT_USED=ALL_COLORS.reduce((a,c)=>({...a,[c.id]:0}),{});
-function isDark(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return(r*299+g*587+b*114)/1000<128;}
-function gToBeads(g){return Math.round(g*100);}
-function fmtG(g){const n=Math.round(g*100)/100;return Number.isInteger(n)?String(n):n.toFixed(2).replace(/\.?0+$/,"");}
-
-const THEMES={
-  sky:{bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"夜空 🌙",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff"},
-  night:{bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"晴天 ☀️",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166"}
-};
-
-const G=`
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0;}
-.tt{transition:background 0.3s,color 0.3s,border-color 0.3s;}
-@keyframes bb{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-6px) scale(1.08);}}
-.fade{animation:fu 0.22s ease both;}
-@keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-.cc{transition:transform 0.15s,box-shadow 0.15s,border 0.15s,opacity 0.15s;}
-.cc:active{transform:scale(0.93)!important;opacity:0.8;}
-.btn{transition:all 0.18s;}
-.btn:active{transform:scale(0.95);}
-`;
-
-// ── 色卡组件（点击弹菜单：改库存 / 扣用量）──
-const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch,isSel,onToggleSel,onSave,onDeduct,wC,wL,focusMode,focusColor,onFocusClick}){
-  const beads=Math.round(stock[c.id]);
-  const st=beads<wC?"c":beads<wL?"l":"ok";
-  const col=st==="c"?T.danger:st==="l"?T.warn:T.text;
-  const dk=isDark(c.hex);
-  // mode: null | "menu" | "edit" | "deduct"
-  const [mode,setMode]=useState(null);
-  const [localB,setLocalB]=useState("");
-  const inputRef=useRef(null);
-
-  useEffect(()=>{if(mode==="edit"||mode==="deduct")setTimeout(()=>inputRef.current&&inputRef.current.focus(),0);},[mode]);
-  useEffect(()=>{if(mode===null)setLocalB("");},[mode]);
-
-  const isFocused=focusMode&&focusColor===c.id;
-  const isDimmed=focusMode&&focusColor&&focusColor!==c.id;
-
-  function handleClick(e){
-    if(batch){onToggleSel(c.id);return;}
-    if(focusMode){onFocusClick&&onFocusClick(c.id);return;}
-    e.stopPropagation();setMode(m=>m===null?"menu":null);
-  }
-  function startEdit(e){e.stopPropagation();setLocalB(String(beads));setMode("edit");}
-  function startDeduct(e){e.stopPropagation();setLocalB("");setMode("deduct");}
-  function saveEdit(e){e&&e.stopPropagation();const n=parseInt(localB);if(!isNaN(n)&&n>=0)onSave(c.id,n);setMode(null);}
-  function saveDeduct(e){e&&e.stopPropagation();const n=parseInt(localB);if(!isNaN(n)&&n>0)onDeduct(c.id,n);setMode(null);}
-  function onKeyEdit(e){if(e.key==="Enter")saveEdit();if(e.key==="Escape")setMode(null);}
-  function onKeyDeduct(e){if(e.key==="Enter")saveDeduct();if(e.key==="Escape")setMode(null);}
-
-  const gVal=(beads/100).toFixed(1).replace(/\.0$/,"");
-  const pad=compact?"6px 8px":"10px 10px 10px";
-
-  return(
-    <div className="cc tt" onClick={handleClick}
-      style={{background:T.card,borderRadius:compact?16:20,overflow:"hidden",cursor:"pointer",position:"relative",
-        opacity:isDimmed?0.13:1,
-        filter:isDimmed?"grayscale(0.7)":"none",
-        border:isFocused?`2.5px solid ${T.accent}`:isSel?`2.5px solid ${T.accent}`:st==="c"?`2px solid ${T.danger}`:st==="l"?`2px solid ${T.warn}`:`1.5px solid ${T.border}`,
-        boxShadow:isFocused?`0 0 0 4px ${T.accent}50,${T.cardShadow}`:isSel?`0 0 0 3px ${T.accent}30`:mode==="menu"?`0 0 0 3px ${T.accent}40`:T.cardShadow,
-        transform:isFocused?"scale(1.04)":isSel?"scale(0.97)":"none",
-        transition:"opacity 0.25s,filter 0.25s,transform 0.18s,box-shadow 0.18s,border 0.18s"}}>
-      <div style={{background:c.hex,height:compact?40:50,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-        {tn==="night"&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/>}
-        <span style={{fontSize:compact?12:13,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.65)",position:"relative"}}>{c.id}</span>
-        {batch&&<div style={{position:"absolute",right:8,width:20,height:20,borderRadius:"50%",background:isSel?T.accent:"rgba(255,255,255,0.8)",border:`2px solid ${isSel?T.accent:"rgba(200,200,200,0.9)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:800}}>{isSel?"✓":""}</div>}
-        {isFocused&&<div style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.35)",borderRadius:6,padding:"1px 5px",fontSize:9,color:"#fff",fontWeight:800}}>✦ 拼这个</div>}
-      </div>
-
-      {/* 默认显示 */}
-      {mode===null&&<div style={{padding:pad,textAlign:"center"}}>
-        <div style={{fontSize:compact?14:16,fontWeight:800,color:col}}>{beads} <span style={{fontSize:10,fontWeight:600}}>粒</span></div>
-        <div style={{fontSize:compact?10:11,color:T.textMid,fontWeight:600,marginTop:1}}>{gVal} g</div>
-        {!compact&&used[c.id]>0&&<div style={{fontSize:10,color:T.textLight,marginTop:1}}>已用 {Math.round(used[c.id])} 粒</div>}
-      </div>}
-
-      {/* 菜单 */}
-      {mode==="menu"&&<div style={{padding:"8px 6px",display:"flex",gap:5}} onClick={e=>e.stopPropagation()}>
-        <button onClick={startEdit} style={{flex:1,padding:"7px 4px",borderRadius:10,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:10,fontWeight:800,background:T.accentLight,color:T.accent}}>✏️ 改库存</button>
-        <button onClick={startDeduct} style={{flex:1,padding:"7px 4px",borderRadius:10,border:`1.5px solid ${T.warn}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.warnBg,color:T.warn}}>📦 扣用量</button>
-      </div>}
-
-      {/* 改库存 */}
-      {mode==="edit"&&<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontSize:10,color:T.textLight,marginBottom:4,fontWeight:600}}>改库存</div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:3}}>
-          <input ref={inputRef} value={localB} onChange={e=>setLocalB(e.target.value)} onBlur={saveEdit} onKeyDown={onKeyEdit} type="number" min="0"
-            style={{width:68,textAlign:"center",fontSize:15,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.accent}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.accent,outline:"none"}}/>
-          <span style={{fontSize:11,color:T.textLight,fontWeight:700}}>粒</span>
-        </div>
-        <div style={{fontSize:10,color:T.textLight}}>= {((parseInt(localB)||0)/100).toFixed(1).replace(/\.0$/,"")} g</div>
-      </div>}
-
-      {/* 扣用量 */}
-      {mode==="deduct"&&<div style={{padding:pad,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-        <div style={{fontSize:10,color:T.warn,marginBottom:4,fontWeight:600}}>扣用量</div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:3}}>
-          <input ref={inputRef} value={localB} onChange={e=>setLocalB(e.target.value)} onBlur={saveDeduct} onKeyDown={onKeyDeduct} type="number" min="0"
-            style={{width:68,textAlign:"center",fontSize:15,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.warn}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.warn,outline:"none"}}/>
-          <span style={{fontSize:11,color:T.textLight,fontWeight:700}}>粒</span>
-        </div>
-        <div style={{fontSize:10,color:T.textLight}}>库存 {beads} → {Math.max(0,beads-(parseInt(localB)||0))} 粒</div>
-      </div>}
-    </div>
-  );
-});
-
-
-export default function App(){
-  const [tn,setTn]=useState("sky");
-  const T=THEMES[tn];
-  const [user,setUser]=useState(null);
-  const [authLoading,setAuthLoading]=useState(true);
-
-  useEffect(()=>{
-    supabase.auth.getSession().then(({data:{session}})=>{
-      setUser(session?.user??null);
-      setAuthLoading(false);
-    });
-    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
-      setUser(session?.user??null);
-    });
-    return()=>subscription.unsubscribe();
-  },[]);
-
-
-  const [isPro,setIsPro]=useState(false);
-  const [showUpgrade,setShowUpgrade]=useState(false);
-  const [inviteInfo,setInviteInfo]=useState({code:"",count:0,bonus:0,trialExp:null});
-  const FREE_AI_LIMIT=5;
-  const [freeAiUsed,setFreeAiUsed]=useState(()=>{try{const v=localStorage.getItem('pindou_free_ai_used');return v?Number(v):0}catch{return 0}});
-  const totalAiLimit = FREE_AI_LIMIT + (inviteInfo.bonus || 0);
-
-  const [stock,setStock]=useState(INIT_STOCK);
-  const [used,setUsed]=useState(INIT_USED);
-  const [syncLoading,setSyncLoading]=useState(false);
-  const [syncStatus,setSyncStatus]=useState(""); // "ok" | "err" | ""
-  const [cloudReady,setCloudReady]=useState(false);
-  const [page,setPage]=useState("home");
-  useEffect(()=>{try{localStorage.setItem('pindou_free_ai_used',String(freeAiUsed));}catch{}},[freeAiUsed]);
-
-  // 专注模式
-  const [focusMode,setFocusMode]=useState(false);
-  const [focusColor,setFocusColor]=useState(null);
-
-  // 登录后从云端拉数据
-  useEffect(()=>{
-    if(!user){setCloudReady(false);setIsPro(false);setSyncStatus("");return;}
-    setCloudReady(false);
-    async function loadCloud(){
-      setSyncLoading(true);
-      // 拉库存
-      const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
-      // 拉plan
-      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at, trial_expires_at, bonus_ai_count, invite_code, invite_count").eq("user_id",user.id).single();
-      const now=new Date();
-      const isTesterPro=profile?.plan==="tester_pro" && profile?.pro_expires_at && new Date(profile.pro_expires_at)>now;
-      const isPaidPro=profile?.plan==="pro";
-      const isAdmin=profile?.role==="admin";
-      const isTrialPro=profile?.trial_expires_at && new Date(profile.trial_expires_at)>now;
-      const nextIsPro=!!(isAdmin||isPaidPro||isTesterPro||isTrialPro);
-      setIsPro(nextIsPro);
-      // 邀请码不存在时自动生成
-      if(!profile?.invite_code){
-        const myCode=genInviteCode(user.id);
-        await supabase.from("profiles").update({invite_code:myCode}).eq("user_id",user.id);
+      // Check base language (e.g., 'en' from 'en-US')
+      const baseLang = primaryLang.split('-')[0];
+      if (localeMap[baseLang]) {
+        targetPath = localeMap[baseLang];
       }
-      setInviteInfo({
-        code: profile?.invite_code || genInviteCode(user.id),
-        count: profile?.invite_count || 0,
-        bonus: profile?.bonus_ai_count || 0,
-        trialExp: profile?.trial_expires_at || null,
-      });
-      if(!nextIsPro)setSyncStatus("");
-      if(error){
-        setSyncStatus("err");
-        // 出错时才读本地缓存兜底
-        try{const s=localStorage.getItem("pindou_stock");if(s)setStock(JSON.parse(s));}catch{}
-        try{const u=localStorage.getItem("pindou_used");if(u)setUsed(JSON.parse(u));}catch{}
-      }else if(data&&data.length>0){
-        const ns={...INIT_STOCK},nu={...INIT_USED};
-        data.forEach(r=>{
-          if(ns[r.color]!==undefined)ns[r.color]=r.quantity;
-          if(nu[r.color]!==undefined)nu[r.color]=r.used||0;
-        });
-        setStock(ns);setUsed(nu);
-        setSyncStatus("ok");
-      }else{
-        // 云端无数据（新账号）：用初始值，不读本地缓存
-        setStock(INIT_STOCK);setUsed(INIT_USED);
-        setSyncStatus("ok");
-      }
-      setSyncLoading(false);
-      setCloudReady(true);
-    }
-    loadCloud();
-  },[user]);
-
-  // 云端写回（stock+used一起）
-  const syncTimer=useRef(null);
-  useEffect(()=>{
-    if(!user||!cloudReady||!isPro)return;
-    clearTimeout(syncTimer.current);
-    syncTimer.current=setTimeout(async()=>{
-      const rows=Object.entries(stock).map(([color,quantity])=>({user_id:user.id,color,quantity,used:used[color]||0}));
-      const {error}=await supabase.from("stock").upsert(rows,{onConflict:"user_id,color"});
-      if(error){setSyncStatus("err");console.error("sync error:",error);}
-      else setSyncStatus("ok");
-    },1500);
-  },[stock,used,cloudReady]);
-  const [search,setSearch]=useState("");
-  const [sort,setSort]=useState("id-asc");
-  const [fSeries,setFSeries]=useState(null);
-
-  const [wL,setWL]=useState(()=>{try{const v=localStorage.getItem('pindou_warn_low');return v?Number(v):500}catch{return 500}});
-  const [wC,setWC]=useState(()=>{try{const v=localStorage.getItem('pindou_warn_crit');return v?Number(v):200}catch{return 200}});
-  useEffect(()=>{
-    try{
-      localStorage.setItem('pindou_warn_low',String(wL));
-      localStorage.setItem('pindou_warn_crit',String(wC));
-    }catch{}
-  },[wL,wC]);
-  const [history,setHistory]=useState([]); // [{stock,used,tasks?}]
-  const MAX_HISTORY=20;
-  const [batch,setBatch]=useState(false);
-  const [sel,setSel]=useState(new Set());
-  const [bAmt,setBAmt]=useState("");
-  const [bDir,setBDir]=useState("-");
-  const [cmdText,setCmdText]=useState("");
-  const [cmdErr,setCmdErr]=useState("");
-  const [cmdTags,setCmdTags]=useState([]); // [{id,dir,amt}] 识图结果tag模式
-  const [showTagLink,setShowTagLink]=useState(false);
-  const [tagLinkMode,setTagLinkMode]=useState(null); // "new" | "link" | null
-  const [newDoneName,setNewDoneName]=useState("");
-  const [linkedTaskId,setLinkedTaskId]=useState(null);
-  const [imgLoading,setImgLoading]=useState(false);
-  const [imgErr,setImgErr]=useState("");
-  const imgRef=useRef(null);
-
-  const critC=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wC);
-  const lowC=ALL_COLORS.filter(c=>Math.round(stock[c.id])>=wC&&Math.round(stock[c.id])<wL);
-  const sUsed=useMemo(()=>SERIES.map(s=>({s,total:ALL_COLORS.filter(c=>c.id.startsWith(s)).reduce((sum,c)=>sum+used[c.id],0)})).sort((a,b)=>b.total-a.total),[used]);
-  const top5=sUsed.filter(x=>x.total>0).slice(0,5);
-  const maxU=top5[0]?.total||1;
-
-  const filtered=useMemo(()=>{
-    let l=[...ALL_COLORS];
-    if(fSeries)l=l.filter(c=>c.id.startsWith(fSeries));
-    if(search.trim())l=l.filter(c=>c.id.toLowerCase().includes(search.trim().toLowerCase()));
-    if(sort==="id-asc")l.sort((a,b)=>a.id.localeCompare(b.id));
-    else if(sort==="id-desc")l.sort((a,b)=>b.id.localeCompare(a.id));
-    else if(sort==="stock-asc")l.sort((a,b)=>stock[a.id]-stock[b.id]);
-    else if(sort==="stock-desc")l.sort((a,b)=>stock[b.id]-stock[a.id]);
-    else if(sort==="used-desc")l.sort((a,b)=>used[b.id]-used[a.id]);
-    return l;
-  },[search,sort,stock,used,fSeries]);
-
-
-
-  function getStatus(id){if(gToBeads(stock[id])<wC)return"c";if(gToBeads(stock[id])<wL)return"l";return"ok";}
-  function goS(s){setFSeries(s);setSort("used-desc");setSearch("");setPage("stock");}
-  function toggleSel(id){setSel(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});}
-  function applyBatch(){
-    const amt=parseFloat(bAmt);if(isNaN(amt)||amt<=0)return;
-    pushHistory(stock,used);
-    const ns={...stock},nu={...used};
-    sel.forEach(id=>{if(bDir==="-"){const d=Math.min(ns[id],amt);nu[id]+=d;ns[id]=Math.max(0,ns[id]-amt);}else{ns[id]+=amt;}});
-    setStock(ns);setUsed(nu);setSel(new Set());setBAmt("");setBatch(false);
-  }
-  function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");setCmdTags([]);}
-
-  function applyTags(){
-    if(cmdTags.length===0)return;
-    const ns={...stock},nu={...used};
-    cmdTags.forEach(({id,dir,amt})=>{
-      const a=parseFloat(amt);
-      if(isNaN(a)||a<=0)return;
-      const ids=id==="全部"?ALL_COLORS.map(c=>c.id):[id].filter(i=>ALL_COLORS.find(c=>c.id===i));
-      ids.forEach(i=>{
-        if(dir==="-"){const d=Math.min(ns[i]||0,a);nu[i]=(nu[i]||0)+d;ns[i]=Math.max(0,(ns[i]||0)-a);}
-        else{ns[i]=(ns[i]||0)+a;}
-      });
-    });
-    pushHistory(stock,used);
-    setStock(ns);setUsed(nu);
-    setCmdTags([]);setBatch(false);setSel(new Set());
-  }
-
-  function getDefaultDoneName(){
-    const d=new Date();
-    const mm=String(d.getMonth()+1).padStart(2,"0");
-    const dd=String(d.getDate()).padStart(2,"0");
-    return `${mm}/${dd}`;
-  }
-
-  function openTagLinkFlow(){
-    if(cmdTags.length===0)return;
-    setShowTagLink(true);
-    setTagLinkMode(null);
-    setNewDoneName(getDefaultDoneName());
-    setLinkedTaskId(null);
-  }
-
-  function finishTagDeduction(mode){
-    if(cmdTags.length===0)return;
-
-    const colorData=cmdTags
-      .filter(t=>t.dir==="-")
-      .map(t=>({id:t.id,count:parseFloat(t.amt)||0}))
-      .filter(t=>t.id&&t.count>0&&t.id!=="全部");
-
-    const ns={...stock},nu={...used};
-    colorData.forEach(({id,count})=>{
-      const d=Math.min(ns[id]||0,count);
-      nu[id]=(nu[id]||0)+d;
-      ns[id]=Math.max(0,(ns[id]||0)-count);
-    });
-
-    if(mode==="new"){
-      const name=(newDoneName||"").trim()||getDefaultDoneName();
-      const createdId=`done_${Date.now()}`;
-      const newTask={
-        id:createdId,
-        name,
-        img:null,
-        status:"done",
-        doneDate:new Date().toISOString(),
-        elapsedMs:0,
-        startedAt:null,
-        colorData,
-        sourceType:"quick_done"
-      };
-      pushHistory(stock,used,tasks);
-      setStock(ns);setUsed(nu);
-      setTasks(prev=>[newTask,...prev]);
-    }else if(mode==="link"&&linkedTaskId){
-      pushHistory(stock,used,tasks);
-      setStock(ns);setUsed(nu);
-      setTasks(prev=>prev.map(t=>t.id===linkedTaskId?{
-        ...t,
-        status:"done",
-        doneDate:new Date().toISOString(),
-        startedAt:null,
-        colorData: colorData.length>0 ? colorData : (t.colorData||[])
-      }:t));
-    }else{
-      // 纯扣豆不关联作品
-      pushHistory(stock,used);
-      setStock(ns);setUsed(nu);
     }
 
-    setCmdTags([]);
-    setBatch(false);
-    setSel(new Set());
-    setShowTagLink(false);
-    setTagLinkMode(null);
-    setLinkedTaskId(null);
+    if (targetPath) {
+      window.location.href = targetPath + currentPath + window.location.search;
+    }
+  })();
+</script> -->
+<meta name="robots" content="noindex, nofollow"><script src="https://cdn.prod.website-files.com/6889473510b50328dbb70ae6%2F689e5ba67671442434f3ca35%2F699e25b1680ad671d02001a2%2Ftutorial_table_spacing-1.0.0.js" type="text/javascript"></script></head><body><div class="page_wrap"><div class="u-position-fixed"><div class="w-embed"><style>
+  :root {
+    --grid-breakout: [full-start] minmax(0, 1fr) [content-start] repeat(var(--_grid---column-count), minmax(0, var(--_grid---column-width))) [content-end] minmax(0, 1fr) [full-end];
+    --grid-breakout-single: [full-start] minmax(0, 1fr) [content-start] minmax(0, calc(100% - var(--site--margin) * 2)) [content-end] minmax(0, 1fr) [full-end];
+  }
+  ::before, ::after {
+    box-sizing: border-box;
+  }
+  .w-embed:before, .w-embed:after,
+  .w-richtext:before, .w-richtext:after {
+    content: unset;
+  }
+  html {
+    background-color: var(--_theme---background);
+  }
+  button {
+    background-color: unset;
+    padding: unset;
+    text-align: inherit;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  video {
+    width: 100%;
+    object-fit: cover;
+  }
+  /* remove padding of empty element */
+  .wf-empty {
+    padding: 0;
+  }
+  svg {
+    max-width: 100%;
+  }
+  @media (prefers-color-scheme: light) {
+    option { color: black; }
+  }
+  img::selection {
+    background: transparent;
+  }
+  /* Typography */
+  body {
+    text-transform: var(--_text-style---text-transform);
+    font-smoothing: antialiased;
+    -webkit-font-smoothing: antialiased;
   }
 
-  const [cropImg,setCropImg]=useState(null); // 裁剪用的原图base64
-  const [cropBox,setCropBox]=useState(null); // {x,y,w,h} 相对于显示尺寸
-  const [cropDrag,setCropDrag]=useState(null); // 拖拽状态
-  const cropCanvasRef=useRef(null);
-  const cropImgRef=useRef(null);
+  /* Clear Defaults */
+  a:not ([class]) {
+    text-decoration: underline;} 
 
-  async function handleImg(e){
-    const file=e.target.files[0];
-    if(!file)return;
-    const url=URL.createObjectURL(file);
-    const img=new Image();
-    img.onload=()=>{
-      const canvas=document.createElement('canvas');
-      const max=1600;let w=img.width,h=img.height;
-      if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
-      canvas.width=w;canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      URL.revokeObjectURL(url);
-      setCropImg(canvas.toDataURL('image/jpeg',0.9));
-      setCropBox(null);
-    };
-    img.src=url;
-    e.target.value="";
+  [class~="u-rich-text"] a,
+  [class~="u-rich-text-cs"] a,
+  [class~="u-rich-text-blog"] a,
+  [class~="u-rich-text-tutorials"] a,
+  a.u-rich-text,
+  [class~="command_instruction"] a {
+    transition: color .15s ease-out, text-decoration-color .15s ease-out;
+    text-underline-offset: 3px;
+    text-decoration: underline;
+    color: currentcolor;
+    text-decoration-color: var(--_theme---border-primary);
   }
 
-  async function confirmCrop(){
-    if(!cropImg)return;
-    if(!isPro&&freeAiUsed>=totalAiLimit){setShowUpgrade(true);return;}
-    setImgLoading(true);setImgErr("");
-    try{
-      let finalB64=cropImg;
-      if(cropBox&&cropImgRef.current){
-        const el=cropImgRef.current;
-        const scaleX=el.naturalWidth/el.clientWidth;
-        const scaleY=el.naturalHeight/el.clientHeight;
-        const canvas=document.createElement('canvas');
-        canvas.width=Math.round(cropBox.w*scaleX);
-        canvas.height=Math.round(cropBox.h*scaleY);
-        const ctx=canvas.getContext('2d');
-        const imgEl=new Image();
-        await new Promise(res=>{imgEl.onload=res;imgEl.src=cropImg;});
-        ctx.drawImage(imgEl,Math.round(cropBox.x*scaleX),Math.round(cropBox.y*scaleY),canvas.width,canvas.height,0,0,canvas.width,canvas.height);
-        finalB64=canvas.toDataURL('image/jpeg',0.92);
+  [class~="u-rich-text"] a:hover,
+  [class~="u-rich-text-cs"] a:hover,
+  [class~="u-rich-text-blog"] a:hover,
+  [class~="u-rich-text-tutorials"] a:hover,
+  a.u-rich-text:hover,
+  [class~="command_instruction"] a:hover {
+    text-decoration-color: var(--_theme---foreground-primary);
+    color: var(--_theme---foreground-primary);
+  }
+
+  h1,h2,h3,h4,h5,h6,p,blockquote,label {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    text-wrap: inherit;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+  select:has(option[value=""]:checked) {
+    color: color-mix(in lab, currentcolor 60%, transparent)
+  }
+  /* Selection Color */
+  ::selection {
+    background-color: var(--_theme---selection--background);
+    color: var(--_theme---selection--text);
+  }
+  /* Margin Trim */
+  :is(.u-margin-trim,.u-rich-text) > :not(:not(.w-condition-invisible,.u-cover-absolute,.u-ignore-trim) ~ :not(.w-condition-invisible,.u-cover-absolute,.u-ignore-trim)),
+  :is(.u-margin-trim,.u-rich-text) > :not(:not(.w-condition-invisible,.u-cover-absolute,.u-ignore-trim) ~ :not(.w-condition-invisible,.u-cover-absolute,.u-ignore-trim)).u-display-contents > :first-child {
+    margin-top: 0;
+  }
+  :is(.u-margin-trim,.u-rich-text) > :not(:has(~ :not(.w-condition-invisible,.u-cover-absolute,.u-ignore-trim))),
+  :is(.u-margin-trim,.u-rich-text) > :not(:has(~ :not(.w-condition-invisible,.u-cover-absolute,.u-ignore-trim))).u-display-contents > :last-child {
+    margin-bottom: 0;
+  }
+  /* Line Height Trim */
+  :is(h1,h2,h3,h4,h5,h6,p):not(.u-text-trim-off,:has([class*="u-text-style-"]))::before,
+  [class*="u-text-style-"]:not(.u-text-trim-off,:has(h1,h2,h3,h4,h5,h6,p))::before {
+    content: "";
+    display: table;
+    margin-bottom: calc(-0.5lh + var(--_text-style---trim-top));
+  }
+  :is(h1,h2,h3,h4,h5,h6,p):not(.u-text-trim-off,:has([class*="u-text-style-"]))::after,
+  [class*="u-text-style-"]:not(.u-text-trim-off,:has(h1,h2,h3,h4,h5,h6,p))::after {
+    content: "";
+    display: table;
+    margin-bottom: calc(-0.5lh + var(--_text-style---trim-bottom));
+  }
+  /* Rich Text Links */
+  .w-richtext a {
+    position: relative;
+    z-index: 4;
+  }
+  /* Line Clamp */
+  .u-line-clamp-1, .u-line-clamp-2, .u-line-clamp-3, .u-line-clamp-4 {
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .u-line-clamp-2 { -webkit-line-clamp: 2; }
+  .u-line-clamp-3 { -webkit-line-clamp: 3; }
+  .u-line-clamp-4 { -webkit-line-clamp: 4; }
+  /* Child Contain */
+  .u-child-contain > * {
+    width: 100%;
+    max-width: inherit !important;
+    margin-inline: 0 !important;
+    margin-top: 0 !important;
+  }
+  /* Hide */
+  .u-hide-if-empty:empty,
+  .u-hide-if-empty:not(:has(> :not(.w-condition-invisible))),
+  .u-hide-if-empty-cms:not(:has(.w-dyn-item)),
+  .u-embed-js,
+  .u-embed-css {
+    display: none !important;
+  }
+  /* Focus State */
+  a, button, :where([tabindex]), [data-outline] {
+    outline-offset: var(--focus--offset-outer);
+  }
+  a:focus-visible,
+  button:focus-visible,
+  [tabindex]:focus-visible,
+  label:has(input:focus-visible) [data-outline] {
+    outline-color: color-mix(in srgb, var(--_button-style---border) 50%, transparent);
+    outline-width: var(--focus--width);
+    outline-style: solid;
+  }
+
+  /* Global / Clickable Component */
+  .wf-design-mode .clickable_wrap {
+    z-index: 0;
+  }
+  .clickable_wrap a[href="#"] {
+    display: none;
+  }
+  .clickable_wrap a[href="#"] ~ button {
+    display: block;
+  }
+  /* Responsive Above */
+  @container threshold-large (width >= 62em) {
+    .u-order-unset-above { order: unset !important; }
+    .u-all-unset-above { all: unset !important; }
+    .u-grid-below { display: flex !important; }
+    .u-max-width-unset-above { max-width: unset !important; }
+    .u-width-unset-above { width: unset !important; }
+    .u-hide-above { display: none !important; }
+  }
+  @container threshold-medium (width >= 48em) {
+    .u-order-unset-above { order: unset !important; }
+    .u-all-unset-above { all: unset !important; }
+    .u-grid-below { display: flex !important; }
+    .u-max-width-unset-above { max-width: unset !important; }
+    .u-width-unset-above { width: unset !important; }
+    .u-hide-above { display: none !important; }
+  }
+  @container threshold-small (width >= 30em) {
+    .u-order-unset-above { order: unset !important; }
+    .u-all-unset-above { all: unset !important; }
+    .u-grid-below { display: flex !important; }
+    .u-max-width-unset-above { max-width: unset !important; }
+    .u-width-unset-above { width: unset !important; }
+    .u-hide-above { display: none !important; }
+  }
+  /* Responsive Below */
+  @container threshold-large (width < 62em) {
+    .u-order-unset-below { order: unset !important; }
+    .u-all-unset-below { all: unset !important; }
+    .u-grid-above { display: flex !important; }
+    .u-max-width-unset-below { max-width: unset !important; }
+    .u-width-unset-below { width: unset !important; }
+    .u-alignment-unset-below {
+      --_alignment---direction: start;
+      align-self: start;
+    }
+    .u-hide-below { display: none !important; }
+  }
+  @container threshold-medium (width < 48em) {
+    .u-order-unset-below { order: unset !important; }
+    .u-all-unset-below { all: unset !important; }
+    .u-grid-above { display: flex !important; }
+    .u-max-width-unset-below { max-width: unset !important; }
+    .u-width-unset-below { width: unset !important; }
+    .u-alignment-unset-below {
+      --_alignment---direction: start;
+      align-self: start;
+    }
+    .u-hide-below { display: none !important; }
+  }
+  @container threshold-small (width < 30em) {
+    .u-order-unset-below { order: unset !important; }
+    .u-all-unset-below { all: unset !important; }
+    .u-grid-above { display: flex !important; }
+    .u-max-width-unset-below { max-width: unset !important; }
+    .u-width-unset-below { width: unset !important; }
+    .u-alignment-unset-below {
+      --_alignment---direction: start;
+      align-self: start;
+    }
+    .u-hide-below { display: none !important; }
+  }
+  /* Form Radio */
+  .form_main_radio_label:has(input:checked) .form_main_radio_circle_inner {
+    opacity: 1;
+  }
+  /* Form Checkbox */
+  .form_main_checkbox_label:has(input:checked) .form_main_checkbox_box {
+    background-color: currentColor;
+    border-color: currentColor;
+  }
+  .form_main_checkbox_label:has(input:checked) .form_main_checkbox_icon {
+    opacity: 1;
+  }
+  /* State Manager */
+  [data-state] { --_state---true: 1; --_state---false: 0; }
+  .is-active,
+  [data-state~="checked"]:is(:checked, :has(:checked)),
+  [data-state~="current"]:is(.w--current, :has(.w--current)),
+  [data-state~="open"]:is(.w--open, :has(.w--open)),
+  [data-state~="expanded"]:is([aria-expanded="true"], :has([aria-expanded="true"])),
+  [data-state~="external"]:is([target="_blank"], :has([target="_blank"])) { 
+    --_state---true: 0; --_state---false: 1;
+  }
+  .wf-design-mode [data-trigger~="preview"],
+  [data-trigger~="focus"]:is(:focus-visible, :has(:focus-visible)),
+  [data-trigger~="group"]:has([data-trigger~="focus-other"]:focus-visible, [data-trigger~="focus-other"] :focus-visible)
+  [data-trigger~="focus-other"]:not(:focus-visible, :has(:focus-visible)) {
+    --_trigger---on: 0; --_trigger---off: 1;
+  }
+  @media (hover: hover) {
+    [data-button]:hover,
+    [data-trigger~="hover"]:is(a:hover,button:hover,:has(a:hover,button:hover)),
+    [data-trigger~="group"]:has([data-trigger~="hover-other"]:hover) [data-trigger~="hover-other"]:not(:hover) { 
+      --_trigger---on: 0; --_trigger---off: 1;
+    }
+    [data-trigger~="hover-other"]:hover { --_trigger---on: 1 !important; --_trigger---off: 0 !important; }
+  }
+  @media (hover: none) {
+    [data-trigger~="mobile"] { --_trigger---on: 0; --_trigger---off: 1; }
+  }
+</style></div><div class="w-embed"><style>
+  code, kbd, pre, samp {
+    font-family: var(--_typography---font--mono-family);
+  }
+  body * {
+    scrollbar-width: none;        /* Firefox */
+    -ms-overflow-style: none;     /* IE/Edge Legacy */
+  }
+  body *::-webkit-scrollbar {
+    display: none;                /* Unreliable */
+    width: 0px;                   /* WebKit/Blink */
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body,
+    .u-theme-ivory,
+    [data-wf--section--theme="ivory"] {
+      --_theme---background-primary: var(--swatch--gray-950);
+      --_theme---background-secondary: var(--swatch--gray-900);
+      --_theme---background-tertiary: var(--swatch--gray-850);
+      --_theme---border-primary: var(--swatch--gray-600);
+      --_theme---border-secondary: var(--swatch--gray-700);
+      --_theme---border-tertiary: var(--swatch--gray-750);
+      --_theme---foreground-primary: var(--swatch--gray-050);
+      --_theme---foreground-secondary: var(--swatch--gray-400);
+      --_theme---foreground-tertiary: var(--swatch--gray-500);
+      --_theme---pictogram-accent: var(--swatch--gray-750);
+      --_theme---button-primary--background: var(--swatch--gray-050);
+      --_theme---button-primary--text: var(--swatch--gray-950);
+      --_theme---button-primary--border: var(--swatch--transparent);
+      --_theme---button-primary--icon: var(--_theme---button-primary--text);
+      --_theme---button-primary--background-hover: var(--_theme---button-primary--background);
+      --_theme---button-primary--text-hover: var(--_theme---button-primary--text);
+      --_theme---button-primary--border-hover: var(--_theme---button-primary--border);
+      --_theme---button-primary--icon-hover: var(--_theme---background-primary);
+      --_theme---button-secondary--background: var(--swatch--gray-750);
+      --_theme---button-secondary--text: var(--swatch--gray-050);
+      --_theme---button-secondary--border: var(--_theme---border-secondary);
+      --_theme---button-secondary--icon: var(--_theme---button-secondary--text);
+      --_theme---button-secondary--background-hover: var(--_theme---button-secondary--background);
+      --_theme---button-secondary--text-hover: var(--_theme---button-secondary--text);
+      --_theme---button-secondary--border-hover: var(--_theme---button-secondary--background);
+      --_theme---button-secondary--icon-hover: var(--_theme---foreground-secondary);
+      --_theme---button-tertiary--background: var(--_theme---background-primary);
+      --_theme---button-tertiary--text: var(--swatch--gray-050);
+      --_theme---button-tertiary--border: var(--_theme---border-secondary);
+      --_theme---button-tertiary--icon: var(--_theme---button-tertiary--text);
+      --_theme---button-tertiary--background-hover: var(--_theme---button-tertiary--background);
+      --_theme---button-tertiary--text-hover: var(--_theme---button-tertiary--text);
+      --_theme---button-tertiary--border-hover: var(--_theme---button-tertiary--border);
+      --_theme---button-tertiary--icon-hover: var(--_theme---foreground-primary);
+      --_theme---error-text: #df6666;
+      --_theme---heroes-accent: #C46849;
+      --_theme---white: var(--_theme---background-primary);
+    }
+    .u-theme-white,
+    [data-wf--section--theme="white"] {
+      --_theme---background-primary: var(--swatch--gray-850);
+      --_theme---background-secondary: var(--swatch--gray-800);
+      --_theme---background-tertiary: var(--swatch--gray-750);
+      --_theme---border-primary: var(--swatch--gray-550);
+      --_theme---border-secondary: var(--swatch--gray-650);
+      --_theme---border-tertiary: var(--swatch--gray-700);
+      --_theme---foreground-primary: var(--swatch--gray-050);
+      --_theme---foreground-secondary: var(--swatch--gray-350);
+      --_theme---foreground-tertiary: var(--swatch--gray-450);
+      --_theme---pictogram-accent: var(--swatch--gray-700);
+      --_theme---button-primary--background: var(--swatch--gray-050);
+      --_theme---button-primary--text: var(--swatch--gray-950);
+      --_theme---button-primary--border: var(--swatch--transparent);
+      --_theme---button-primary--icon: var(--_theme---button-primary--text);
+      --_theme---button-primary--background-hover: var(--_theme---button-primary--background);
+      --_theme---button-primary--text-hover: var(--_theme---button-primary--text);
+      --_theme---button-primary--border-hover: var(--_theme---button-primary--border);
+      --_theme---button-primary--icon-hover: var(--_theme---background-primary);
+      --_theme---button-secondary--background: var(--swatch--gray-700);
+      --_theme---button-secondary--text: var(--swatch--gray-050);
+      --_theme---button-secondary--border: var(--_theme---border-secondary);
+      --_theme---button-secondary--icon: var(--_theme---button-secondary--text);
+      --_theme---button-secondary--background-hover: var(--_theme---button-secondary--background);
+      --_theme---button-secondary--text-hover: var(--_theme---button-secondary--text);
+      --_theme---button-secondary--border-hover: var(--_theme---button-secondary--background);
+      --_theme---button-secondary--icon-hover: var(--_theme---foreground-secondary);
+      --_theme---button-tertiary--background: var(--_theme---background-primary);
+      --_theme---button-tertiary--text: var(--swatch--gray-050);
+      --_theme---button-tertiary--border: var(--_theme---border-secondary);
+      --_theme---button-tertiary--icon: var(--_theme---button-tertiary--text);
+      --_theme---button-tertiary--background-hover: var(--_theme---button-tertiary--background);
+      --_theme---button-tertiary--text-hover: var(--_theme---button-tertiary--text);
+      --_theme---button-tertiary--border-hover: var(--_theme---button-tertiary--border);
+      --_theme---button-tertiary--icon-hover: var(--_theme---foreground-primary);
+      --_theme---error-text: #df6666;
+      --_theme---heroes-accent: #C46849;
+      --_theme---white: var(--_theme---background-primary);
+    }
+    .u-theme-neutral-1,
+    [data-wf--section--theme="neutral-1"] {
+      --_theme---background-primary: var(--swatch--gray-800);
+      --_theme---background-secondary: var(--swatch--gray-750);
+      --_theme---background-tertiary: var(--swatch--gray-700);
+      --_theme---border-primary: var(--swatch--gray-500);
+      --_theme---border-secondary: var(--swatch--gray-600);
+      --_theme---border-tertiary: var(--swatch--gray-650);
+      --_theme---foreground-primary: var(--swatch--gray-050);
+      --_theme---foreground-secondary: var(--swatch--gray-300);
+      --_theme---foreground-tertiary: var(--swatch--gray-400);
+      --_theme---pictogram-accent: var(--swatch--gray-650);
+      --_theme---button-primary--background: var(--swatch--gray-050);
+      --_theme---button-primary--text: var(--swatch--gray-950);
+      --_theme---button-primary--border: var(--swatch--transparent);
+      --_theme---button-primary--icon: var(--_theme---button-primary--text);
+      --_theme---button-primary--background-hover: var(--_theme---button-primary--background);
+      --_theme---button-primary--text-hover: var(--_theme---button-primary--text);
+      --_theme---button-primary--border-hover: var(--_theme---button-primary--border);
+      --_theme---button-primary--icon-hover: var(--_theme---background-primary);
+      --_theme---button-secondary--background: var(--swatch--gray-650);
+      --_theme---button-secondary--text: var(--swatch--gray-050);
+      --_theme---button-secondary--border: var(--_theme---border-secondary);
+      --_theme---button-secondary--icon: var(--_theme---button-secondary--text);
+      --_theme---button-secondary--background-hover: var(--_theme---button-secondary--background);
+      --_theme---button-secondary--text-hover: var(--_theme---button-secondary--text);
+      --_theme---button-secondary--border-hover: var(--_theme---button-secondary--background);
+      --_theme---button-secondary--icon-hover: var(--_theme---foreground-secondary);
+      --_theme---button-tertiary--background: var(--_theme---background-primary);
+      --_theme---button-tertiary--text: var(--swatch--gray-050);
+      --_theme---button-tertiary--border: var(--_theme---border-secondary);
+      --_theme---button-tertiary--icon: var(--_theme---button-tertiary--text);
+      --_theme---button-tertiary--background-hover: var(--_theme---button-tertiary--background);
+      --_theme---button-tertiary--text-hover: var(--_theme---button-tertiary--text);
+      --_theme---button-tertiary--border-hover: var(--_theme---button-tertiary--border);
+      --_theme---button-tertiary--icon-hover: var(--_theme---foreground-primary);
+      --_theme---error-text: #df6666;
+      --_theme---heroes-accent: #C46849;
+      --_theme---white: var(--_theme---background-primary);
+    }
+
+    .logo_light {
+      display: none;
+    }
+    .logo_dark {
+      display: block;
+    }
+    .illustration_light {
+      display: none;
+    }
+    .illustration_dark {
+      display: block;
+    }
+
+  }
+
+  @media (prefers-color-scheme: light) {
+    .logo_light {
+      display: block;
+    }
+    .logo_dark {
+      display: none;
+    }
+    .illustration_light {
+      display: block;
+    }
+    .illustration_dark {
+      display: none;
+    }
+  }
+
+  .u-text-font-mono {
+    --_text-style---trim-top: var(--_typography---font--mono-text-trim-top);
+    --_text-style---trim-bottom: var(--_typography---font--mono-text-trim-bottom);
+  }
+
+  .u-checklist ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .u-checklist ul li {
+    position: relative; 
+    padding-left: 2rem; 
+  }
+
+  .u-checklist ul li::before {
+    content: "";                 
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-image: url("data:image/svg+xml,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M18.226%206.13068C18.4439%205.95655%2018.7615%205.95361%2018.9842%206.13888C19.2067%206.32458%2019.2604%206.63728%2019.1283%206.88304L19.0604%206.98382L10.0602%2017.784C9.95233%2017.9133%209.7949%2017.9908%209.62665%2017.9984C9.45844%2018.0059%209.29454%2017.9429%209.17547%2017.8238L4.97541%2013.6237L4.89806%2013.53C4.7446%2013.2971%204.7705%2012.9802%204.97541%2012.7753C5.18032%2012.5704%205.49726%2012.5445%205.73011%2012.698L5.82386%2012.7753L9.55868%2016.5101L18.1393%206.21506L18.226%206.13068Z%22%20fill%3D%22%235E5D59%22/%3E%3C/svg%3E");
+  }
+
+  [class^="card_"][class$="_wrap"] .clickable_wrap.u-cover-absolute .clickable_link,
+  [class^="card_"][class$="_wrap"] .clickable_wrap.u-cover-absolute .clickable_btn {
+    outline-offset: var(--focus--offset-inner);
+  }
+
+  textarea[data-autogrow] {
+    overflow-y: hidden;
+    resize: none;
+    height: 1.75rem; 
+    min-height: 0;  
+  }
+
+  .btn_main_wrap::hover,
+  .btn_small_wrap::hover,
+  .btn_tiny_wrap::hover,
+  .button_toggle_wrap::hover,
+  .btn_icon_main_wrap::hover,
+  .btn_icon_small_wrap::hover,
+  .btn_icon_tiny_wrap::hover{
+    transition: /* Transition to click/active */
+      box-shadow ease-in-out 100ms, 
+      background ease-in-out 100ms,
+      color ease-in-out 50ms;
+  }
+
+  .btn_main_wrap::active,
+  .btn_small_wrap::active,
+  .btn_tiny_wrap::active,
+  .button_toggle_wrap::active,
+  .btn_icon_main_wrap::active,
+  .btn_icon_small_wrap::active,
+  .btn_icon_tiny_wrap::active{
+    transition: /* Transition to click/active */
+      box-shadow ease-in-out 50ms, 
+      background ease-in-out 50ms,
+      color ease-in-out 25ms;
+  }
+
+  .card_cs_grid_img img {
+    max-width: 60%;
+    max-height: 60%;
+  }
+
+  @container viewport (width < 30em) {
+    [data-wf--grid--column-count="4"]:has(.card_feature_wrap) .c-grid {
+      --_column-count---value: 1;
+    }
+  }
+  @container viewport (min-width: 30em) and (max-width: 62em) {
+    [data-wf--grid--column-count="4"]:has(.card_feature_wrap) .c-grid {
+      --_column-count---value: 2;
+    }
+  }
+
+  /* Mods for spacing and visibility of embed in accordian content used for schema */
+  .accordion_content_text p:has(+ .w-embed.w-script) {
+    margin-bottom: 0;
+  }
+
+  /* Absolute inner SVG of lottie to prevent page jump */
+  .heroes_lottie_component svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+</style>
+
+<style>
+  /* Sticky scroll */
+  @media screen and (min-width: 992px) {
+    .sticky_image_link_wrap:has(.sticky_image_link.w--current) {
+      opacity: 1;
+      width: calc((100% - var(--_grid---gutter)) * (6 / 12));
+    }
+  }
+  @media screen and (max-width: 767px) {
+    .c-grid:last-child .sticky_image_block,
+    .sticky_image_block:last-child {
+      padding: 0;
+    }
+    .c-grid:last-child .sticky_image_wrap {
+      margin-bottom: 0;
+    }
+  }
+
+  #send, #threads, #get-help, #collaborate {
+    display: block; /* or grid, flex - anything but contents */
+  }
+
+  /* Removes padding from the last-item in the Download page cards */
+  .download_card_bar_wrap:last-child {
+    padding-bottom: 0;
+  }
+</style></div><div class="w-embed"><style>
+	/* Select text below clickable overlay */
+  html.wf-design-mode .clickable_wrap {
+    pointer-events: none;
+  }
+</style></div><div class="u-embed-js w-embed w-script"><script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // ---------------- Config ----------------
+    const EDGE_PADDING = 16;   // >= 1rem from edges
+    const OFFSET_Y     = 10;   // gap under trigger
+    const DIM_OPACITY  = 0.3;
+    const DIM_EASE_MS  = 350;
+    const CLOSE_DELAY  = 120;
+    const isCoarse = () => matchMedia("(hover: none), (pointer: coarse)").matches;
+
+    // ---------------- Bubble (single instance) ----------------
+    function ensureBubble(){
+      let el = document.querySelector(".tt-bubble");
+      if (el) return el;
+      el = document.createElement("div");
+      el.className = "tt-bubble u-theme-white";
+      el.setAttribute("role","tooltip");
+      el.setAttribute("aria-hidden","true");
+      el.style.left = "0px";
+      el.style.top  = "0px";
+      el.innerHTML = `
+        <div class="tt-inner">
+          <div class="tt-h" id="tt-title"></div>
+          <p class="tt-b" id="tt-body"></p>
+          <button type="button" class="tt-close" aria-label="Close">×</button>
+        </div>`;
+      document.body.appendChild(el);
+      return el;
+    }
+    const bubble  = ensureBubble();
+    const elH     = bubble.querySelector("#tt-title");
+    const elB     = bubble.querySelector("#tt-body");
+    const elClose = bubble.querySelector(".tt-close");
+
+    // ---------------- Parse [[term|heading|body]] anywhere ----------------
+    const TOKEN_RE = /\[\[([^|\]]+)\|([^|\]]+)\|([^\]]+)\]\]/g;
+    const BLOCK_SKIP = new Set(["SCRIPT","STYLE","NOSCRIPT","TEXTAREA","INPUT","SELECT","CODE","PRE","TEMPLATE","IFRAME"]);
+    function shouldSkipTextNode(n){
+      let el = n.parentElement;
+      while (el){
+        if (BLOCK_SKIP.has(el.tagName) || el.isContentEditable) return true;
+        el = el.parentElement;
       }
-      setCropImg(null);setCropBox(null);
-      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:finalB64})});
-      const data=await resp.json();
-      if(data.result&&data.result!=='无法识别'){
-        // 解析成tags
-        const tags=data.result.split(/[,，]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
-          const m=s.match(/^([A-Za-z]+\d+|全部)\s*([+-])\s*(\d+)$/i);
-          if(!m)return null;
-          return {id:m[1].toUpperCase(),dir:m[2],amt:m[3]};
-        }).filter(Boolean);
-        if(tags.length>0){setCmdTags(tags);setCmdText("");setCmdErr("");}
-        else{setImgErr("识别失败，试试框选统计表区域再识别～");}
-      }else{setImgErr("识别失败，试试框选统计表区域再识别～");}
-    }catch(err){setImgErr("请求出错："+err.message);}
-    finally{setImgLoading(false);}
-  }
-
-  function applyCmd(){
-    const raw=cmdText.trim();
-    if(!raw)return;
-    // 支持多条指令用逗号/换行分隔，格式：A15-200 / B3+500 / 全部-100
-    const lines=raw.split(/[,，\n]+/).map(s=>s.trim()).filter(Boolean);
-    const ns={...stock},nu={...used};
-    let hasErr=false;
-    lines.forEach(line=>{
-      const m=line.match(/^(全部|[A-Za-z]\d+)\s*([+-])\s*(\d+)$/i);
-      if(!m){hasErr=true;return;}
-      const [,target,dir,amtStr]=m;
-      const amt=parseFloat(amtStr);
-      if(isNaN(amt)||amt<=0){hasErr=true;return;}
-      const ids=target==="全部"?ALL_COLORS.map(c=>c.id):[target.toUpperCase()].filter(id=>ALL_COLORS.find(c=>c.id===id));
-      if(ids.length===0){hasErr=true;return;}
-      ids.forEach(id=>{
-        if(dir==="-"){const d=Math.min(ns[id]||0,amt);nu[id]=(nu[id]||0)+d;ns[id]=Math.max(0,(ns[id]||0)-amt);}
-        else{ns[id]=(ns[id]||0)+amt;}
-      });
+      return false;
+    }
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    while (walker.nextNode()){
+      const n = walker.currentNode;
+      if (!n.nodeValue || shouldSkipTextNode(n)) continue;
+      if (TOKEN_RE.test(n.nodeValue)) textNodes.push(n);
+      TOKEN_RE.lastIndex = 0;
+    }
+    textNodes.forEach(node => {
+      const frag = document.createDocumentFragment();
+      const insideLink = !!node.parentElement.closest("a");
+      let text = node.nodeValue, last = 0; TOKEN_RE.lastIndex = 0; let m;
+      while ((m = TOKEN_RE.exec(text))){
+        if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+        const term=m[1].trim(), heading=m[2].trim(), body=m[3].trim();
+        const t = insideLink ? document.createElement("span") : document.createElement("button");
+        if (insideLink){ t.setAttribute("role","button"); t.setAttribute("tabindex","0"); } else { t.type="button"; }
+        t.className="tt-trigger";
+        t.textContent=term;
+        t.setAttribute("data-tt-h", heading);
+        t.setAttribute("data-tt-b", body);
+        t.setAttribute("aria-haspopup","dialog");
+        t.setAttribute("aria-expanded","false");
+        frag.appendChild(t);
+        last = TOKEN_RE.lastIndex;
+      }
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(frag, node);
     });
-    if(hasErr){setCmdErr("部分指令格式有误，请检查～例：A15-200 或 全部+100");return;}
-    pushHistory(stock,used);
-    setStock(ns);setUsed(nu);
-    setCmdText("");setCmdErr("");setBatch(false);setSel(new Set());
+
+    // ---------------- State ----------------
+    let current = null;
+    let hoverCount = 0;
+    let closeTimer = null;
+
+    // Dimming bookkeeping
+    let dimCtx = null; // { container, dimEls:[], wrappedTexts:[], pathEls:[] }
+
+    // ---------------- Find the correct "text element" container ----------------
+    function findTextContainer(trigger){
+      // Prefer common RTE wrappers
+      let el = trigger.closest(".w-richtext, .rich-text, .rte, [data-rte]");
+      if (el) return el;
+
+      // Otherwise climb until we find an ancestor that contains multiple block nodes anywhere inside.
+      const BLOCK_SEL = "p,h1,h2,h3,h4,h5,h6,ul,ol,li,blockquote,pre,figure,figcaption";
+      el = trigger.parentElement;
+      while (el && el !== document.body){
+        const blockCount = el.querySelectorAll(BLOCK_SEL).length;
+        if (blockCount >= 2) return el;
+        el = el.parentElement;
+      }
+
+      // Fallback: nearest non-inline container
+      el = trigger.parentElement || document.body;
+      while (el && el !== document.body){
+        const d = getComputedStyle(el).display;
+        if (d !== "inline" && d !== "contents") return el;
+        el = el.parentElement;
+      }
+      return document.body;
+    }
+
+    // Utility: child of `ancestor` that contains `target` (direct child)
+    function directChildContaining(ancestor, target){
+      for (const ch of ancestor.children){
+        if (ch === target || ch.contains(target)) return ch;
+      }
+      return null;
+    }
+
+    function getElementTarget(e) {
+    // If target is already an Element, use it
+    if (e.target instanceof Element) return e.target;
+    // Otherwise, walk the composed/path for the first Element
+    const path = (typeof e.composedPath === 'function') ? e.composedPath() : [];
+    for (const n of path) if (n instanceof Element) return n;
+    return null;
   }
 
+    // ---------------- Dim everything except the trigger branch (sibling branches only) ----------------
+    function dimAllOtherBranches(container, trigger){
+      undim(); // clear previous
 
+      const dimEls = [];
+      const wrappedTexts = [];
+      const pathEls = [];
 
+      // Build ELEMENT-only path [container -> ... -> trigger]
+      const path = [];
+      for (let el = trigger; el && el !== container; el = el.parentElement) path.push(el);
+      path.push(container);
+      path.reverse();
 
+      // At each ancestor level, find the *direct* child that leads to the trigger
+      for (let i = 0; i < path.length; i++){
+        const anc = path[i];
+        const branchChild = (i < path.length - 1) ? directChildContaining(anc, path[i+1]) : path[i]; // last step is the trigger itself
 
-
-  const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
-
-  function pushHistory(s,u,t){setHistory(h=>[...h.slice(-MAX_HISTORY+1),{stock:{...s},used:{...u},...(t!==undefined&&{tasks:[...t]})}]);}
-
-  const saveStock=useCallback((id,beads)=>{
-    pushHistory(stock,used);
-    const diff=(stock[id]||0)-beads;
-    if(diff>0){setUsed(u=>({...u,[id]:(u[id]||0)+diff}));}
-    setStock(s=>({...s,[id]:beads}));
-  },[stock,used]);
-  const deductStock=useCallback((id,beads)=>{
-    pushHistory(stock,used);
-    setStock(s=>({...s,[id]:Math.max(0,(s[id]||0)-beads)}));
-    setUsed(u=>({...u,[id]:(u[id]||0)+beads}));
-  },[stock,used]);
-  function undoLast(){
-    setHistory(h=>{
-      if(h.length===0)return h;
-      const prev=h[h.length-1];
-      setStock(prev.stock);
-      setUsed(prev.used);
-      if(prev.tasks!==undefined)setTasks(prev.tasks);
-      return h.slice(0,-1);
-    });
-  }
-  const [resetConfirm,setResetConfirm]=useState(false);
-  const [resetKey,setResetKey]=useState(0);
-  const [tasks,setTasks]=useState(()=>{try{return JSON.parse(localStorage.getItem("pindou_tasks")||"[]")}catch(e){return []}});
-
-  useEffect(()=>{
-    try{
-      localStorage.setItem("pindou_tasks",JSON.stringify(tasks));
-    }catch(e){}
-  },[tasks]);
-  const [tasksLoaded,setTasksLoaded]=useState(false);
-  const tasksTimerRef=useRef(null);
-  useEffect(()=>{async function lt(){
-    try{
-      const localTasks=(()=>{try{const s=localStorage.getItem('pindou_tasks');return s?JSON.parse(s):[]}catch{return []}})();
-      if(user&&isPro){
-        const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
-        const cloudTasks=Array.isArray(data?.tasks)?data.tasks:[];
-        if(localTasks.length>0 && cloudTasks.length===0){
-          setTasks(localTasks);
-        }else if(cloudTasks.length>0){
-          setTasks(cloudTasks);
-          try{localStorage.setItem('pindou_tasks',JSON.stringify(cloudTasks));}catch{}
-        }else{
-          setTasks(localTasks);
+        // Fade element siblings (whole branches)
+        for (const child of anc.children){
+          if (child === branchChild) continue; // keep the path branch crisp
+          // Never fade any element that is (or contains) the trigger
+          if (child === trigger || child.contains(trigger)) continue;
+          child.style.transition = `opacity ${DIM_EASE_MS}ms ease`;
+          child.style.opacity = String(DIM_OPACITY);
+          dimEls.push(child);
         }
-      }else{
-        setTasks(localTasks);
+
+        // Fade TEXT NODE siblings directly under this ancestor (outside branchChild)
+        anc.childNodes.forEach(node => {
+          if (node.nodeType !== 3) return; // text only
+          if (!node.nodeValue || !node.nodeValue.trim()) return;
+          // If this text node sits inside branchChild, skip
+          if (branchChild && branchChild.contains && branchChild.contains(node)) return;
+          const span = document.createElement("span");
+          span.style.transition = `opacity ${DIM_EASE_MS}ms ease`;
+          span.style.opacity = String(DIM_OPACITY);
+          span.textContent = node.nodeValue;
+          node.parentNode.replaceChild(span, node);
+          wrappedTexts.push(span);
+        });
+
+        // Keep a reference to the path elements (so we can explicitly restore opacity if needed)
+        if (anc && anc.nodeType === 1) pathEls.push(anc);
       }
-    }finally{
-      setTasksLoaded(true);
-    }
-  }lt();},[user,isPro]);
-  useEffect(()=>{if(!tasksLoaded)return;try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch{}if(!user||!isPro)return;clearTimeout(tasksTimerRef.current);tasksTimerRef.current=setTimeout(async()=>{await supabase.from("profiles").update({tasks}).eq("user_id",user.id);},1500);},[tasks,tasksLoaded]);
-  async function resetData(){
-    if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
-    setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
-    localStorage.removeItem('pindou_stock');localStorage.removeItem('pindou_used');
-    localStorage.removeItem('pindou_tasks');
-    if(user){
-      await supabase.from('stock').delete().eq('user_id',user.id);
-      await supabase.from('profiles').update({tasks:[]}).eq('user_id',user.id);
-    }
-    setResetConfirm(false);
-    setResetKey(k=>k+1);
-  }
 
-  function exportData(){
-    const data={stock,used,exportedAt:new Date().toISOString()};
-    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=`拼豆记_备份_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.json`;
-    a.click();URL.revokeObjectURL(url);
-  }
-
-  const importRef=useRef(null);
-  function importData(e){
-    const file=e.target.files[0];if(!file)return;
-    const r=new FileReader();
-    r.onload=ev=>{
-      try{
-        const d=JSON.parse(ev.target.result);
-        if(d.stock)setStock(d.stock);
-        if(d.used)setUsed(d.used);
-        alert('导入成功！数据已恢复～');
-      }catch{alert('文件格式有误，请使用导出的备份文件～');}
-    };
-    r.readAsText(file);
-    e.target.value='';
-  }
-  const cardProps={tn,T,stock,used,batch,onSave:saveStock,onDeduct:deductStock,onToggleSel:toggleSel,wC,wL,focusMode,focusColor,onFocusClick:handleFocusClick};
-
-  function handleFocusClick(id){
-    setFocusColor(prev=>prev===id?null:id);
-  }
-  function exitFocusMode(){setFocusMode(false);setFocusColor(null);}
-  function focusNav(dir){
-    const idx=filtered.findIndex(c=>c.id===focusColor);
-    if(idx===-1){setFocusColor(filtered[0]?.id||null);return;}
-    const next=filtered[(idx+dir+filtered.length)%filtered.length];
-    if(next)setFocusColor(next.id);
-  }
-
-  async function handleLogout(){
-    await supabase.auth.signOut();
-    setUser(null);
-  }
-
-  if(authLoading)return(
-    <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",fontSize:16,color:T.textMid,fontWeight:700}}>
-      Loading… 🫘
-    </div>
-  );
-  if(!user)return <AuthPage T={T} tn={tn} onLogin={setUser}/>;
-
-  return(
-    <>
-      <style>{G}</style>
-      {showUpgrade&&<UpgradeModal T={T} onClose={()=>setShowUpgrade(false)}/>}
-      <div className="tt" style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
-
-        {/* 裁剪弹窗 */}
-        {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10}}>拖拽边框调整选区 · 框选统计表区域</div>
-          <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:12}}
-            onPointerMove={ev=>{
-              if(!cropDrag||!cropImgRef.current)return;
-              const el=cropImgRef.current.getBoundingClientRect();
-              const cx=Math.max(0,Math.min(ev.clientX-el.left,el.width));
-              const cy=Math.max(0,Math.min(ev.clientY-el.top,el.height));
-              const dx=cx-cropDrag.lastX, dy=cy-cropDrag.lastY;
-              setCropBox(b=>{
-                if(!b)return b;
-                let {x,y,w,h}=b;
-                const minS=30;
-                if(cropDrag.type==="move"){
-                  x=Math.max(0,Math.min(x+dx,el.width-w));
-                  y=Math.max(0,Math.min(y+dy,el.height-h));
-                }else{
-                  if(cropDrag.type.includes("l")){const nx=Math.min(x+dx,x+w-minS);w=w-(nx-x);x=nx;}
-                  if(cropDrag.type.includes("r")){w=Math.max(minS,Math.min(w+dx,el.width-x));}
-                  if(cropDrag.type.includes("t")){const ny=Math.min(y+dy,y+h-minS);h=h-(ny-y);y=ny;}
-                  if(cropDrag.type.includes("b")){h=Math.max(minS,Math.min(h+dy,el.height-y));}
-                }
-                return {x,y,w,h};
-              });
-              setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
-            }}
-            onPointerUp={()=>setCropDrag(null)}
-          >
-            <img ref={cropImgRef} src={cropImg}
-              onLoad={ev=>{
-                const {clientWidth:w,clientHeight:h}=ev.target;
-                // 默认框选下半部分（统计表通常在下方）
-                setCropBox({x:w*0.05,y:h*0.65,w:w*0.9,h:h*0.32});
-              }}
-              style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none"}}/>
-            {cropBox&&<>
-              {/* 暗色遮罩四周 */}
-              <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`
-                linear-gradient(to bottom,
-                  rgba(0,0,0,0.45) ${cropBox.y}px,
-                  transparent ${cropBox.y}px,
-                  transparent ${cropBox.y+cropBox.h}px,
-                  rgba(0,0,0,0.45) ${cropBox.y+cropBox.h}px
-                )`}}/>
-              {/* 选框本体——中间拖动 */}
-              <div onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
-                style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none"}}>
-                {/* 三等分辅助线 */}
-                {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.4)"}}/>)}
-                {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.4)"}}/>)}
-                {/* 8个控制点 */}
-                {[
-                  {type:"tl",style:{top:-8,left:-8,cursor:"nw-resize"}},
-                  {type:"t", style:{top:-8,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
-                  {type:"tr",style:{top:-8,right:-8,cursor:"ne-resize"}},
-                  {type:"r", style:{top:"50%",right:-8,transform:"translateY(-50%)",cursor:"e-resize"}},
-                  {type:"br",style:{bottom:-8,right:-8,cursor:"se-resize"}},
-                  {type:"b", style:{bottom:-8,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
-                  {type:"bl",style:{bottom:-8,left:-8,cursor:"sw-resize"}},
-                  {type:"l", style:{top:"50%",left:-8,transform:"translateY(-50%)",cursor:"w-resize"}},
-                ].map(({type,style})=>(
-                  <div key={type}
-                    onPointerDown={ev=>{ev.stopPropagation();const el=cropImgRef.current.getBoundingClientRect();setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});ev.currentTarget.setPointerCapture(ev.pointerId);}}
-                    style={{position:"absolute",width:18,height:18,background:"#60d4f0",borderRadius:3,touchAction:"none",...style}}/>
-                ))}
-              </div>
-            </>}
-          </div>
-          <div style={{display:"flex",gap:12,marginTop:14}}>
-            <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
-            <button onClick={confirmCrop} disabled={imgLoading} style={{padding:"8px 28px",borderRadius:50,border:"none",background:"#60d4f0",color:"#1a2a3a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
-              {imgLoading?"识别中…":"✓ 确认识别"}
-            </button>
-          </div>
-          {imgErr&&<div style={{marginTop:8,fontSize:12,color:"#ff8080",fontWeight:600}}>{imgErr}</div>}
-        </div>}
-        {/* 顶部header在作品页和我的页隐藏 */}
-        {page!=="works"&&page!=="mine"&&<div className="tt" style={{background:T.headerBg,borderBottom:`1.5px solid ${T.border}`,padding:"6px 18px",flexShrink:0,zIndex:100,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <JarLogo accent={T.accent} size={44}/>
-            <div style={{display:"flex",alignItems:"center",gap:5}}>
-              <div style={{fontSize:18,fontWeight:900,color:T.accent,letterSpacing:0.3,lineHeight:"44px"}}>拼豆记</div>
-              {(() => {
-                if (!isPro) {
-                  return <div style={{fontSize:9,color:"#7aa37a",fontWeight:600}}>📱 本地保存</div>;
-                }
-                if (syncLoading) {
-                  return <div style={{fontSize:9,color:"#f5a623",fontWeight:600}}>☁️ 同步中…</div>;
-                }
-                if (syncStatus === "err") {
-                  return <div style={{fontSize:9,color:"#ff6b6b",fontWeight:600}}>⚠️ 同步失败</div>;
-                }
-                return <div style={{fontSize:9,color:"#4caf50",fontWeight:600}}>☁️ 已同步</div>;
-              })()}
-            </div>
-          </div>
-          <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
-        </div>}
-        {/* 导入隐藏input */}
-        <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={importData}/>
-
-        {/* 主内容滚动区 — 包含所有页面 */}
-        <div style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",display:"flex",flexDirection:"column",minHeight:0}}>
-
-          {/* home / stock 内容 */}
-          {(page==="home"||page==="stock")&&<>
-            <div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0",width:"100%",boxSizing:"border-box"}}>
-
-              {page==="home"&&<div className="fade">
-                <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                    <div style={{fontSize:12,color:T.textLight,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
-                    <button className="btn" onClick={resetData} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
-                      {resetConfirm?"⚠️ 确认清空":"🗑️ 重置"}
-                    </button>
-                  </div>
-                  <div style={{display:"flex",gap:10}}>
-                    {[["🟡 即将不足",wL,setWL,T.warn,T.warnBg,T.warnBorder],[" 🔴 不足",wC,setWC,T.danger,T.dangerBg,T.dangerBorder]].map(([lbl,val,set,col,bg,bd])=>(
-                      <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:1,background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
-                        {lbl}
-                        <input type="number" value={val} onChange={e=>set(Number(e.target.value))} style={{...inp({width:48,padding:"3px 5px",fontSize:12,textAlign:"center",borderRadius:8}),marginLeft:"auto"}}/>
-                        <span style={{fontSize:11}}>粒</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                {[["🟡 即将不足",lowC,T.warnBg,T.warnBorder,T.warn],["🔴 不足",critC,T.dangerBg,T.dangerBorder,T.danger]].map(([title,colors,bg,bd])=>(
-                  <div key={title} className="tt" style={{background:bg,border:`1.5px solid ${bd}`,borderRadius:24,padding:"16px",marginBottom:14}}>
-                    <div style={{fontSize:13,fontWeight:800,marginBottom:10,display:"flex",alignItems:"center",gap:8,color:T.text}}>
-                      {title}<span style={{background:tn==="night"?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.85)",borderRadius:50,padding:"2px 12px",fontSize:11,color:T.textMid,fontWeight:600}}>{colors.length} 个</span>
-                    </div>
-                    {colors.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"10px 0"}}>暂无 ✨</div>
-                      :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                        {colors.map(c=><StockCard key={c.id} c={c} compact={true} isSel={sel.has(c.id)} {...cardProps}/>)}
-                      </div>
-                    }
-                  </div>
-                ))}
-                <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"18px",marginBottom:14,boxShadow:T.cardShadow}}>
-                  <div style={{fontSize:14,fontWeight:800,marginBottom:14,color:T.text}}>📊 色系消耗 Top5</div>
-                  {top5.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"16px 0"}}>✨ 更新库存后自动统计</div>
-                    :top5.map(({s,total},i)=>(
-                      <div key={s} onClick={()=>goS(s)} style={{marginBottom:12,cursor:"pointer"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5,fontWeight:700}}>
-                          <span style={{color:T.accent}}>{s} 系列</span>
-                          <span style={{color:T.textMid,fontWeight:400}}>{Math.round(total)} 粒</span>
-                        </div>
-                        <div style={{background:T.barBg,borderRadius:20,height:10,overflow:"hidden"}}>
-                          <div style={{width:`${(total/maxU)*100}%`,height:"100%",borderRadius:20,background:T.bars[i],transition:"width 0.5s"}}/>
-                        </div>
-                      </div>
-                    ))
-                  }
-                  {top5.length>0&&<div style={{fontSize:11,color:T.textLight,textAlign:"right",marginTop:6}}>点击查看系列详情 →</div>}
-                </div>
-              </div>}
-
-              {page==="stock"&&<div className="fade">
-                <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center"}}>
-                  <input placeholder="🔍 搜索色号 A5、B12..." value={search} onChange={e=>{setSearch(e.target.value);setFSeries(null);}} style={{...inp({flex:1,padding:"10px 16px",borderRadius:50,fontSize:13})}}/>
-                  <select value={sort} onChange={e=>setSort(e.target.value)} style={{...inp({padding:"10px 8px",borderRadius:50,fontSize:12,cursor:"pointer"})}}>
-                    <option value="id-asc">色号↑</option><option value="id-desc">色号↓</option>
-                    <option value="stock-asc">库存↑</option><option value="stock-desc">库存↓</option>
-                    <option value="used-desc">消耗↓</option>
-                  </select>
-                  <button className="btn" onClick={()=>{setBatch(!batch);setSel(new Set());}} style={{padding:"10px 14px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,whiteSpace:"nowrap",background:batch?T.accent:T.accentLight,color:batch?"#fff":T.accent}}>{batch?"✕ 退出":"批量"}</button>
-                </div>
-                {history.length>0&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:8,marginTop:-4}}>
-                  <button className="btn" onClick={undoLast} style={{padding:"6px 14px",borderRadius:50,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,background:T.accentLight,color:T.accent,display:"flex",alignItems:"center",gap:4}}>↩️ 撤销<span style={{background:T.accent,color:"#fff",borderRadius:50,fontSize:10,padding:"1px 6px",fontWeight:900}}>{history.length}</span></button>
-                </div>}
-                {fSeries&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                  <span style={{fontSize:13,color:T.accent,fontWeight:800}}>{fSeries} 系列</span>
-                  <button onClick={()=>setFSeries(null)} style={{...inp({fontSize:11,padding:"3px 12px",borderRadius:50,cursor:"pointer",color:T.textMid})}}>清除 ×</button>
-                </div>}
-                {focusMode&&<div style={{background:`linear-gradient(135deg,${T.accentSoft},#f0e8ff)`,border:`1.5px solid ${T.accent}`,borderRadius:14,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.accent,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
-                  <span>🎯 专注模式</span>
-                  {focusColor?(
-                    <>
-                      <div style={{width:22,height:22,borderRadius:7,background:ALL_COLORS.find(c=>c.id===focusColor)?.hex||"#ccc",border:"2px solid rgba(0,0,0,0.12)",flexShrink:0}}/>
-                      <span style={{flex:1}}>正在拼 <b>{focusColor}</b></span>
-                    </>
-                  ):<span style={{flex:1,color:T.textMid,fontWeight:600,fontSize:12}}>点击任意色卡开始高亮</span>}
-                </div>}
-                {batch&&<div style={{background:T.accentSoft,border:`1px solid ${T.border}`,borderRadius:14,padding:"10px 14px",marginBottom:12,fontSize:13,color:T.accent,fontWeight:700}}>🫧 点击色卡勾选{sel.size>0&&<span style={{marginLeft:8}}>· 已选 {sel.size} 个</span>}</div>}
-                <div style={{fontSize:12,color:T.textLight,marginBottom:10,fontWeight:600}}>共 {filtered.length} 个色号 · {focusMode?"点击高亮单个颜色":"点击色卡编辑克/粒数"}</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                  {filtered.map(c=><StockCard key={c.id} c={c} compact={false} isSel={sel.has(c.id)} {...cardProps}/>)}
-                </div>
-              </div>}
-
-            </div>
-          </>}
-
-          {/* 作品页 */}
-          {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
-
-          {/* 我的页 */}
-          {page==="mine"&&<MinePage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} inviteInfo={inviteInfo}/>}
-
-        </div>{/* end 主内容滚动区 */}
-
-        {/* 批量操作浮层 */}
-        {batch&&<div style={{position:"fixed",bottom:64,left:0,right:0,zIndex:300,display:"flex",justifyContent:"center",padding:"0 14px"}}>
-          <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:"24px 24px 0 0",padding:"16px 16px 20px",display:"flex",flexDirection:"column",gap:10,maxWidth:480,width:"100%",boxShadow:T.floatShadow,maxHeight:"80vh",overflowY:"auto"}}>
-
-            {/* 勾选操作行 */}
-            {sel.size>0&&<>
-              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <span style={{fontSize:13,color:T.textMid,fontWeight:700}}>已选 {sel.size} 个</span>
-                <div style={{display:"flex",border:`1.5px solid ${T.border}`,borderRadius:50,overflow:"hidden"}}>
-                  {[["-","－扣除"],["+"," ＋补货"]].map(([d,l])=>(<button key={d} onClick={()=>setBDir(d)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:bDir===d?T.accent:T.card,color:bDir===d?"#fff":T.textMid,transition:"all 0.15s"}}>{l}</button>))}
-                </div>
-                <input type="number" placeholder="粒数" value={bAmt} onChange={e=>setBAmt(e.target.value)} style={{...inp({width:72,padding:"6px 8px",fontSize:13,textAlign:"center"})}}/>
-                <button className="btn" onClick={applyBatch} style={{padding:"6px 18px",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,background:T.accent,color:"#fff"}}>确认</button>
-              </div>
-              <div style={{height:1,background:T.border}}/>
-            </>}
-
-            {/* 识图tag货架区 */}
-            {cmdTags.length>0&&<>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div style={{fontSize:11,color:T.accent,fontWeight:700}}>📷 识图结果 · 点数字可改 · ×删除</div>
-                <button onClick={()=>setCmdTags([])} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:T.textLight,fontWeight:700,padding:0}}>清空</button>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
-                {cmdTags.map((tag,i)=>{
-                  const color=ALL_COLORS.find(c=>c.id===tag.id);
-                  const bg=color?color.hex:"#e0e0e0";
-                  const rgb=color?[parseInt(bg.slice(1,3),16),parseInt(bg.slice(3,5),16),parseInt(bg.slice(5,7),16)]:[180,180,180];
-                  const bright=(rgb[0]*299+rgb[1]*587+rgb[2]*114)/1000;
-                  const txt=bright>140?"rgba(0,0,0,0.75)":"rgba(255,255,255,0.95)";
-                  return(
-                    <div key={i} style={{borderRadius:12,overflow:"hidden",border:`1.5px solid ${T.border}`,position:"relative"}}>
-                      <div style={{background:T.accentSoft,padding:"3px 6px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                        <span style={{flex:1,fontSize:11,fontWeight:800,color:T.accent,textAlign:"center"}}>{tag.id}</span>
-                        <button onClick={()=>setCmdTags(ts=>ts.filter((_,j)=>j!==i))}
-                          style={{background:"none",border:"none",cursor:"pointer",color:T.textLight,fontSize:12,lineHeight:1,padding:0,fontWeight:900,flexShrink:0}}>×</button>
-                      </div>
-                      <div style={{background:bg,padding:"6px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",aspectRatio:"1/1"}}>
-                        <input type="number" value={tag.amt}
-                          onChange={e=>setCmdTags(ts=>ts.map((t,j)=>j===i?{...t,amt:e.target.value}:t))}
-                          style={{width:"70%",aspectRatio:"1/1",background:"rgba(255,255,255,0.25)",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:0,fontSize:13,fontWeight:900,color:txt,textAlign:"center",fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box"}}/>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{height:1,background:T.border}}/>
-            </>}
-
-            {/* 文本框+识图按钮 */}
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 手动输入：A15-200、全部+100</div>
-                <button className="btn" onClick={()=>{if(!isPro&&freeAiUsed>=totalAiLimit){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
-                  style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap",position:"relative"}}>
-                  {imgLoading?"识别中…":"📷 识图"}
-                  {!isPro&&<span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>{Math.max(0,totalAiLimit-freeAiUsed)}次</span>}
-                </button>
-                <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
-              </div>
-              {!isPro&&<div style={{fontSize:10,color:T.textLight,fontWeight:700,marginTop:-2}}>免费版剩余 AI 识图 {Math.max(0,totalAiLimit-freeAiUsed)} 次，Pro 无限次</div>}
-              <textarea value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
-                placeholder={"A15-200, B3+500, 全部-100"}
-                rows={2}
-                style={{...inp({width:"100%",padding:"8px 12px",fontSize:13,resize:"none",lineHeight:1.6,boxSizing:"border-box"})}}/>
-            </div>
-
-            {cmdErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{cmdErr}</div>}
-            {imgErr&&<div style={{fontSize:11,color:T.danger,fontWeight:600}}>{imgErr}</div>}
-
-            <div style={{display:"flex",gap:8,marginTop:2}}>
-              <button className="btn" onClick={exitBatch} style={{...inp({flex:1,padding:"10px 0",borderRadius:50,cursor:"pointer",fontSize:13,color:T.textMid,fontWeight:700})}}>取消</button>
-              <button className="btn" onClick={cmdTags.length>0?openTagLinkFlow:applyCmd}
-                style={{flex:3,padding:"10px 0",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>
-                {cmdTags.length>0?"确认并继续":"执行"}
-              </button>
-            </div>
-          </div>
-        </div>}
-
-
-        {showTagLink&&(
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
-            onClick={()=>{setShowTagLink(false);setTagLinkMode(null);}}>
-            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:T.card,borderRadius:24,padding:"18px 16px",boxShadow:"0 20px 60px rgba(0,0,0,0.18)"}}>
-              <div style={{fontSize:15,fontWeight:900,color:T.text,textAlign:"center",marginBottom:14}}>这次扣豆要怎么记入作品？</div>
-
-              {!tagLinkMode&&(
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  <button onClick={()=>setTagLinkMode("new")} style={{padding:"12px 0",borderRadius:16,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>新建完成作品</button>
-                  <button onClick={()=>setTagLinkMode("link")} style={{padding:"12px 0",borderRadius:16,border:`1.5px solid ${T.border}`,background:T.bg,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>关联已有作品</button>
-                  <button onClick={()=>setShowTagLink(false)} style={{padding:"11px 0",borderRadius:50,border:"none",background:"#f3f4f6",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>返回</button>
-                </div>
-              )}
-
-              {tagLinkMode==="new"&&(
-                <div>
-                  <input value={newDoneName} onChange={e=>setNewDoneName(e.target.value)} placeholder="完成作品 03/20"
-                    style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"10px 12px",fontSize:13,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>setTagLinkMode(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>上一步</button>
-                    <button onClick={()=>finishTagDeduction("new")} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>确认扣豆</button>
-                  </div>
-                </div>
-              )}
-
-              {tagLinkMode==="link"&&(
-                <div>
-                  <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:280,overflowY:"auto",marginBottom:12}}>
-                    {tasks.filter(t=>t.status!=="done").length===0&&(
-                      <div style={{fontSize:12,color:T.textMid,textAlign:"center",padding:"12px 0"}}>当前没有可关联的作品</div>
-                    )}
-                    {tasks.filter(t=>t.status!=="done").map(t=>(
-                      <button key={t.id} onClick={()=>setLinkedTaskId(t.id)}
-                        style={{display:"flex",alignItems:"center",gap:10,padding:"10px",borderRadius:16,border:`1.5px solid ${linkedTaskId===t.id?T.accent:T.border}`,background:linkedTaskId===t.id?T.accentSoft:T.bg,cursor:"pointer",textAlign:"left"}}>
-                        <div style={{width:44,height:44,borderRadius:12,background:T.card,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>
-                          {t.img?<img src={t.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
-                        </div>
-                        <div style={{fontSize:12,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>setTagLinkMode(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>上一步</button>
-                    <button onClick={()=>finishTagDeduction("link")} disabled={!linkedTaskId}
-                      style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:linkedTaskId?T.accent:"#cfd8e3",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:linkedTaskId?"pointer":"not-allowed"}}>确认扣豆</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 专注模式浮动导航条 */}
-        {focusMode&&page==="stock"&&!batch&&(
-          <div style={{position:"fixed",bottom:70,left:0,right:0,zIndex:250,display:"flex",justifyContent:"center",padding:"0 14px",pointerEvents:"none"}}>
-            <div className="tt" style={{background:T.card,border:`1.5px solid ${T.accent}`,borderRadius:50,padding:"8px 12px",display:"flex",alignItems:"center",gap:10,boxShadow:`0 4px 20px ${T.accent}40`,pointerEvents:"all"}}>
-              <button onClick={()=>focusNav(-1)} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.accentSoft,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",color:T.accent,fontWeight:800}}>‹</button>
-              {focusColor?(
-                <div style={{display:"flex",alignItems:"center",gap:8,minWidth:100}}>
-                  <div style={{width:28,height:28,borderRadius:9,background:ALL_COLORS.find(c=>c.id===focusColor)?.hex||"#ccc",border:"2px solid rgba(0,0,0,0.12)",flexShrink:0,boxShadow:`0 0 0 2px ${T.accent}`}}/>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:900,color:T.accent}}>{focusColor}</div>
-                    <div style={{fontSize:9,color:T.textMid,fontWeight:600}}>{filtered.findIndex(c=>c.id===focusColor)+1} / {filtered.length}</div>
-                  </div>
-                </div>
-              ):(
-                <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:100,textAlign:"center"}}>点色卡开始</div>
-              )}
-              <button onClick={()=>focusNav(1)} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.accentSoft,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Nunito',sans-serif",color:T.accent,fontWeight:800}}>›</button>
-              <div style={{width:1,height:20,background:T.border}}/>
-              <button onClick={exitFocusMode} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,color:T.textMid}}>退出</button>
-            </div>
-          </div>
-        )}
-
-        {/* 底部导航栏 */}
-        <div className="tt" style={{flexShrink:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
-          {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🫘",iconI:"🫙"},{key:"works",label:"作品",iconA:"🎨",iconI:"🖼️"},{key:"mine",label:"我的",iconA:"👤",iconI:"👤"}].map(n=>{
-            const active=page===n.key;
-            return(
-              <button key={n.key} className="btn" onClick={()=>{setPage(n.key);exitBatch();}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:"3px 14px"}}>
-                <span style={{fontSize:20,transition:"filter 0.2s,transform 0.2s",filter:active?"none":"grayscale(0.5) opacity(0.35)",transform:active?"scale(1.1)":"scale(1)"}}>{active?n.iconA:n.iconI}</span>
-                <span style={{fontSize:9,fontWeight:active?800:600,color:active?T.accent:T.textLight,transition:"color 0.2s"}}>{n.label}</span>
-                <div style={{width:active?18:0,height:2,borderRadius:10,background:T.navActiveDot,marginTop:1,transition:"width 0.25s"}}/>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// 年份横滚条组件
-// ══════════════════════════════════
-//  WorksPage（作品页）
-// ══════════════════════════════════
-// ══════════════════════════════════
-//  颜色相近度计算（hex→Lab近似比较）
-// ══════════════════════════════════
-function hexToRgb(hex){
-  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
-  return [r,g,b];
-}
-function colorDistance(h1,h2){
-  const [r1,g1,b1]=hexToRgb(h1),[r2,g2,b2]=hexToRgb(h2);
-  return Math.sqrt((r1-r2)**2+(g1-g2)**2+(b1-b2)**2);
-}
-function getSimilarColors(targetId,stock,count=6){
-  const target=ALL_COLORS.find(c=>c.id===targetId);
-  if(!target)return[];
-  const series=targetId.match(/^[A-Za-z]+/)[0].toUpperCase();
-  const withDist=ALL_COLORS
-    .filter(c=>c.id!==targetId)
-    .map(c=>({...c,dist:colorDistance(target.hex,c.hex),qty:stock[c.id]||0,sameSeries:c.id.startsWith(series)}));
-  // 同色系优先，同色系内按距离排，再补跨色系
-  const same=withDist.filter(c=>c.sameSeries).sort((a,b)=>a.dist-b.dist);
-  const other=withDist.filter(c=>!c.sameSeries).sort((a,b)=>a.dist-b.dist);
-  return [...same,...other].slice(0,count);
-}
-
-// ══════════════════════════════════
-//  MissingColorPage（缺色替换）
-// ══════════════════════════════════
-function MissingColorPage({T,stock,onBack}){
-  const [step,setStep]=useState("upload"); // upload → result → replace
-  const [imgSrc,setImgSrc]=useState(null);
-  const [loading,setLoading]=useState(false);
-  const [err,setErr]=useState("");
-  // parsed: [{id,need}]
-  const [parsed,setParsed]=useState([]);
-  // replaces: {colorId: replacementId|null}
-  const [replaces,setReplaces]=useState({});
-  // 展开推荐的色号
-  const [expanded,setExpanded]=useState({});
-  const fileRef=useRef(null);
-
-  function handleFile(e){
-    const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=ev=>setImgSrc(ev.target.result);
-    r.readAsDataURL(f);
-    e.target.value="";
-  }
-
-  async function recognize(){
-    if(!imgSrc)return;
-    setLoading(true);setErr("");
-    try{
-      const resp=await fetch('/api/qwen',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          image:imgSrc,
-          prompt:`请识别图纸下方色块统计区域，提取每个色号和对应的颗数，格式为：色号 颗数，每行一个，例如：\nA1 200\nB3 150\n只输出色号和数字，不要其他内容。`
-        })
+      // Hard-guard: explicitly set opacity:1 on the entire path to neutralize any inherited fade
+      pathEls.forEach(el => {
+        el.style.opacity = "1";
       });
-      const data=await resp.json();
-      if(data.result){
-        const lines=data.result.split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
-        const items=lines.map(line=>{
-          const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);
-          return m?{id:m[1].toUpperCase(),need:parseInt(m[2])}:null;
-        }).filter(Boolean);
-        if(items.length>0){
-          // 只保留库存不足的
-          const missing=items.filter(i=>(stock[i.id]||0)<i.need);
-          if(missing.length>0){setParsed(missing);setStep("result");}
-          else{
-            // 全部库存足够
-            setParsed(items);setStep("result");
-          }
-        }else{setErr("识别失败，建议截图只保留色块统计区再试～");}
-      }else{setErr("识别失败，建议截图只保留色块统计区再试～");}
-    }catch(e){setErr("请求失败："+e.message);}
-    finally{setLoading(false);}
-  }
 
-  // 选择替代色
-  function pickReplace(originalId,replaceId){
-    setReplaces(prev=>({...prev,[originalId]:replaceId}));
-    setExpanded(prev=>({...prev,[originalId]:false}));
-  }
+      dimCtx = { container, dimEls, wrappedTexts, pathEls };
+    }
 
-  const missingItems=parsed.filter(i=>(stock[i.id]||0)<i.need);
-  const okItems=parsed.filter(i=>(stock[i.id]||0)>=i.need);
+    function undim(){
+      if (!dimCtx) return;
+      const { dimEls, wrappedTexts, pathEls } = dimCtx;
 
-  return(
-    <div className="fade" style={{padding:"18px 16px",fontFamily:"'Nunito',sans-serif"}}>
-      {/* 顶部 */}
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-        <button onClick={onBack} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
-        <div style={{fontSize:15,fontWeight:800,color:T.text}}>🔍 缺色替换</div>
-      </div>
+      // Animate back
+      dimEls.forEach(el => {
+        el.style.transition = `opacity ${DIM_EASE_MS}ms ease`;
+        el.style.opacity = "1";
+        // remove inline style after the animation so we don't override site CSS
+        setTimeout(() => { if (el) el.style.opacity = ""; }, DIM_EASE_MS + 50);
+      });
 
-      {/* Step1：上传 */}
-      {step==="upload"&&(
-        <div>
-          {!imgSrc?(
-            <div onClick={()=>fileRef.current?.click()} style={{background:T.accentSoft,border:`2px dashed ${T.accent}`,borderRadius:22,padding:"36px 20px",textAlign:"center",cursor:"pointer",marginBottom:16}}>
-              <div style={{fontSize:40,marginBottom:10}}>📷</div>
-              <div style={{fontSize:14,fontWeight:800,color:T.accent}}>点击上传图纸</div>
-              <div style={{fontSize:11,color:T.textMid,marginTop:6,lineHeight:1.7}}>建议截取图纸下方<br/>「色块统计区」识别更准确</div>
-            </div>
-          ):(
-            <div style={{marginBottom:16}}>
-              <img src={imgSrc} style={{width:"100%",borderRadius:16,marginBottom:12,maxHeight:300,objectFit:"contain",background:"#f0f0f0"}} alt=""/>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={()=>setImgSrc(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新选图</button>
-                <button onClick={recognize} disabled={loading} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:loading?0.7:1}}>
-                  {loading?"🔍 识别中…":"✓ 开始识别"}
-                </button>
-              </div>
-            </div>
-          )}
-          {err&&<div style={{background:"#fff0f0",border:"1px solid #ffb3b3",borderRadius:12,padding:"10px 14px",fontSize:12,color:"#e05050",fontWeight:600}}>{err}</div>}
-          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFile}/>
-        </div>
-      )}
+      wrappedTexts.forEach(span => {
+        span.style.transition = `opacity ${DIM_EASE_MS}ms ease`;
+        span.style.opacity = "1";
+        span.addEventListener("transitionend", () => {
+          if (!span.parentNode) return;
+          span.parentNode.replaceChild(document.createTextNode(span.textContent || ""), span);
+        }, { once:true });
+      });
 
-      {/* Step2：结果+替换 */}
-      {step==="result"&&(
-        <div>
-          {/* 缺货项 */}
-          {missingItems.length>0&&(
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:T.warn,marginBottom:10,letterSpacing:0.5}}>⚠️ 库存不足 · {missingItems.length}个色号</div>
-              {missingItems.map(item=>{
-                const have=stock[item.id]||0;
-                const short=item.need-have;
-                const replaced=replaces[item.id];
-                const replacedColor=replaced?ALL_COLORS.find(c=>c.id===replaced):null;
-                const replacedHave=replaced?stock[replaced]||0:0;
-                const replacedOk=replacedHave>=item.need;
-                const similar=getSimilarColors(item.id,stock,6);
-                const isExpanded=expanded[item.id];
-                const origColor=ALL_COLORS.find(c=>c.id===item.id);
+      // Clear hard-guard on path
+      pathEls.forEach(el => { if (el) el.style.opacity = ""; });
 
-                return(
-                  <div key={item.id} style={{background:T.card,border:`1.5px solid ${replaced?(replacedOk?"#b6eab6":"#fde5b0"):T.warn+"44"}`,borderRadius:18,padding:"14px",marginBottom:10,boxShadow:T.cardShadow}}>
-                    {/* 原色行 */}
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                      <div style={{width:36,height:36,borderRadius:10,background:origColor?.hex,border:"1.5px solid rgba(0,0,0,0.1)",flexShrink:0}}/>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:14,fontWeight:800,color:T.text}}>{item.id}</div>
-                        <div style={{fontSize:11,color:T.warn,fontWeight:600}}>需要{item.need}粒 · 库存{have}粒 · 差{short}粒</div>
-                      </div>
-                      {!replaced&&<div style={{fontSize:10,background:T.warn,color:"#fff",borderRadius:6,padding:"2px 8px",fontWeight:700}}>缺货</div>}
-                    </div>
+      dimCtx = null;
+    }
 
-                    {/* 已选替代色 */}
-                    {replaced&&replacedColor&&(
-                      <div style={{background:replacedOk?"#f0faf0":"#fff8ed",borderRadius:12,padding:"10px 12px",marginBottom:8}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <div style={{fontSize:12,color:T.textMid,fontWeight:600}}>→ 替换为</div>
-                          <div style={{width:24,height:24,borderRadius:7,background:replacedColor.hex,border:"1.5px solid rgba(0,0,0,0.1)"}}/>
-                          <div style={{flex:1,fontSize:13,fontWeight:800,color:T.text}}>{replaced}</div>
-                          <div style={{fontSize:11,fontWeight:700,color:replacedOk?"#4caf50":"#f5a623"}}>
-                            {replacedOk?`✅ 库存${replacedHave}粒够用`:`⚠️ 库存${replacedHave}粒 差${item.need-replacedHave}粒`}
-                          </div>
-                        </div>
-                        <button onClick={()=>setReplaces(prev=>{const n={...prev};delete n[item.id];return n;})}
-                          style={{marginTop:8,background:"none",border:"none",fontSize:11,color:T.textLight,cursor:"pointer",padding:0,fontFamily:"'Nunito',sans-serif"}}>✕ 取消选择</button>
-                      </div>
-                    )}
+    // ---------------- Positioning (centered, edge-aware, flip) ----------------
+    function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+    function measureBubbleForPlacement(){
+      const wasOpen = bubble.classList.contains("is-open");
+      if (!wasOpen){ bubble.style.visibility="hidden"; bubble.classList.add("is-open"); }
+      const rect = bubble.getBoundingClientRect();
+      if (!wasOpen){ bubble.classList.remove("is-open"); bubble.style.visibility=""; }
+      return { w: rect.width, h: rect.height };
+    }
+    function placeAnchored(trigger){
+      const vw=innerWidth, vh=innerHeight;
+      const r = trigger.getBoundingClientRect();
+      const { w, h } = measureBubbleForPlacement();
 
-                    {/* 推荐相近色 */}
-                    {!replaced&&(
-                      <div>
-                        <div style={{fontSize:11,color:T.textMid,fontWeight:600,marginBottom:8}}>推荐相近色：</div>
-                        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                          {(isExpanded?similar:similar.slice(0,3)).map(c=>{
-                            const enough=c.qty>=item.need;
-                            return(
-                              <div key={c.id} onClick={()=>pickReplace(item.id,c.id)}
-                                style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:12,border:`1.5px solid ${enough?"#b6eab6":"#fde5b0"}`,background:enough?"#f0faf0":"#fff8ed",cursor:"pointer"}}>
-                                <div style={{width:20,height:20,borderRadius:6,background:c.hex,border:"1px solid rgba(0,0,0,0.1)",flexShrink:0}}/>
-                                <div>
-                                  <div style={{fontSize:12,fontWeight:800,color:T.text}}>{c.id}</div>
-                                  <div style={{fontSize:10,color:enough?"#4caf50":"#f5a623",fontWeight:600}}>{enough?`${c.qty}粒✓`:`差${item.need-c.qty}粒`}</div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {similar.length>3&&(
-                            <div onClick={()=>setExpanded(prev=>({...prev,[item.id]:!prev[item.id]}))}
-                              style={{display:"flex",alignItems:"center",padding:"6px 10px",borderRadius:12,border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer",fontSize:11,color:T.textMid,fontWeight:700}}>
-                              {isExpanded?"收起":"更多"}{isExpanded?"↑":"↓"}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      let left = r.left + (r.width/2) - (w/2);
+      left = clamp(left, EDGE_PADDING, Math.max(EDGE_PADDING, vw - EDGE_PADDING - w));
 
-          {/* 库存充足项 */}
-          {okItems.length>0&&(
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:800,color:"#4caf50",marginBottom:10,letterSpacing:0.5}}>✅ 库存充足 · {okItems.length}个色号</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {okItems.map(item=>{
-                  const c=ALL_COLORS.find(x=>x.id===item.id);
-                  return(
-                    <div key={item.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:12,border:"1.5px solid #d4f0d4",background:"#f0faf0"}}>
-                      <div style={{width:18,height:18,borderRadius:5,background:c?.hex,border:"1px solid rgba(0,0,0,0.1)"}}/>
-                      <div style={{fontSize:12,fontWeight:700,color:T.text}}>{item.id}</div>
-                      <div style={{fontSize:10,color:"#4caf50",fontWeight:600}}>{stock[item.id]}粒</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+      const topBelow   = r.bottom + OFFSET_Y;
+      const spaceBelow = vh - topBelow - EDGE_PADDING;
+      const placeBelow = spaceBelow >= h;
+      let top = placeBelow ? topBelow : (r.top - h - OFFSET_Y);
+      top = clamp(top, EDGE_PADDING, Math.max(EDGE_PADDING, vh - EDGE_PADDING - h));
 
-          {/* 底部按钮 */}
-          <div style={{display:"flex",gap:10,marginTop:8}}>
-            <button onClick={()=>{setStep("upload");setImgSrc(null);setParsed([]);setReplaces({});setExpanded({});setErr("");}}
-              style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新识别</button>
-            {missingItems.length>0&&(
-              <button onClick={()=>setStep("summary")}
-                style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>查看替换方案 →</button>
-            )}
-          </div>
-        </div>
-      )}
+      bubble.style.left = left + "px";
+      bubble.style.top  = top  + "px";
 
-      {/* Step3：最终方案 */}
-      {step==="summary"&&(
-        <div>
-          <div style={{fontSize:13,fontWeight:800,color:T.text,marginBottom:14}}>📋 替换方案汇总</div>
-          {missingItems.map(item=>{
-            const replaced=replaces[item.id];
-            const origColor=ALL_COLORS.find(c=>c.id===item.id);
-            const repColor=replaced?ALL_COLORS.find(c=>c.id===replaced):null;
-            return(
-              <div key={item.id} style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:16,padding:"12px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:12,boxShadow:T.cardShadow}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{width:30,height:30,borderRadius:9,background:origColor?.hex,border:"1.5px solid rgba(0,0,0,0.1)"}}/>
-                  <div style={{fontSize:13,fontWeight:800,color:T.text}}>{item.id}</div>
-                </div>
-                <div style={{fontSize:16,color:T.textLight}}>→</div>
-                {replaced&&repColor?(
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <div style={{width:30,height:30,borderRadius:9,background:repColor.hex,border:"1.5px solid rgba(0,0,0,0.1)"}}/>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:800,color:T.text}}>{replaced}</div>
-                      <div style={{fontSize:10,color:"#4caf50",fontWeight:600}}>{item.need}粒</div>
-                    </div>
-                  </div>
-                ):(
-                  <div style={{fontSize:12,color:T.textLight,fontStyle:"italic"}}>未选替代色</div>
-                )}
-              </div>
-            );
-          })}
-          <button onClick={()=>setStep("result")}
-            style={{width:"100%",padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:8}}>← 返回修改</button>
-        </div>
-      )}
-    </div>
-  );
-}
+      const br = bubble.getBoundingClientRect();
+      if (br.bottom > vh - EDGE_PADDING){
+        bubble.style.maxHeight = (vh - 2*EDGE_PADDING) + "px";
+        bubble.style.overflowY = "auto";
+      } else {
+        bubble.style.maxHeight = "none";
+        bubble.style.overflowY = "visible";
+      }
+    }
 
-// ══════════════════════════════════
-//  FocusMode（专注模式全屏）
-// ══════════════════════════════════
-function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded,onPushHistory}){
-  const [view,setView]=useState("home");
-  const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
-  const [showGoalEdit,setShowGoalEdit]=useState(false);
-  const [goalInput,setGoalInput]=useState("");
-  const [showAddModal,setShowAddModal]=useState(false);
-  const [newName,setNewName]=useState("");
-  const [newImg,setNewImg]=useState(null);
-  const [pickerOpen,setPickerOpen]=useState(false);
-  const [pickedId,setPickedId]=useState(null);
-  const [flipAnimating,setFlipAnimating]=useState(false);
-  const [showDoneList,setShowDoneList]=useState(false);
-  const [showToolbox,setShowToolbox]=useState(false);
-  const [pendingFinishId,setPendingFinishId]=useState(null);
-  const [toolbox,setToolbox]=useState(()=>{try{const s=localStorage.getItem('pindou_toolbox');return s?JSON.parse(s):{
-    boards:{"52×52":{qty:0,note:""},"78×78":{qty:0,note:""},"104×104":{qty:0,note:""}},
-    needles:{"60针":{qty:0,note:""},"70针":{qty:0,note:""},"80针":{qty:0,note:""}},
-    shovels:{"6道":{qty:0,note:""},"7道":{qty:0,note:""},"10道":{qty:0,note:""},"12道":{qty:0,note:""},"15道":{qty:0,note:""}},
-    devices:{'熨斗':{owned:false,note:""},'烫画机':{owned:false,note:""},'打孔器':{owned:false,note:""}},
-    supplies:{'钥匙扣':{qty:0,note:""},'澡巾':{qty:0,note:""},'挂件':{qty:0,note:""},'烘焙布':{qty:0,note:""},'烫纸':{qty:0,note:""}}
-  }}catch{return {
-    boards:{"52×52":{qty:0,note:""},"78×78":{qty:0,note:""},"104×104":{qty:0,note:""}},
-    needles:{"60针":{qty:0,note:""},"70针":{qty:0,note:""},"80针":{qty:0,note:""}},
-    shovels:{"6道":{qty:0,note:""},"7道":{qty:0,note:""},"10道":{qty:0,note:""},"12道":{qty:0,note:""},"15道":{qty:0,note:""}},
-    devices:{'熨斗':{owned:false,note:""},'烫画机':{owned:false,note:""},'打孔器':{owned:false,note:""}},
-    supplies:{'钥匙扣':{qty:0,note:""},'澡巾':{qty:0,note:""},'挂件':{qty:0,note:""},'烘焙布':{qty:0,note:""},'烫纸':{qty:0,note:""}}
-  }}}); 
-  const [toolOpen,setToolOpen]=useState({boards:true,needles:false,shovels:false,devices:false,supplies:false});
-  const newImgRef=useRef(null);
-  const [longPressId,setLongPressId]=useState(null);
-  const longPressTimer=useRef(null);
+    // ---------------- Open / Close (place → fade/scale) ----------------
+    function animateIn(){
+      bubble.style.transition = "none";
+      bubble.style.opacity = "0";
+      bubble.style.transform = "scale(0.95)";
+      void bubble.offsetWidth;
+      bubble.style.transition = "opacity .18s ease, transform .18s ease";
+      bubble.style.opacity = "1";
+      bubble.style.transform = "scale(1)";
+    }
+    function animateOut(done){
+      bubble.style.transition = "opacity .16s ease, transform .16s ease";
+      bubble.style.opacity = "0";
+      bubble.style.transform = "scale(0.95)";
+      const end = () => { bubble.removeEventListener("transitionend", end); done && done(); };
+      bubble.addEventListener("transitionend", end);
+      setTimeout(end, 260);
+    }
 
-  const now=new Date();
-  const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
-  const doneTasks=tasks.filter(t=>t.status==="done");
-  const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
-  useEffect(()=>{
-    try{localStorage.setItem('pindou_toolbox',JSON.stringify(toolbox));}catch{}
-  },[toolbox]);
-  const [,setTimerTick]=useState(0);
-  useEffect(()=>{const id=setInterval(()=>setTimerTick(v=>v+1),1000);return()=>clearInterval(id);},[]);
+    function openFromTrigger(trigger){
+      if (current && current !== trigger) forceClose();
+      current = trigger;
+      trigger.setAttribute("aria-expanded","true");
 
-  function openAddModal(){setNewName("");setNewImg(null);setShowAddModal(true);}
-  function closeAddModal(){setShowAddModal(false);}
+      elH.textContent = trigger.getAttribute("data-tt-h") || "";
+      elB.textContent = trigger.getAttribute("data-tt-b") || "";
 
-  function updateToolQty(group,key,delta){
-    setToolbox(prev=>{
-      const cur=prev[group][key]||{qty:0,note:""};
-      return {...prev,[group]:{...prev[group],[key]:{...cur,qty:Math.max(0,(cur.qty||0)+delta)}}};
-    });
-  }
-  function updateToolNote(group,key,val){
-    setToolbox(prev=>{
-      const cur=prev[group][key]||{qty:0,note:""};
-      return {...prev,[group]:{...prev[group],[key]:{...cur,note:val}}};
-    });
-  }
-  function toggleToolOwned(key){
-    setToolbox(prev=>{
-      const cur=prev.devices[key]||{owned:false,note:""};
-      return {...prev,devices:{...prev.devices,[key]:{...cur,owned:!cur.owned}}};
-    });
-  }
+      bubble.classList.add("is-open");
+      bubble.setAttribute("aria-hidden","false");
 
-  function saveNewTask(){
-    if(!newName.trim())return;
-    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:[],status:"todo",createdAt:new Date().toISOString(),doneDate:null,elapsedMs:0,startedAt:null};
-    setTasks(prev=>[t,...prev]);
-    closeAddModal();
-  }
+      placeAnchored(trigger);
+      animateIn();
 
-  function handleNewImg(e){
-    const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();r.onload=ev=>setNewImg(ev.target.result);r.readAsDataURL(f);
-    e.target.value="";
-  }
+      const container = findTextContainer(trigger);
+      dimAllOtherBranches(container, trigger);
 
-  function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));setLongPressId(null);}
-  function startTask(id){
-    setTasks(prev=>prev.map(t=>{
-      if(t.id!==id)return t;
-      return {...t,status:"doing",startedAt:new Date().toISOString(),doneDate:null};
-    }));
-  }
-  function pauseTask(id){
-    setTasks(prev=>prev.map(t=>{
-      if(t.id!==id)return t;
-      const add=t.startedAt?(Date.now()-new Date(t.startedAt).getTime()):0;
-      return {...t,status:"paused",elapsedMs:(t.elapsedMs||0)+Math.max(0,add),startedAt:null};
-    }));
-  }
-  function resumeTask(id){
-    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"doing",startedAt:new Date().toISOString()}:t));
-  }
-  function getDisplayElapsedMs(task){
-    const base=task.elapsedMs||0;
-    const running=task.status==="doing"&&task.startedAt ? (Date.now()-new Date(task.startedAt).getTime()) : 0;
-    return Math.max(0,base+running);
-  }
-  function formatElapsed(ms){
-    const totalS=Math.max(0,Math.floor(ms/1000));
-    const h=Math.floor(totalS/3600);
-    const m=Math.floor((totalS%3600)/60);
-    const s=totalS%60;
-    if(h>0)return `${String(h).padStart(2,"0")}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
-    if(m>0)return `${m}m ${String(s).padStart(2,"0")}s`;
-    return `${s}s`;
-  }
-  function finishTask(id){
-    setPendingFinishId(id);
-  }
-  function confirmFinishTask(deduct){
-    const id=pendingFinishId;
-    const task=tasks.find(t=>t.id===id);
-    if(!task){setPendingFinishId(null);return;}
-    const add=task.startedAt?(Date.now()-new Date(task.startedAt).getTime()):0;
-    const total=(task.elapsedMs||0)+Math.max(0,add);
+      hoverCount = 0;
+      cancelCloseTimer();
+    }
 
-    // 存快照（含tasks），撤销时一键还原库存+作品
-    onPushHistory(tasks);
+    function forceClose(){
+      if (!current) return;
+      bubble.classList.remove("is-open");
+      bubble.setAttribute("aria-hidden","true");
+      current.setAttribute("aria-expanded","false");
+      current = null;
+      undim();
+      hoverCount = 0;
+      cancelCloseTimer();
+    }
 
-    if(deduct&&task.colorData&&task.colorData.length>0){
-      task.colorData.forEach(c=>{
-        if(c?.id&&c?.count>0)onDeductStock(c.id,c.count);
+    function closeWithAnim(){
+      if (!current) return;
+      const t = current;
+      animateOut(() => {
+        bubble.classList.remove("is-open");
+        bubble.setAttribute("aria-hidden","true");
+        t.setAttribute("aria-expanded","false");
+        current = null;
+        undim();
       });
     }
 
-    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString(),elapsedMs:total,startedAt:null}:t));
-    setPendingFinishId(null);
-  }
-
-  function restoreTask(id){
-    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"paused",startedAt:null}:t));
-  }
-
-  function startLongPress(id){longPressTimer.current=setTimeout(()=>setLongPressId(id),600);}
-  function cancelLongPress(){clearTimeout(longPressTimer.current);}
-  const activeTasks=tasks.filter(t=>t.status!=="done");
-
-  function pickOneCore(prevId){
-    const pool=tasks.filter(t=>t.status!=="done");
-    if(pool.length===0)return null;
-    let next=pool[Math.floor(Math.random()*pool.length)]?.id;
-    if(pool.length>1 && next===prevId){
-      next=pool[(pool.findIndex(x=>x.id===next)+1)%pool.length].id;
+    function scheduleClose(){
+      cancelCloseTimer();
+      closeTimer = setTimeout(() => {
+        if (hoverCount <= 0 && !isCoarse()) closeWithAnim();
+      }, CLOSE_DELAY);
     }
-    return next;
-  }
-  function pickOne(){
-    setPickedId(prev=>pickOneCore(prev));
-  }
-  function handleFlipCard(){
-    const pool=tasks.filter(t=>t.status!=="done");
-    if(pool.length===0||flipAnimating)return;
-    if(pool.length===1 && pickedId===pool[0].id)return;
-    setFlipAnimating(true);
-    setTimeout(()=>{
-      setPickedId(prev=>pickOneCore(prev));
-      setTimeout(()=>setFlipAnimating(false),260);
-    },220);
-  }
-  function downloadPicked(){
-    if(!pickedTask?.img){alert("这张图纸没有图片，无法导出～");return;}
-    try{
-      const a=document.createElement("a");
-      a.href=pickedTask.img;
-      const safe=(pickedTask.name||"图纸").replace(/[\/:*?"<>|]/g,"_");
-      a.download=`${safe}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }catch(e){
-      alert("导出失败："+e.message);
-    }
-  }
-  const pickedTask=pickedId?tasks.find(t=>t.id===pickedId):null;
-  // 缺色替换页
-  if(view==="missing")return <MissingColorPage T={T} stock={stock} onBack={()=>setView("home")}/>;
+    function cancelCloseTimer(){ if (closeTimer){ clearTimeout(closeTimer); closeTimer = null; } }
 
-  // 日记页
-  if(view==="diary")return(
-    <div style={{fontFamily:"'Nunito',sans-serif"}}>
-      <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${T.border}`}}>
-        <button onClick={()=>setView("home")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer",lineHeight:1}}>←</button>
-        <div style={{fontSize:15,fontWeight:800,color:T.text}}>📖 拼豆日记</div>
-      </div>
-      <DiaryPage T={T} tn={tn} inWorks={true}/>
-    </div>
-  );
+    // ---------------- Hover-intent (desktop) ----------------
+    function onZoneEnter(){ if (isCoarse()) return; hoverCount++; cancelCloseTimer(); }
+    function onZoneLeave(){ if (isCoarse()) return; hoverCount = Math.max(0, hoverCount - 1); if (hoverCount === 0) scheduleClose(); }
 
-  return(
-    <div style={{fontFamily:"'Nunito',sans-serif",paddingBottom:20}}>
+    bubble.addEventListener("pointerenter", onZoneEnter, true);
+    bubble.addEventListener("mouseenter",   onZoneEnter, true);
+    bubble.addEventListener("pointerleave", onZoneLeave, true);
+    bubble.addEventListener("mouseleave",   onZoneLeave, true);
 
-        {/* 新建图纸弹窗 */}
-      {showAddModal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:999,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
-          onClick={e=>{if(e.target===e.currentTarget)closeAddModal();}}>
-          <div style={{background:T.card,borderRadius:"24px 24px 0 0",width:"100%",maxWidth:480,maxHeight:"90vh",display:"flex",flexDirection:"column"}}>
-                        <>
-              <div style={{padding:"20px 20px 0",flexShrink:0}}>
-                <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>🖼️ 新建图纸</div>
-                <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="图纸名称，比如：草莓蛋糕" autoFocus
-                  style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:14}}/>
-              </div>
-
-              <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
-                <div onClick={()=>newImgRef.current?.click()}
-                  style={{background:T.accentSoft,border:`2px dashed ${T.border}`,borderRadius:16,padding:"20px",textAlign:"center",cursor:"pointer",marginBottom:10,overflow:"hidden",minHeight:80}}>
-                  {newImg?(
-                    <img src={newImg} style={{width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10}} alt=""/>
-                  ):(
-                    <>
-                      <div style={{fontSize:28,marginBottom:6}}>📷</div>
-                      <div style={{fontSize:13,fontWeight:700,color:T.accent}}>点击上传图纸</div>
-                      <div style={{fontSize:11,color:T.textMid,marginTop:4}}>只保存图纸，不进行颜色识别</div>
-                    </>
-                  )}
-                </div>
-                <input ref={newImgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleNewImg}/>
-              </div>
-
-              <div style={{padding:"12px 20px 36px",flexShrink:0,display:"flex",gap:10}}>
-                <button onClick={closeAddModal} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
-                <button onClick={saveNewTask} disabled={!newName.trim()}
-                  style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:newName.trim()?T.accent:"#ccc",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>
-                  保存图纸 ✓
-                </button>
-              </div>
-            </>
-
-          </div>
-        </div>
-      )}
-
-      {/* 长按删除确认 */}
-      {longPressId&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:998,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}}
-          onClick={()=>setLongPressId(null)}>
-          <div style={{background:T.card,borderRadius:22,padding:"24px 20px",width:"100%",maxWidth:320}} onClick={e=>e.stopPropagation()}>
-            <div style={{textAlign:"center",marginBottom:16}}>
-              <div style={{fontSize:32,marginBottom:8}}>🗑️</div>
-              <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:6}}>删除这个图纸？</div>
-              <div style={{fontSize:12,color:T.textMid}}>「{tasks.find(t=>t.id===longPressId)?.name}」删除后无法恢复</div>
-            </div>
-            <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setLongPressId(null)} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
-              <button onClick={()=>deleteTask(longPressId)} style={{flex:1,padding:"12px 0",borderRadius:50,border:"none",background:T.danger,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>删除</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 进度区 */}
-      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 18px 16px",borderBottom:`1px solid ${T.border}`}}>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:10}}>
-          <div>
-            <div style={{fontSize:18,fontWeight:900,color:T.accent}}>作品</div>
-            <div style={{fontSize:11,color:T.textMid,marginTop:2}}>本月进度 · {now.getMonth()+1}月</div>
-          </div>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:20,fontWeight:900,color:T.text}}>{doneThisMonth.length} <span style={{fontSize:12,fontWeight:600,color:T.textMid}}>件</span></div>
-          </div>
-        </div>
-        {showGoalEdit?(
-          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-            <input value={goalInput} onChange={e=>setGoalInput(e.target.value)} type="number" placeholder="目标件数"
-              style={{flex:1,border:`1.5px solid ${T.border}`,borderRadius:12,padding:"6px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none"}}/>
-            <button onClick={()=>{setMonthGoal(goalInput===""?0:Number(goalInput));setShowGoalEdit(false);localStorage.setItem('pindou_month_goal',goalInput);}}
-              style={{padding:"6px 14px",borderRadius:20,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>确认</button>
-            <button onClick={()=>setShowGoalEdit(false)} style={{padding:"6px 10px",borderRadius:20,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>取消</button>
-          </div>
-        ):(
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.textMid,fontWeight:600,marginBottom:5}}>
-            <span>{monthGoal>0?`本月目标 ${monthGoal} 件`:"未设置目标"}</span>
-            <button onClick={()=>{setGoalInput(String(monthGoal||""));setShowGoalEdit(true);}} style={{background:"none",border:"none",fontSize:10,color:T.accent,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:0}}>修改目标</button>
-          </div>
-        )}
-        {monthGoal>0&&<div style={{background:T.accentLight,borderRadius:20,height:8,overflow:"hidden",marginBottom:10}}>
-          <div style={{width:`${progress*100}%`,height:"100%",borderRadius:20,background:`linear-gradient(90deg,${T.accent},#a78bff)`,transition:"width 0.5s"}}/>
-        </div>}
-        <div style={{display:"flex",gap:6}}>
-          {[["📋",tasks.filter(t=>t.status==="todo").length,"待开始",T.textMid,T.accentSoft],["🔥",tasks.filter(t=>t.status==="doing").length,"进行中",T.warn,T.warnBg],["✅",doneTasks.length,"已完成","#4caf50","#f0fff4"]].map(([ic,n,lb,col,bg])=>(
-            <div key={lb} style={{flex:1,textAlign:"center",fontSize:10,fontWeight:700,color:col,background:bg,borderRadius:8,padding:"5px 0"}}>{ic} {lb} {n}</div>
-          ))}
-        </div>
-        <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
-          <button onClick={()=>setShowDoneList(v=>!v)} style={{background:"none",border:"none",fontSize:11,color:T.accent,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito',sans-serif",padding:0}}>
-            {showDoneList?`收起已完成 ${doneTasks.length}`:`查看已完成 ${doneTasks.length}`}
-          </button>
-        </div>
-      </div>
-
-      {/* 工具入口 */}
-      <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setView("missing");}}
-          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
-          <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔍</div>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>缺色替换</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
-            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>找库存替代色</div>
-          </div>
-        </div>
-        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setView("diary");}}
-          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
-          <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#fff0f8,#ffd6ee)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>📖</div>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>拼豆日记</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
-            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>记录拼豆时光</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 即将出炉 */}
-      <div style={{padding:"16px 16px 0"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:10}}>
-          <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
-          <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"flex-end",flexShrink:0}}>
-            <button onClick={()=>{pickOne();setPickerOpen(true);}} style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>🎩 翻一翻</button>
-            <button onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}} style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>{isPro?"🧰 工具箱":"🧰 工具箱 · Pro"}</button>
-            <button onClick={openAddModal} style={{padding:"5px 10px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>＋ 新建</button>
-          </div>
-        </div>
-        <div style={{fontSize:11,color:T.textLight,marginBottom:10,fontWeight:600}}>长按卡片可删除</div>
-
-        {/* 翻卡器：随机给你一张待拼图纸 */}
-        {pickerOpen&&(
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
-            onClick={()=>setPickerOpen(false)}>
-            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:T.card,borderRadius:24,border:`1.5px solid ${T.border}`,boxShadow:T.floatShadow,overflow:"hidden"}}>
-              <div style={{padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",background:`linear-gradient(135deg,${T.accentSoft},#f5f0ff)`}}>
-                <div style={{fontSize:14,fontWeight:900,color:T.text}}>🃏 翻卡器</div>
-                <button onClick={()=>setPickerOpen(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
-              </div>
-
-              {!pickedTask?(
-                <div style={{padding:"22px 16px",textAlign:"center",color:T.textMid,fontWeight:700}}>
-                  <span style={{display:"block",lineHeight:1.7}}>现在没有待拼图纸哦~</span>
-                  <span style={{display:"block",lineHeight:1.7}}>先去「新建」存几张吧</span>
-                </div>
-              ):(
-                <div style={{padding:"16px"}}>
-                  <div onClick={handleFlipCard} style={{borderRadius:18,overflow:"hidden",border:`1.5px solid ${T.border}`,background:T.bg,cursor:"pointer",perspective:1200}}>
-                    <div style={{transform:`rotateY(${flipAnimating?90:0}deg)`,transformStyle:"preserve-3d",transition:"transform 0.48s cubic-bezier(.22,.8,.22,1)"}}>
-                      <div style={{aspectRatio:"16/11",background:"#ddd",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {pickedTask.img?<img src={pickedTask.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<div style={{fontSize:28}}>🖼️</div>}
-                      </div>
-                    </div>
-                    <div style={{padding:"12px 12px 10px"}}>
-                      <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pickedTask.name}</div>
-                      <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>状态：{pickedTask.status==="doing"?"进行中":pickedTask.status==="paused"?"已暂停":"待开始"}</div>
-                    </div>
-                  </div>
-
-                  <div style={{display:"flex",justifyContent:"center",marginTop:14}}>
-                    <button onClick={downloadPicked} style={{width:"78%",maxWidth:260,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>下载导出</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-
-        {showToolbox&&(
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
-            onClick={()=>setShowToolbox(false)}>
-            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,maxHeight:"85vh",background:T.card,borderRadius:"24px 24px 0 0",overflow:"hidden",display:"flex",flexDirection:"column"}}>
-              <div style={{padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${T.border}`}}>
-                <div style={{fontSize:15,fontWeight:900,color:T.text}}>🧰 工具箱</div>
-                <button onClick={()=>setShowToolbox(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
-              </div>
-              <div style={{padding:"14px 16px 24px",overflowY:"auto"}}>
-
-                {[
-                  ["boards","豆板",toolbox.boards],
-                  ["needles","豆针",toolbox.needles],
-                  ["shovels","豆铲",toolbox.shovels],
-                ].map(([group,title,items])=>(
-                  <div key={group} style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
-                    <div onClick={()=>setToolOpen(v=>({...v,[group]:!v[group]}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen[group]?10:0}}>
-                      <div style={{fontSize:13,fontWeight:900,color:T.text}}>{title}</div>
-                      <div style={{fontSize:14,color:T.textMid}}>{toolOpen[group]?"▾":"▸"}</div>
-                    </div>
-                    {toolOpen[group]&&Object.entries(items).map(([key,val])=>(
-                      <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
-                        <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                          <button onClick={()=>updateToolQty(group,key,-1)} style={{width:28,height:28,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
-                          <div style={{minWidth:34,textAlign:"center",fontSize:13,fontWeight:900,color:T.text}}>{val.qty||0}</div>
-                          <button onClick={()=>updateToolQty(group,key,1)} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
-                        </div>
-                        <input value={val.note||""} onChange={e=>updateToolNote(group,key,e.target.value)} placeholder="备注，比如：2块A店买的，2块B店买的"
-                          style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-
-                <div style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
-                  <div onClick={()=>setToolOpen(v=>({...v,devices:!v.devices}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen.devices?10:0}}>
-                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>固定设备</div>
-                    <div style={{fontSize:14,color:T.textMid}}>{toolOpen.devices?"▾":"▸"}</div>
-                  </div>
-                  {toolOpen.devices&&Object.entries(toolbox.devices).map(([key,val])=>(
-                    <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
-                      <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
-                      <button onClick={()=>toggleToolOwned(key)} style={{padding:"8px 14px",borderRadius:50,border:`1.5px solid ${val.owned?T.accent:T.border}`,background:val.owned?T.accentSoft:T.card,color:val.owned?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",marginBottom:8}}>
-                        {val.owned?"已拥有":"未拥有"}
-                      </button>
-                      <input value={val.note||""} onChange={e=>updateToolNote('devices',key,e.target.value)} placeholder="备注"
-                        style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
-                  <div onClick={()=>setToolOpen(v=>({...v,supplies:!v.supplies}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen.supplies?10:0}}>
-                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>配件 / 耗材</div>
-                    <div style={{fontSize:14,color:T.textMid}}>{toolOpen.supplies?"▾":"▸"}</div>
-                  </div>
-                  {toolOpen.supplies&&Object.entries(toolbox.supplies).map(([key,val])=>(
-                    <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
-                      <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                        <button onClick={()=>updateToolQty('supplies',key,-1)} style={{width:28,height:28,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
-                        <div style={{minWidth:34,textAlign:"center",fontSize:13,fontWeight:900,color:T.text}}>{val.qty||0}</div>
-                        <button onClick={()=>updateToolQty('supplies',key,1)} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
-                      </div>
-                      <input value={val.note||""} onChange={e=>updateToolNote('supplies',key,e.target.value)} placeholder="备注"
-                        style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
-                    </div>
-                  ))}
-                </div>
-
-              </div>
-            </div>
-          </div>
-        )}
-
-        {pendingFinishId&&(
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
-            onClick={()=>setPendingFinishId(null)}>
-            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:340,background:T.card,borderRadius:24,padding:"22px 18px",boxShadow:T.floatShadow}}>
-              <div style={{fontSize:15,fontWeight:900,color:T.text,textAlign:"center",marginBottom:8}}>完成这张图纸？</div>
-              <div style={{fontSize:12,color:T.textMid,textAlign:"center",lineHeight:1.7,marginBottom:16}}>
-                这次完成后，要不要同步扣除库存里的豆子数量
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                <button onClick={()=>confirmFinishTask(true)} style={{padding:"11px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>扣除库存并完成</button>
-                <button onClick={()=>confirmFinishTask(false)} style={{padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>仅标记完成</button>
-                <button onClick={()=>setPendingFinishId(null)} style={{padding:"11px 0",borderRadius:50,border:"none",background:"#f3f4f6",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>取消</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-
-
-
-        {activeTasks.length===0&&(
-          <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有图纸～点右上角新建一个吧 (◕ᴗ◕✿)</div>
-        )}
-
-        {activeTasks.map(task=>{
-          const showTime=task.status==="doing"||task.status==="paused"||task.status==="done";
-          const elapsed=formatElapsed(getDisplayElapsedMs(task));
-          const statusText=task.status==="doing"?"进行中":task.status==="paused"?"已暂停":task.status==="done"?"已完成":"待开始";
-          const statusBg=task.status==="doing"?T.warnBg:task.status==="paused"?"#f3f4f6":task.status==="done"?"#f0fff4":T.accentSoft;
-          const statusColor=task.status==="doing"?T.warn:task.status==="paused"?"#7d8792":task.status==="done"?"#4caf50":T.accent;
-          return(
-          <div key={task.id}
-            onTouchStart={()=>startLongPress(task.id)}
-            onTouchEnd={cancelLongPress}
-            onTouchMove={cancelLongPress}
-            onMouseDown={()=>startLongPress(task.id)}
-            onMouseUp={cancelLongPress}
-            onMouseLeave={cancelLongPress}
-            className="cc"
-            style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"12px",marginBottom:12,boxShadow:T.cardShadow,display:"flex",gap:12,alignItems:"stretch"}}>
-            <div style={{width:96,height:96,borderRadius:18,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>
-              {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
-            </div>
-
-            <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-              <div>
-                <div style={{fontSize:15,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.25,marginBottom:10}}>{task.name}</div>
-
-                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
-                  <div style={{padding:"4px 10px",borderRadius:12,background:statusBg,border:`1.5px solid ${statusColor}33`,fontSize:11,fontWeight:800,color:statusColor}}>
-                    {statusText}
-                  </div>
-                  {showTime&&(
-                    <div style={{fontSize:11,color:T.textMid,fontWeight:800,letterSpacing:0.2}}>
-                      {task.status==="doing"?`计时 ${elapsed}`:task.status==="paused"?`已拼 ${elapsed}`:`用时 ${elapsed}`}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                {task.status==="todo"&&(
-                  <button onClick={()=>startTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer",boxShadow:`0 3px 10px ${T.accent}22`}}>▶ 开始拼</button>
-                )}
-
-                {task.status==="doing"&&(
-                  <>
-                    <button onClick={()=>pauseTask(task.id)} style={{width:42,height:42,borderRadius:"50%",border:`2px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:18,fontWeight:900,cursor:"pointer",flexShrink:0}}>⏸</button>
-                    <button onClick={()=>finishTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:"none",background:"#0cc33c",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer",boxShadow:"0 3px 10px rgba(12,195,60,0.16)"}}>✓ 完成</button>
-                  </>
-                )}
-
-                {task.status==="paused"&&(
-                  <>
-                    <button onClick={()=>finishTask(task.id)} style={{width:42,height:42,borderRadius:"50%",border:"2px solid #c9efd2",background:"#eefbf1",color:"#32b74a",fontSize:20,fontWeight:900,cursor:"pointer",flexShrink:0}}>✓</button>
-                    <button onClick={()=>resumeTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer",boxShadow:`0 3px 10px ${T.accent}22`}}>▶ 继续拼</button>
-                  </>
-                )}
-
-                {task.status==="done"&&(
-                  <div style={{padding:"10px 14px",borderRadius:50,background:"#f0fff4",border:"1.5px solid #bfe9c6",color:"#2f9a47",fontSize:13,fontWeight:900}}>
-                    ✓ 已完成
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )})}
-
-        {showDoneList&&doneTasks.length>0&&(
-          <div style={{paddingTop:4}}>
-            <div style={{fontSize:12,fontWeight:800,color:T.textMid,marginBottom:10}}>✅ 已完成</div>
-            {doneTasks.map(task=>{
-              const elapsed=formatElapsed(task.elapsedMs||0);
-              return(
-              <div key={`done-${task.id}`} style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:22,padding:"12px",marginBottom:12,boxShadow:T.cardShadow,display:"flex",gap:12,alignItems:"stretch",opacity:0.96}}>
-                <div
-                  onClick={()=>{
-                    const inp=document.createElement('input');
-                    inp.type='file';inp.accept='image/*';
-                    inp.onchange=e=>{
-                      const f=e.target.files[0];if(!f)return;
-                      const r=new FileReader();
-                      r.onload=ev=>{
-                        const img=new Image();
-                        img.onload=()=>{
-                          const canvas=document.createElement('canvas');
-                          const max=300;
-                          let w=img.width,h=img.height;
-                          if(w>h){if(w>max){h=Math.round(h*max/w);w=max;}}
-                          else{if(h>max){w=Math.round(w*max/h);h=max;}}
-                          canvas.width=w;canvas.height=h;
-                          canvas.getContext('2d').drawImage(img,0,0,w,h);
-                          const compressed=canvas.toDataURL('image/jpeg',0.7);
-                          setTasks(prev=>prev.map(t=>t.id===task.id?{...t,img:compressed}:t));
-                        };
-                        img.src=ev.target.result;
-                      };
-                      r.readAsDataURL(f);
-                    };
-                    inp.click();
-                  }}
-                  style={{width:80,height:80,borderRadius:16,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:"pointer",position:"relative"}}>
-                  {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
-                  <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.0)",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:4,opacity:1}}>
-                    <div style={{fontSize:9,color:"rgba(255,255,255,0.85)",background:"rgba(0,0,0,0.32)",borderRadius:6,padding:"1px 6px",fontWeight:700,fontFamily:"'Nunito',sans-serif"}}>换封面</div>
-                  </div>
-                </div>
-                <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-                  <div>
-                    <div style={{fontSize:14,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:8}}>{task.name}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                      <div style={{padding:"4px 10px",borderRadius:12,background:"#f0fff4",border:"1.5px solid #bfe9c6",fontSize:10,fontWeight:800,color:"#4caf50"}}>已完成</div>
-                      <div style={{fontSize:11,color:T.textMid,fontWeight:800}}>用时 {elapsed}</div>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",gap:8,marginTop:10}}>
-                    <button onClick={()=>restoreTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>↩ 恢复</button>
-                    <button onClick={()=>deleteTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:"none",background:T.dangerBg,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>删除</button>
-                  </div>
-                </div>
-              </div>
-            )})}
-          </div>
-        )}
-      </div>
-
-    </div>
-  );
-}
-
-// ══════════════════════════════════
-//  MinePage（我的页）
-// ══════════════════════════════════
-function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteInfo}){
-  const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
-  const [nickname,setNickname]=useState(()=>localStorage.getItem('pindou_nickname')||"");
-  const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
-  const [editingName,setEditingName]=useState(false);
-  const [nameInput,setNameInput]=useState("");
-  const avatarRef=useRef(null);
-
-  function saveNickname(){
-    localStorage.setItem('pindou_nickname',nameInput);
-    setNickname(nameInput);
-    setEditingName(false);
-  }
-  function handleAvatar(e){
-    const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=ev=>{
-      localStorage.setItem('pindou_avatar',ev.target.result);
-      setAvatar(ev.target.result);
+    const handleEnter = (e) => {
+      if (isCoarse()) return;
+      const target = getElementTarget(e);
+      if (!target) return;
+      const t = target.closest(".tt-trigger");
+      if (!t) return;
+      onZoneEnter();
+      if (!current || current !== t) openFromTrigger(t);
     };
-    r.readAsDataURL(f);
-    e.target.value="";
-  }
+    const handleLeave = (e) => {
+      if (isCoarse()) return;
+      const target = getElementTarget(e);
+      if (!target) return;
+      const t = target.closest(".tt-trigger");
+      if (!t) return;
+      onZoneLeave();
+    };
+    document.addEventListener("pointerenter", handleEnter, true);
+    document.addEventListener("mouseenter",   handleEnter, true);
+    document.addEventListener("pointerleave", handleLeave, true);
+    document.addEventListener("mouseleave",   handleLeave, true);
 
-  return(
-    <div style={{fontFamily:"'Nunito',sans-serif",padding:"0 0 20px"}}>
-      {/* 头部 */}
-      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 20px 16px",display:"flex",flexDirection:"column",alignItems:"center"}}>
-        {/* 头像 */}
-        <div onClick={()=>avatarRef.current?.click()} style={{position:"relative",marginBottom:12,cursor:"pointer"}}>
-          <div style={{width:76,height:76,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,overflow:"hidden",boxShadow:`0 4px 16px ${T.accent}44`}}>
-            {avatar?<img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🧑"}
-          </div>
-          <div style={{position:"absolute",bottom:-2,right:-2,width:22,height:22,borderRadius:"50%",background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",border:`2px solid ${T.card}`}}>📷</div>
-        </div>
-        <input ref={avatarRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatar}/>
+    // ---------------- Keyboard ----------------
+    document.addEventListener("focusin", (e) => {
+      if (!e.target) return;
+      const t = e.target.closest(".tt-trigger");
+      if (t) openFromTrigger(t);
+    });
+    document.addEventListener("focusout", (e) => {
+      if (!e.target) return;
+      const t = e.target.closest(".tt-trigger");
+      if (t && current === t) closeWithAnim();
+    });
 
-        {/* 昵称 */}
-        {editingName?(
-          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
-            <input value={nameInput} onChange={e=>setNameInput(e.target.value)} autoFocus
-              onKeyDown={e=>{if(e.key==="Enter")saveNickname();if(e.key==="Escape")setEditingName(false);}}
-              style={{border:`1.5px solid ${T.border}`,borderRadius:10,padding:"5px 12px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",width:150,textAlign:"center"}}/>
-            <button onClick={saveNickname} style={{background:T.accent,border:"none",borderRadius:8,padding:"5px 12px",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>保存</button>
-          </div>
-        ):(
-          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}} onClick={()=>{setNameInput(nickname);setEditingName(true);}}>
-            <div style={{fontSize:16,fontWeight:800,color:T.text}}>{nickname||"点击设置昵称"}</div>
-            {isPro&&<span style={{fontSize:10,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"2px 8px",fontWeight:900}}>Pro ✦</span>}
-            <span style={{fontSize:12,color:T.textLight,cursor:"pointer"}}>✏️</span>
-          </div>
-        )}
-        <div style={{fontSize:11,color:T.textLight,marginTop:2}}>加入于 {joinDate}</div>
-        {/* Pro状态小横幅 */}
-        {isPro?(
-          <div style={{marginTop:10,padding:"6px 16px",borderRadius:50,background:"linear-gradient(90deg,#ffd166,#ffb347)",fontSize:11,fontWeight:900,color:"#7a4000"}}>✦ Pro 会员 · 全功能已解锁</div>
-        ):(
-          <div className="cc" onClick={onUpgrade} style={{marginTop:10,padding:"7px 18px",borderRadius:50,background:"linear-gradient(135deg,#fff8ec,#ffe0a0)",border:"1.5px solid #ffd166",fontSize:12,fontWeight:900,color:"#b87c00",cursor:"pointer",boxShadow:"0 2px 8px rgba(255,209,102,0.25)"}}>🌟 升级 Pro · 解锁全功能</div>
-        )}
-      </div>
+    // ---------------- Mobile / coarse ----------------
+    document.addEventListener("pointerdown", (e) => {
+      if (!isCoarse()) return;
 
-      <div style={{padding:"16px 16px 0"}}>
-        {/* 邀请好友 */}
-        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
-          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🎁 邀请好友</div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-            <div style={{flex:1,background:T.accentSoft,borderRadius:12,padding:"10px 14px",fontSize:16,fontWeight:900,color:T.accent,letterSpacing:2,textAlign:"center"}}>{inviteInfo.code||"加载中…"}</div>
-            <button onClick={()=>{navigator.clipboard.writeText(inviteInfo.code);}} style={{padding:"10px 14px",borderRadius:12,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>复制</button>
-          </div>
-          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7,marginBottom:8}}>
-            好友填你的邀请码注册 → 好友得 <b style={{color:T.accent}}>3天Pro试用</b><br/>
-            你每邀请1人 → 得 <b style={{color:T.accent}}>+2次AI识图</b>，最多邀请5人
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{flex:1,background:T.bg,borderRadius:10,height:6,overflow:"hidden"}}>
-              <div style={{width:`${Math.min((inviteInfo.count||0)/5*100,100)}%`,height:"100%",background:T.accent,borderRadius:10,transition:"width 0.4s"}}/>
-            </div>
-            <div style={{fontSize:11,color:T.textMid,fontWeight:700,whiteSpace:"nowrap"}}>{inviteInfo.count||0} / 5 人</div>
-          </div>
-          {(inviteInfo.bonus||0)>0&&<div style={{marginTop:8,fontSize:11,color:"#4caf50",fontWeight:700}}>🎉 已获得 {inviteInfo.bonus} 次额外识图</div>}
-        </div>
+      const t = e.target.closest(".tt-trigger");
+      if (!t) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (current === t && bubble.classList.contains("is-open")) { closeWithAnim(); return; }
+      openFromTrigger(t);
+    }, true);
 
-        {/* 数据管理 */}
-        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
-          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>📦 数据管理</div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            <div className="cc" onClick={onExport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬇️ 导出数据</div>
-                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>备份库存数据为JSON文件</div>
-              </div>
-              <span style={{fontSize:18,color:T.textLight}}>›</span>
-            </div>
-            <div className="cc" onClick={onImport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:T.text}}>⬆️ 导入数据</div>
-                <div style={{fontSize:11,color:T.textMid,marginTop:2}}>从备份文件恢复库存数据</div>
-              </div>
-              <span style={{fontSize:18,color:T.textLight}}>›</span>
-            </div>
-          </div>
-        </div>
+    document.addEventListener("click", (e) => {
+      if (!isCoarse()) return;
+      if (!bubble.classList.contains("is-open")) return;
+      const inBubble  = !!e.target.closest(".tt-bubble");
+      const onTrigger = !!e.target.closest(".tt-trigger");
+      if (!inBubble && !onTrigger) closeWithAnim();
+    }, true);
 
-        {/* 退出登录 */}
-        <button className="btn" onClick={onLogout}
-          style={{width:"100%",padding:"14px 0",borderRadius:20,border:`1.5px solid ${T.border}`,background:T.card,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer",boxShadow:T.cardShadow}}>
-          退出登录
-        </button>
-      </div>
-    </div>
-  );
-}
+    // Close button + ESC
+    elClose.addEventListener("click", closeWithAnim);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeWithAnim(); });
 
-function YearScroller({curYear,setCurYear,T}){
-  const ref=useRef(null);
-  const years=Array.from({length:30},(_,i)=>2015+i);
-  useEffect(()=>{
-    if(!ref.current)return;
-    const el=ref.current.querySelector(`[data-year="${curYear}"]`);
-    if(el)el.scrollIntoView({inline:"center",behavior:"smooth",block:"nearest"});
-  },[curYear]);
-  return(
-    <>
-      <style>{`.yscroll::-webkit-scrollbar{display:none}`}</style>
-      <div ref={ref} className="yscroll" style={{display:"flex",gap:28,overflowX:"auto",paddingBottom:8,marginBottom:16,
-        scrollbarWidth:"none",WebkitOverflowScrolling:"touch",
-        paddingLeft:"calc(50% - 20px)",paddingRight:"calc(50% - 20px)"}}>
-        {years.map(y=>(
-          <button key={y} data-year={y} onClick={()=>setCurYear(y)}
-            style={{flexShrink:0,background:"none",border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",
-              fontSize:y===curYear?18:14,fontWeight:y===curYear?800:500,
-              color:y===curYear?T.accent:T.textLight,
-              borderBottom:y===curYear?`2.5px solid ${T.accent}`:"2.5px solid transparent",
-              paddingBottom:3,transition:"all 0.2s",whiteSpace:"nowrap"}}>
-            {y}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-}
-
-// ══════════════ 日记页组件 ══════════════
-function DiaryPage({T}){
-  const [diaryPage,setDiaryPage]=useState("cal");
-  const [curYear,setCurYear]=useState(new Date().getFullYear());
-  const [curMonth,setCurMonth]=useState(new Date().getMonth()+1);
-  const [selDay,setSelDay]=useState(new Date().getDate());
-  const [db,setDb]=useState(()=>{
-    try{const s=localStorage.getItem('pindou_diary');return s?JSON.parse(s):{'2026-3-9':{text:'黄色系小熊，拼了好久终于成功！',photos:[]}};}catch{return{};}
+    // Reposition on resize/scroll while open
+    const reposition = () => { if (!current) return; placeAnchored(current); };
+    addEventListener("resize", reposition, { passive: true });
+    addEventListener("scroll", reposition, { passive: true });
   });
-  const [editKey,setEditKey]=useState(null);
-  const [editText,setEditText]=useState("");
-  const [editPhotos,setEditPhotos]=useState([]);
-  const [delMode,setDelMode]=useState(false);
-  const [delSel,setDelSel]=useState(new Set());
-  const fileRef=useRef();
+  </script></div><div class="u-embed-css w-embed"><style>
+/* Tooltip Styles */
 
-  useEffect(()=>{try{localStorage.setItem('pindou_diary',JSON.stringify(db));}catch{}},[db]);
+  /* Trigger */
+  .tt-trigger {
+    cursor: help;
+    text-decoration: underline dotted;
+    text-underline-offset: .2em;
+    color: inherit;
+  }
+  .tt-trigger:focus-visible{ outline:2px solid currentColor; outline-offset:2px; }
 
-  function rkey(y,m,d){return`${y}-${m}-${d}`;}
-  function hasRec(d){return!!db[rkey(curYear,curMonth,d)];}
-  function monthCount(y,m){return Object.keys(db).filter(k=>k.startsWith(`${y}-${m}-`)).length;}
-  function shiftMonth(dir){let m=curMonth+dir,y=curYear;if(m>12){m=1;y++;}if(m<1){m=12;y--;}setCurMonth(m);setCurYear(y);setSelDay(1);}
-  function openEdit(key){setEditKey(key);const r=db[key]||{text:"",photos:[]};setEditText(r.text||"");setEditPhotos([...(r.photos||[])]);setDiaryPage("edit");}
-  function toggleDelSel(key){setDelSel(p=>{const n=new Set(p);n.has(key)?n.delete(key):n.add(key);return n;});}
-  function confirmDelete(){
-    if(delSel.size===0)return;
-    setDb(prev=>{const n={...prev};delSel.forEach(k=>delete n[k]);return n;});
-    setDelSel(new Set());setDelMode(false);
+  /* Bubble */
+  .tt-bubble{
+    position: fixed;
+    z-index: 10;
+    max-width: 17rem;
+    background: var(--_theme---background-primary);
+    box-shadow: 0 4px 24px rgba(0,0,0,.05);
+    border-radius: var(--radius--large);
+    border-style: solid;
+    border-color: var(--_theme---border-tertiary);
+    padding: var(--_spacing---space--1-5rem);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(0,0,0) scale(.98);
+    transition: opacity .3s ease, transform .3s ease;
+    will-change: transform, opacity;
+  }
+  .tt-bubble.is-open{ opacity:1; transform:translate3d(0,0,0) scale(1); pointer-events:auto; }
+
+  .tt-h{ 
+    margin-bottom: var(--_spacing---space--0-5rem); 
+    font-size: var(--_typography---font-size--body-3); 
+    font-family: var(--_typography---font--secondary-family);
+    line-height: var(--_typography---line-height--1-6); 
+    color: var(--_theme---foreground-primary);
+  }
+  .tt-b{ 
+    margin:0; 
+    font-size: var(--_typography---font-size--caption);
+    line-height: var(--_typography---line-height--1-6);
+    color: var(--_theme---foreground-tertiary);
   }
 
-  const CandySVG=()=>(
-    <svg viewBox="0 0 100 100" style={{width:"100%",height:"100%"}}>
-      {/* 糖果包装纸左 */}
-      <ellipse cx="18" cy="50" rx="14" ry="8" fill="#e0e0e0" transform="rotate(-30 18 50)"/>
-      <ellipse cx="18" cy="50" rx="10" ry="5" fill="#cccccc" opacity="0.7" transform="rotate(-30 18 50)"/>
-      {/* 糖果包装纸右 */}
-      <ellipse cx="82" cy="50" rx="14" ry="8" fill="#e0e0e0" transform="rotate(30 82 50)"/>
-      <ellipse cx="82" cy="50" rx="10" ry="5" fill="#cccccc" opacity="0.7" transform="rotate(30 82 50)"/>
-      {/* 糖果主体 */}
-      <circle cx="50" cy="50" r="28" fill="#ff7b8a"/>
-      <circle cx="50" cy="50" r="28" fill="url(#diaryCandy)"/>
-      {/* 糖果条纹 */}
-      <path d="M 30 30 Q 50 20 70 30 Q 80 50 70 70 Q 50 80 30 70 Q 20 50 30 30Z" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="5"/>
-      <path d="M 36 24 Q 58 18 72 36" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="4" strokeLinecap="round"/>
-      {/* 高光 */}
-      <ellipse cx="38" cy="36" rx="10" ry="7" fill="rgba(255,255,255,0.4)" transform="rotate(-20 38 36)"/>
-      <ellipse cx="42" cy="33" rx="5" ry="3" fill="rgba(255,255,255,0.6)" transform="rotate(-20 42 33)"/>
-      <defs>
-        <radialGradient id="diaryCandy" cx="38%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="rgba(255,160,170,0.6)"/>
-          <stop offset="100%" stopColor="rgba(200,50,80,0.3)"/>
-        </radialGradient>
-      </defs>
-    </svg>
-  );
-
-  const todayY=new Date().getFullYear(),todayM=new Date().getMonth()+1,todayD=new Date().getDate();
-  const firstDow=new Date(curYear,curMonth-1,1).getDay();
-  const totalDays=new Date(curYear,curMonth,0).getDate();
-  const prevTotal=new Date(curYear,curMonth-1,0).getDate();
-
-  if(diaryPage==="edit"&&editKey){
-    const parts=editKey.split("-");
-    function handleFiles(e){
-      Array.from(e.target.files).forEach(f=>{
-        if(editPhotos.length>=8)return;
-        const r=new FileReader();r.onload=ev=>setEditPhotos(p=>[...p,ev.target.result]);r.readAsDataURL(f);
-      });e.target.value="";
+  /* Mobile close button */
+  .tt-close {
+    display: none;
+  }
+  @media (hover: none), (pointer: coarse) {
+    .tt-close {
+      display: inline-flex;
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      font-size: 22px; 
+      line-height: 1;
+      color: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
     }
-    function save(){
-      if(!editText.trim()&&editPhotos.length===0)return;
-      setDb(prev=>({...prev,[editKey]:{text:editText,photos:editPhotos}}));
-      setDiaryPage("cal");
+    .tt-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    .tt-close:hover { opacity: 1; }
+  }
+
+</style></div><div class="u-embed-css w-embed"><style>
+  html[lang="de-DE"] h1, html[lang="de-DE"] h2, html[lang="de-DE"] h3, 
+  html[lang="de-DE"] h4, html[lang="de-DE"] h5, html[lang="de-DE"] h6,
+  html[lang="de-DE"] p, html[lang="de-DE"] li,
+  html[lang="fr-FR"] h1, html[lang="fr-FR"] h2, html[lang="fr-FR"] h3,
+  html[lang="fr-FR"] h4, html[lang="fr-FR"] h5, html[lang="fr-FR"] h6,
+  html[lang="fr-FR"] p, html[lang="fr-FR"] li {
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+</style></div></div><div class="nav_component"><div class="w-embed"><style>
+  :root {
+    --nav--icon-thickness: var(--border-width--main);
+    --nav--hamburger-thickness: var(--nav--icon-thickness);
+    --nav--hamburger-gap: var(--_spacing---space--0-25rem);
+    --nav--hamburger-rotate: 45;
+    --nav--dropdown-duration: 300ms;
+    --nav--dropdown-open-duration: 600ms;
+    --nav--dropdown-delay: 0ms;
+    --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ========== GENERAL RESPONSIVE RULES ========== */
+
+  /* Lock body when nav is open (script toggles .is-nav-open) */
+  @media (width < 56em) {
+    body.is-nav-open { overflow: hidden; }
+  }
+
+  @container (min-width: 56em) {
+    .nav_wrap.is-desktop { display: block; }
+    .nav_wrap.is-mobile  { display: none;  }
+  }
+  @container (max-width: 50.5em) {
+    /* Mega dropdown */
+    .nav_dropdown_main_scroll.is-desktop.is-mega {
+      flex-flow: column;
     }
-    return(
-      <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 16px 12px",borderBottom:`1px solid ${T.border}`}}>
-          <button onClick={()=>setDiaryPage("cal")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
-          <span style={{fontSize:15,fontWeight:800,color:T.text}}>{db[editKey]?"查看记录":"新建记录"}</span>
-          <button onClick={save} style={{background:T.accent,border:"none",borderRadius:10,padding:"6px 14px",fontSize:13,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>保存</button>
-        </div>
-        <div style={{padding:"14px 16px",overflowY:"auto",flex:1}}>
-          <div style={{fontSize:12,color:T.textMid,fontWeight:700,marginBottom:14}}>📅 {parts[0]}年{parts[1]}月{parts[2]}日</div>
-          <div style={{marginBottom:14}}>
-            <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>拼豆照片</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {editPhotos.map((src,i)=>(
-                <div key={i} style={{width:76,height:76,borderRadius:10,overflow:"hidden",position:"relative",border:`1.5px solid ${T.border}`}}>
-                  <img src={src} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                  <button onClick={()=>setEditPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:"absolute",top:2,right:2,background:"rgba(0,0,0,0.45)",border:"none",borderRadius:"50%",width:18,height:18,color:"white",fontSize:11,cursor:"pointer"}}>×</button>
-                </div>
-              ))}
-              {editPhotos.length<8&&<div onClick={()=>fileRef.current.click()} style={{width:76,height:76,borderRadius:10,border:`2px dashed ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,color:T.textLight}}>＋</div>}
-            </div>
-            <input type="file" ref={fileRef} accept="image/*" multiple onChange={handleFiles} style={{display:"none"}}/>
-          </div>
-          <div>
-            <div style={{fontSize:11,fontWeight:700,color:T.textLight,marginBottom:8}}>日记内容</div>
-            <textarea value={editText} onChange={e=>setEditText(e.target.value)} maxLength={500} placeholder="今天拼了什么？有什么心情～"
-              style={{width:"100%",minHeight:100,border:`1.5px solid ${T.border}`,borderRadius:12,padding:12,fontSize:13,color:T.text,lineHeight:1.7,resize:"none",fontFamily:"'Nunito',sans-serif",background:T.card,outline:"none"}}/>
-            <div style={{textAlign:"right",fontSize:11,color:T.textLight,marginTop:3}}>{editText.length}/500</div>
-          </div>
-        </div>
-      </div>
-    );
+    .nav_dropdown_main_wrap.is-desktop.u-theme-white.is-mega.w--open {
+      width: 100%;
+      left: 0 !important;
+    }
+    .nav_dropdown_list_wrap.is-mega:first-child .nav_dropdown_label.u-text-style-caption {
+      margin-top: 0;
+    }
+  }
+  @container (width < 28em) {
+    .nav_mobile_layout .nav_actions_mobile { display: none; }
   }
 
-  if(diaryPage==="year"){
-    return(
-      <div style={{padding:"20px 16px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <span style={{fontSize:18,fontWeight:800,color:T.text}}>豆豆日记</span>
-          <button onClick={()=>setDiaryPage("cal")} style={{background:"none",border:"none",fontSize:13,color:T.textMid,fontWeight:700,cursor:"pointer"}}>← 返回</button>
-        </div>
-        {/* 年份横滚条 */}
-        <YearScroller curYear={curYear} setCurYear={setCurYear} T={T}/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-          {Array.from({length:12},(_,i)=>{
-            const m=i+1,cnt=monthCount(curYear,m),isActive=m===curMonth;
-            return(
-              <div key={m} onClick={()=>{setCurMonth(m);setDiaryPage("cal");}} style={{background:isActive?T.accentSoft:T.card,borderRadius:14,padding:"12px 8px",textAlign:"center",cursor:"pointer",border:`2px solid ${isActive?T.accent:T.border}`}}>
-                <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:5}}>{m}月</div>
-                {cnt>0?<><div style={{fontSize:20,fontWeight:800,color:"#7bc4f0"}}>{cnt}</div><div style={{fontSize:10,color:T.textMid}}>篇记录</div></>:<div style={{fontSize:10,color:T.textLight}}>暂无记录</div>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
+  /* ========== DROPDOWN STYLING ========== */
+
+  html:not(.wf-design-mode) .nav_dropdown_component > .w-dropdown-list {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 0fr;
+    transition:
+      grid-template-rows var(--nav--dropdown-duration) var(--ease-expo-out),
+      visibility 0s var(--nav--dropdown-duration),
+      opacity var(--nav--dropdown-duration) var(--ease-expo-out);
+    visibility: hidden;
+    opacity: 0;
+  }
+  html:not(.wf-design-mode) .nav_dropdown_component > .w-dropdown-list.w--open {
+    visibility: visible;
+    opacity: 1;
+    transition:
+      grid-template-rows var(--nav--dropdown-duration) var(--ease-expo-out),
+      visibility 0s 0s,
+      opacity var(--nav--dropdown-duration) var(--ease-expo-out);
+  }
+  .nav_dropdown_component > .w-dropdown-list > * { overflow: hidden; }
+  .nav_dropdown_component:has(> .w-dropdown-toggle[aria-expanded="true"]) > .w-dropdown-list {
+    --nav--dropdown-duration: var(--nav--dropdown-open-duration);
+    grid-template-rows: 1fr;
+  }
+  /*.nav_wrap.is-desktop:has(.nav_dropdown_component > .w-dropdown-toggle.w--open[aria-expanded="false"])
+  .nav_dropdown_component:has(> .w--open[aria-expanded="true"]) > .w-dropdown-list {
+  transition-delay: var(--nav--dropdown-duration);
+  }*/
+
+  /* Dropdown caret rotation */
+  .nav_links_svg.is-desktop { transition: transform 750ms var(--ease-expo-out); }
+  .w-dropdown-toggle[aria-expanded="true"] .nav_links_svg.is-desktop { transform: rotate(-180deg); }
+
+  .nav_links_svg_line.is-2 { transition: transform 500ms var(--ease-expo-out); }
+  .w-dropdown-toggle[aria-expanded="true"] .nav_links_svg_line.is-2 { transform: rotate(0deg); }
+
+  /* open (replicates your original transforms) */
+  .nav_btn_wrap[aria-expanded="true"] .nav_btn_line:nth-child(1),
+  .nav_btn_wrap[aria-expanded="true"] > * > :first-child {
+    transform:
+      translateY(calc(var(--nav--hamburger-thickness) * 1 + var(--nav--hamburger-gap) * 1))
+      rotate(calc(var(--nav--hamburger-rotate) * -1deg));
+  }
+  .nav_btn_wrap[aria-expanded="true"] .nav_btn_line:nth-child(2),
+  .nav_btn_wrap[aria-expanded="true"] > * > :nth-child(2) {
+    opacity: 0;
+  }
+  .nav_btn_wrap[aria-expanded="true"] .nav_btn_line:nth-child(3),
+  .nav_btn_wrap[aria-expanded="true"] > * > :last-child {
+    transform:
+      translateY(calc(var(--nav--hamburger-thickness) * -1 + var(--nav--hamburger-gap) * -1))
+      rotate(calc(var(--nav--hamburger-rotate) * 1deg));
+    width: 1rem;
   }
 
-  // 日历页
-  const rec=db[rkey(curYear,curMonth,selDay)];
-  return(
-    <div style={{padding:"4px 16px 0"}}>
-      {/* 标题栏 */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0 8px"}}>
-        {delMode?(
-          <button onClick={()=>{setDelMode(false);setDelSel(new Set());}}
-            style={{fontSize:12,fontWeight:700,color:T.textMid,background:"none",border:"none",cursor:"pointer",padding:"4px 8px"}}>取消</button>
-        ):(
-          <button onClick={()=>setDelMode(true)}
-            style={{width:36,height:36,borderRadius:"50%",background:T.dangerBg,border:`1.5px solid ${T.dangerBorder}`,cursor:"pointer",
-              fontSize:16,color:T.danger,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑️</button>
-        )}
-        <span style={{fontSize:18,fontWeight:800,color:T.text}}>豆豆日记</span>
-        {delMode?(
-          <button onClick={confirmDelete}
-            style={{fontSize:12,fontWeight:800,color:"#fff",background:delSel.size>0?T.danger:"#ccc",border:"none",borderRadius:10,padding:"6px 12px",cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
-            删除{delSel.size>0?`(${delSel.size})`:""}
-          </button>
-        ):(
-          <button onClick={()=>openEdit(rkey(curYear,curMonth,selDay))}
-            style={{width:36,height:36,borderRadius:"50%",background:T.accent,border:"none",cursor:"pointer",
-              fontSize:22,color:"white",display:"flex",alignItems:"center",justifyContent:"center",
-              boxShadow:`0 2px 8px ${T.accent}55`}}>＋</button>
-        )}
-      </div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <button onClick={()=>shiftMonth(-1)} style={{background:"none",border:"none",fontSize:20,color:T.textMid,cursor:"pointer",padding:"4px 8px",borderRadius:8}}>‹</button>
-        <button onClick={()=>setDiaryPage("year")} style={{background:T.accentSoft,border:"none",borderRadius:12,padding:"6px 16px",fontSize:15,fontWeight:800,color:T.accent,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
-          {curYear}年{curMonth}月
-        </button>
-        <button onClick={()=>shiftMonth(1)} style={{background:"none",border:"none",fontSize:20,color:T.textMid,cursor:"pointer",padding:"4px 8px",borderRadius:8}}>›</button>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",textAlign:"center",marginBottom:4}}>
-        {["日","一","二","三","四","五","六"].map(d=><span key={d} style={{fontSize:11,fontWeight:700,color:T.textLight,padding:"3px 0"}}>{d}</span>)}
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-        {Array.from({length:firstDow},(_,i)=>(
-          <div key={`p${i}`} style={{height:40,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <span style={{fontSize:12,color:T.textLight,opacity:0.4}}>{prevTotal-firstDow+i+1}</span>
-          </div>
-        ))}
-        {Array.from({length:totalDays},(_,i)=>{
-          const d=i+1;
-          const isToday=curYear===todayY&&curMonth===todayM&&d===todayD;
-          const isSel=d===selDay;
-          const hasR=hasRec(d);
-          const key=rkey(curYear,curMonth,d);
-          const isDelSel=delSel.has(key);
-          function handleDayClick(){
-            if(delMode){if(hasR)toggleDelSel(key);}
-            else setSelDay(d);
+
+  /* ========== HOVER & THEME EFFECTS ========== */
+  @media (hover: hover) and (pointer: fine) {
+    body:has(.nav_dropdown_item:hover) .nav_dropdown_item:not(:hover) > * > * {
+      color: var(--_theme---foreground-tertiary);
+    }
+    .nav_dropdown_link {
+      transition:
+        background-color 300ms ease,
+        color 300ms ease;
+    }
+    .nav_dropdown_item:hover .nav_dropdown_link {
+      background: var(--_theme---background-tertiary);
+      color: var(--_theme---foreground-primary);
+    }
+    .nav_secondary_wrap .nav_dropdown_item:hover .nav_dropdown_link {
+      background: var(--_theme---background-tertiary);
+      color: var(--_theme---foreground-primary);
+    }
+    .nav_wrap.is-mobile .nav_dropdown_item:hover .nav_dropdown_link {
+      color: var(--_theme---foreground-primary);
+    }
+    .nav_links_text { transition: color 500ms var(--ease-expo-out); }
+    .nav_links_svg {
+      transition:
+        transform 500ms var(--ease-expo-out),
+        color 500ms var(--ease-expo-out);
+    }
+    .nav_links_item:hover .nav_links_text,
+    .nav_links_item:hover .nav_links_svg { color: var(--_theme---foreground-primary); }
+  }
+
+  /* ========== LAYOUT / UTILITY (kept, de-Webflow’d) ========== */
+  .nav_wrap.is-mobile [data-open-on-mobile] > .w-dropdown-toggle { display: none; }
+  .nav_wrap.is-mobile [data-open-on-mobile] > .w-dropdown-list {
+    visibility: visible;
+    opacity: 1;
+    display: block;
+    grid-template-rows: 1fr;
+  }
+  .nav_buttons_item .button_main_wrap { width: 100%; min-width: max-content; }
+
+  /* Optional: fade out mobile actions while open */
+  .nav_actions_wrap { transition: opacity 500ms var(--ease-expo-out); }
+  body.is-nav-open .nav_actions_mobile .nav_actions_wrap {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .nav_links_item:first-child {
+    border-top: none;
+  }
+
+  /* ========== Breadcrumbs ========== */
+  .breadcrumb_text.is_linked[href="#"],
+  .breadcrumb_text:has(+.breadcrumb_text.is_linked:not([href="#"])) {
+    display: none;
+  }
+  .breadcrumb_text.is_linked:not([href="#"]) {
+    display: block;
+  }
+
+</style></div><div class="u-embed-js w-embed w-script"><script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".nav_component").forEach((root) => {
+    if (root.dataset.scriptInitialized) return;
+    root.dataset.scriptInitialized = "true";
+
+    if (!window.gsap) { console.error("GSAP not found"); return; }
+
+    const btn  = root.querySelector('.nav_btn_wrap');
+    const menu = root.querySelector('.nav_menu_wrap');
+    if (!btn || !menu) { console.warn('Missing .nav_btn_wrap or .nav_menu_wrap in', root); return; }
+
+    // a11y setup (scoped)
+    if (!btn.hasAttribute('type')) btn.setAttribute('type', 'button');
+    if (!btn.hasAttribute('aria-expanded')) btn.setAttribute('aria-expanded', 'false');
+    if (!menu.id) menu.id = 'primary-nav-' + Math.random().toString(36).slice(2);
+    if (!btn.hasAttribute('aria-controls')) btn.setAttribute('aria-controls', menu.id);
+    menu.setAttribute('aria-hidden', 'true');
+
+    // targets (scoped)
+    const items   = Array.from(menu.querySelectorAll('.nav_links_item'));
+    const actions = menu.querySelector('.nav_menu_actions_wrap');
+
+    // feature detection
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canClipInset = !!(window.CSS && CSS.supports && (
+      CSS.supports('clip-path','inset(0 0 100% 0)') || CSS.supports('-webkit-clip-path','inset(0 0 100% 0)')
+    ));
+    const useClip = canClipInset && !prefersReduced;
+
+    // durations from CSS vars
+    function readDur(varName, fallbackSec) {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+      if (!v) return fallbackSec;
+      if (v.endsWith('ms')) return parseFloat(v)/1000;
+      if (v.endsWith('s'))  return parseFloat(v);
+      const n = parseFloat(v);
+      return isNaN(n) ? fallbackSec : n;
+    }
+    const OPEN_DUR  = readDur('--nav--menu-open-duration', 0.8);
+    const CLOSE_DUR = readDur('--nav--menu-close-duration', 0.4);
+
+    // state per component
+    let isOpen = false;
+    let current = null;
+
+    function setMenuVisibleForAnim() {
+      menu.style.display = 'flex';       // ensure it's shown before anim
+      menu.removeAttribute('hidden');
+      menu.setAttribute('aria-hidden', 'false');
+      menu.style.willChange = useClip ? 'clip-path' : 'transform, opacity';
+    }
+    function clearMenuInline() {
+      gsap.set(menu, { clearProps: 'clipPath,webkitClipPath,opacity,transform,willChange,pointerEvents' });
+    }
+
+    // OPEN
+    function playOpen() {
+      setMenuVisibleForAnim();
+      menu.style.pointerEvents = 'none';
+      document.body.classList.add('is-nav-open');
+      btn.setAttribute('aria-expanded', 'true');
+
+      if (useClip) {
+        gsap.set(menu, { clipPath: 'inset(0 0 100% 0)', webkitClipPath: 'inset(0 0 100% 0)' });
+      } else {
+        gsap.set(menu, { yPercent: -2, opacity: 0 });
+      }
+      if (items.length) gsap.set(items, { y: 20, autoAlpha: 0 });
+      if (actions)      gsap.set(actions, { y: 20, autoAlpha: 0 });
+
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      if (useClip) {
+        tl.to(menu, {
+          clipPath: 'inset(0 0 0% 0)',
+          webkitClipPath: 'inset(0 0 0% 0)',
+          duration: prefersReduced ? 0.01 : OPEN_DUR,
+          ease: 'expo.out'
+        }, 0);
+      } else {
+        tl.to(menu, { yPercent: 0, opacity: 1, duration: prefersReduced ? 0.01 : Math.min(OPEN_DUR, 0.36) }, 0.02);
+      }
+
+      if (items.length) {
+        tl.to(items, { y: 0, autoAlpha: 1, stagger: prefersReduced ? 0 : 0.08, duration: prefersReduced ? 0.01 : 0.4 }, 0.10);
+      }
+      if (actions) {
+        const base = 0.10 + (items.length ? items.length * (prefersReduced ? 0 : 0.08) : 0);
+        tl.to(actions, { y: 0, autoAlpha: 1, duration: prefersReduced ? 0.01 : 0.4 }, base);
+      }
+
+      tl.add(() => { menu.style.pointerEvents = 'auto'; }, '>-0.1');
+
+      // listeners (per open)
+      document.addEventListener('keydown', onKeydown);
+      menu.addEventListener('click', onMenuLinkClick);
+
+      return tl;
+    }
+
+    // CLOSE (fade all together, then clip inset close)
+    function playClose() {
+      menu.style.pointerEvents = 'none';
+      btn.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('is-nav-open');
+
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      const fadeTargets = items.concat(actions ? [actions] : []);
+      if (fadeTargets.length) tl.to(fadeTargets, { autoAlpha: 0, y: 0, duration: prefersReduced ? 0.01 : 0.2 }, 0);
+
+      if (useClip) {
+        gsap.set(menu, { clipPath: 'inset(0 0 0% 0)', webkitClipPath: 'inset(0 0 0% 0)' });
+        tl.to(menu, {
+          clipPath: 'inset(0 0 100% 0)',
+          webkitClipPath: 'inset(0 0 100% 0)',
+          duration: prefersReduced ? 0.01 : CLOSE_DUR
+        }, '>-0.02');
+      } else {
+        tl.to(menu, { yPercent: -2, opacity: 0, duration: prefersReduced ? 0.01 : Math.min(CLOSE_DUR, 0.28) }, '>-0.02');
+      }
+
+      tl.add(() => {
+        menu.style.display = 'none';
+        menu.setAttribute('aria-hidden', 'true');
+        clearMenuInline();
+        if (items.length) gsap.set(items, { clearProps: 'all' });
+        if (actions)      gsap.set(actions, { clearProps: 'all' });
+
+        // remove listeners added on open
+        document.removeEventListener('keydown', onKeydown);
+        menu.removeEventListener('click', onMenuLinkClick);
+      });
+
+      return tl;
+    }
+
+    function openMenu() {
+      if (isOpen) return;
+      isOpen = true;
+      if (current && current.isActive()) current.kill();
+      current = playOpen();
+    }
+    function closeMenu() {
+      if (!isOpen) return;
+      isOpen = false;
+      if (current && current.isActive()) current.kill();
+      current = playClose();
+    }
+
+    function onKeydown(e){ if (e.key === 'Escape' && isOpen) { e.preventDefault(); closeMenu(); } }
+
+    function onMenuLinkClick(e){
+      const a = e.target.closest('a[href]');
+      if (!a) return;
+      const url = new URL(a.href, location.href);
+      if (url.origin === location.origin) {
+        e.preventDefault();
+        const tl = playClose();
+        tl.eventCallback('onComplete', () => { window.location.href = a.href; });
+        isOpen = false;
+      }
+    }
+
+    // Toggle (scoped)
+    btn.addEventListener('click', () => (isOpen ? closeMenu() : openMenu()));
+
+    // Normalize if visible on load (scoped)
+    if (getComputedStyle(menu).display !== 'none') {
+      btn.setAttribute('aria-expanded', 'true');
+      menu.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('is-nav-open');
+      isOpen = true;
+    }
+  });
+});
+</script></div><div class="u-embed-js w-embed w-script"><script>
+  (function () {
+    'use strict';
+
+    // ---------- tiny utils ----------
+    var NS = 'navBundleInit';
+    function onceFlag(el, k){ k=k||'scriptInitialized'; if (el.dataset[k]) return true; el.dataset[k]='true'; return false; }
+    function ready(fn){ if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',fn,{once:true});} else { fn(); } }
+
+    // ---------- 1) Ask Claude about this page ----------
+    function initAskPage(){
+      var buttons = document.querySelectorAll('[data-ask-page]');
+      if (!buttons.length) return; // Early exit if no buttons
+
+      buttons.forEach(function(btn){
+        if (onceFlag(btn, NS)) return;
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          var pageUrl = window.location.href;
+          var prompt = "Read this page " + pageUrl + " so that I can ask you questions about it";
+          var claudeUrl = new URL('https://claude.ai/new');
+          claudeUrl.searchParams.set('q', prompt);
+          window.open(claudeUrl.toString(), '_blank', 'noopener');
+        });
+      });
+    }
+
+    // ---------- 2) Copy page content as Markdown (Turndown) ----------
+    var _turndownReady;
+    function ensureTurndown(){
+      if (window.TurndownService) return Promise.resolve();
+      if (_turndownReady) return _turndownReady;
+      _turndownReady = new Promise(function(resolve, reject){
+        var s = document.createElement('script');
+        s.src = 'https://unpkg.com/turndown/dist/turndown.js';
+        s.async = true;
+        s.onload = function(){ resolve(); };
+        s.onerror = function(){ reject(new Error('Failed to load Turndown')); };
+        document.head.appendChild(s);
+      });
+      return _turndownReady;
+    }
+
+    function initCopyAsMarkdown(){
+      var copyButton = document.getElementById('copy-as-markdown');
+      if (!copyButton) return; // Early exit
+
+      if (onceFlag(copyButton, NS)) return;
+
+      var buttonTextEl = copyButton.querySelector('.nav_dropdown_text') || copyButton;
+      var originalText = buttonTextEl.textContent;
+
+      copyButton.addEventListener('click', function(){
+        ensureTurndown().then(function(){
+          try {
+            var TurndownService = window.TurndownService;
+            var turndownService = new TurndownService({
+              headingStyle: 'atx',
+              codeBlockStyle: 'fenced',
+              fence: '```',
+              emDelimiter: '*',
+              strongDelimiter: '**',
+              linkStyle: 'inlined'
+            });
+
+            // Skip junk
+            turndownService.addRule('skipWebflowElements', {
+              filter: function(node){
+                return node.nodeName === 'SCRIPT' ||
+                  node.nodeName === 'STYLE'  ||
+                  (node.className && (String(node.className).includes('w-editor') || String(node.className).includes('w-embed')));
+              },
+              replacement: function(){ return ''; }
+            });
+
+            buttonTextEl.textContent = 'Copying...';
+            copyButton.disabled = true;
+
+            var contentElement = document.querySelector('main') ||
+                document.querySelector('.main-content') ||
+                document.querySelector('body');
+            if (!contentElement) throw new Error('No content found to copy');
+
+            var cloned = contentElement.cloneNode(true);
+            cloned.querySelectorAll('script, style, nav, footer, .w-nav, .footer').forEach(function(el){ el.remove(); });
+
+            var markdown = turndownService.turndown(cloned);
+
+            var done = function(){
+              buttonTextEl.textContent = 'Copied!';
+              setTimeout(function(){
+                buttonTextEl.textContent = originalText;
+                copyButton.disabled = false;
+              }, 2000);
+            };
+
+            if (navigator.clipboard && window.isSecureContext) {
+              navigator.clipboard.writeText(markdown).then(done, function(err){ throw err; });
+            } else {
+              var ta = document.createElement('textarea');
+              ta.value = markdown; ta.style.position='fixed'; ta.style.opacity='0';
+              document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+              done();
+            }
+          } catch (err){
+            console.error('Copy failed:', err);
+            buttonTextEl.textContent = 'Copy failed';
+            setTimeout(function(){
+              buttonTextEl.textContent = originalText;
+              copyButton.disabled = false;
+            }, 2000);
           }
-          return(
-            <div key={d} onClick={handleDayClick}
-              style={{height:40,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-                borderRadius:10,cursor:"pointer",position:"relative",
-                background:delMode&&isDelSel?"rgba(255,100,100,0.15)":isSel&&!hasR?T.accentSoft:"transparent",
-                transition:"background 0.15s",
-                outline:delMode&&isDelSel?`2px solid ${T.danger}`:"none"}}>
-              {/* 删除模式：有记录的显示勾选圈 */}
-              {delMode&&hasR&&(
-                <div style={{position:"absolute",top:2,right:2,width:14,height:14,borderRadius:"50%",
-                  background:isDelSel?T.danger:"rgba(200,200,200,0.5)",border:`1.5px solid ${isDelSel?T.danger:"#ccc"}`,
-                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"white",fontWeight:800,zIndex:3}}>
-                  {isDelSel?"✓":""}
-                </div>
-              )}
-              {/* 正常模式：选中就显示🍬，有记录时覆盖数字和圆点 */}
-              {!delMode&&isSel?(
-                <span style={{fontSize:26,position:"absolute",lineHeight:1}}>🍬</span>
-              ):(
-                <>
-                  <span style={{fontSize:12,fontWeight:isToday?800:600,
-                    color:isToday?T.accent:delMode&&!hasR?T.textLight:T.text,
-                    position:"relative",zIndex:2,opacity:delMode&&!hasR?0.35:1}}>{d}</span>
-                  {/* 圆点：有记录且未被🍬覆盖时显示 */}
-                  {hasR&&<div style={{position:"absolute",bottom:3,width:5,height:5,borderRadius:"50%",background:"#7bc4f0"}}/>}
-                </>
-              )}
-            </div>
-          );
-        })}
-        {Array.from({length:(7-(firstDow+totalDays)%7)%7},(_,i)=>(
-          <div key={`n${i}`} style={{height:40,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <span style={{fontSize:12,color:T.textLight,opacity:0.4}}>{i+1}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{marginTop:12,background:T.accentSoft,borderRadius:14,padding:13,border:`1px solid ${T.border}`}}>
-        {rec?(
-          <>
-            <div style={{fontSize:11,color:T.textMid,fontWeight:700,marginBottom:8}}>📅 {curYear}年{curMonth}月{selDay}日</div>
-            <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-              <div style={{width:52,height:52,flexShrink:0,background:T.accentLight,borderRadius:10,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>
-                {rec.photos&&rec.photos[0]?<img src={rec.photos[0]} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:"🐾"}
-              </div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:3}}>{rec.text?rec.text.slice(0,30)+"…":"（无文字）"}</div>
-                <div style={{fontSize:11,color:T.textMid}}>{rec.photos?rec.photos.length:0} 张照片</div>
-              </div>
-            </div>
-            <div onClick={()=>openEdit(rkey(curYear,curMonth,selDay))} style={{marginTop:8,textAlign:"right",fontSize:11,color:T.accent,fontWeight:700,cursor:"pointer"}}>查看 / 编辑 ›</div>
-          </>
-        ):(
-          <div style={{textAlign:"center",color:T.textLight,fontSize:12,padding:"8px 0"}}>
-            这天还没有记录哦 ·˖✦ <span onClick={()=>openEdit(rkey(curYear,curMonth,selDay))} style={{color:T.accent,fontWeight:700,cursor:"pointer"}}>新建记录</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        }).catch(function(err){
+          console.error('Turndown load failed:', err);
+          buttonTextEl.textContent = 'Copy failed';
+          setTimeout(function(){
+            buttonTextEl.textContent = originalText;
+            copyButton.disabled = false;
+          }, 2000);
+        });
+      });
+    }
+
+    // ---------- init all ----------
+    ready(function(){
+      initAskPage();
+      initCopyAsMarkdown();
+    });
+
+    // Optional: expose minimal API for debugging (comment out in production if not needed)
+    // window.NavBundle = {
+    //   initCopyAsMarkdown: initCopyAsMarkdown,
+    //   initAskPage: initAskPage
+    // };
+  })();
+</script></div><div role="banner" class="nav_wrap is-desktop"><div class="nav_contain u-container"><a aria-label="Home page" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f77e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8eeb7b4d-a73d-ddb2-ba6b-673912a3f77e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%5D" href="https://claude.com" class="nav_logo_wrap w-inline-block"><div STYLE="" class="u-max-width-full"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 573 125" fill="none" class="u-svg"><path d="M200.168 110.625C190.376 110.625 181.647 108.688 173.98 104.813C166.355 100.896 160.397 95.4167 156.105 88.375C151.814 81.3333 149.668 73.25 149.668 64.125C149.668 54.4167 151.855 45.7917 156.23 38.25C160.647 30.7083 166.751 24.8542 174.543 20.6875C182.335 16.4792 191.189 14.375 201.105 14.375C207.064 14.375 213.001 15.0208 218.918 16.3125C224.876 17.5625 230.105 19.5208 234.605 22.1875V42.75H228.98C227.397 35.2083 224.293 29.7292 219.668 26.3125C215.085 22.8958 208.814 21.1875 200.855 21.1875C193.23 21.1875 186.897 22.8958 181.855 26.3125C176.814 29.7292 173.085 34.5 170.668 40.625C168.251 46.7083 167.043 53.7917 167.043 61.875C167.043 69.8333 168.397 76.9792 171.105 83.3125C173.814 89.6458 177.835 94.6458 183.168 98.3125C188.501 101.979 194.918 103.813 202.418 103.813C207.501 103.813 211.855 102.813 215.48 100.813C219.147 98.8125 222.23 96.0833 224.73 92.625C227.23 89.125 229.564 84.8333 231.73 79.75H237.605L233.605 102.313C229.272 105.104 224.105 107.188 218.105 108.563C212.105 109.938 206.126 110.625 200.168 110.625ZM243.168 103.938C245.626 103.646 247.543 103.271 248.918 102.813C250.335 102.313 251.355 101.646 251.98 100.813C252.605 99.9792 252.918 98.9167 252.918 97.625V29.5625L243.168 25.875V21.6875L262.793 14.375H267.793V97.625C267.793 98.9167 268.105 99.9792 268.73 100.813C269.355 101.646 270.355 102.313 271.73 102.813C273.147 103.271 275.085 103.646 277.543 103.938V109.375H243.168V103.938ZM300.355 110.625C296.772 110.625 293.605 109.958 290.855 108.625C288.105 107.292 285.96 105.417 284.418 103C282.918 100.583 282.168 97.7917 282.168 94.625C282.168 90 283.626 86.1875 286.543 83.1875C289.501 80.1458 294.043 77.75 300.168 76L322.855 69.5625V62.75C322.855 58.2917 321.793 54.9167 319.668 52.625C317.585 50.3333 314.48 49.1875 310.355 49.1875C306.73 49.1875 303.855 50.2917 301.73 52.5C299.647 54.7083 298.605 57.7083 298.605 61.5V67.125H288.48C287.272 66.375 286.335 65.3958 285.668 64.1875C285.043 62.9375 284.73 61.5625 284.73 60.0625C284.73 57.1042 285.876 54.3958 288.168 51.9375C290.46 49.4375 293.564 47.4583 297.48 46C301.397 44.5417 305.689 43.8125 310.355 43.8125C316.189 43.8125 321.147 44.6875 325.23 46.4375C329.314 48.1875 332.418 50.7708 334.543 54.1875C336.668 57.6042 337.73 61.7292 337.73 66.5625V96.25C337.73 97.7083 338.022 98.875 338.605 99.75C339.23 100.625 340.23 101.333 341.605 101.875C343.022 102.375 344.98 102.771 347.48 103.063V108.5C343.855 109.792 340.376 110.438 337.043 110.438C333.001 110.438 329.751 109.479 327.293 107.563C324.876 105.646 323.439 102.896 322.98 99.3125C319.939 103.063 316.522 105.896 312.73 107.813C308.939 109.688 304.814 110.625 300.355 110.625ZM307.668 100.625C310.335 100.625 312.98 100 315.605 98.75C318.272 97.4583 320.689 95.6667 322.855 93.375V75.3125L305.855 80.375C302.939 81.25 300.71 82.625 299.168 84.5C297.626 86.3333 296.855 88.5833 296.855 91.25C296.855 93.0833 297.314 94.7083 298.23 96.125C299.147 97.5417 300.418 98.6458 302.043 99.4375C303.71 100.229 305.585 100.625 307.668 100.625ZM376.543 110.625C369.876 110.625 364.814 108.938 361.355 105.563C357.897 102.146 356.168 97.1667 356.168 90.625V58.375L346.418 54.9375V50.75L366.105 43.8125H371.043V88.0625C371.043 92.0208 372.043 94.9583 374.043 96.875C376.043 98.7917 379.126 99.75 383.293 99.75C385.96 99.75 388.814 99.1458 391.855 97.9375C394.939 96.7292 397.814 95.0625 400.48 92.9375V58.375L390.73 54.9375V50.75L410.418 43.8125H415.355V92.5C415.355 93.9583 415.647 95.125 416.23 96C416.855 96.875 417.855 97.5625 419.23 98.0625C420.605 98.5625 422.564 98.9792 425.105 99.3125V104.75L405.418 110H400.48V98.9375C396.98 102.563 393.085 105.417 388.793 107.5C384.543 109.583 380.46 110.625 376.543 110.625ZM458.73 110.625C453.105 110.625 448.043 109.354 443.543 106.813C439.085 104.229 435.585 100.688 433.043 96.1875C430.501 91.6458 429.23 86.5625 429.23 80.9375C429.23 73.6042 430.751 67.125 433.793 61.5C436.876 55.875 441.189 51.5208 446.73 48.4375C452.272 45.3542 458.689 43.8125 465.98 43.8125C468.355 43.8125 470.772 44.0625 473.23 44.5625C475.73 45.0625 478.085 45.7708 480.293 46.6875V29.5625L470.543 25.875V21.6875L490.168 14.375H495.168V92.5C495.168 93.9583 495.46 95.125 496.043 96C496.668 96.875 497.668 97.5625 499.043 98.0625C500.418 98.5625 502.376 98.9792 504.918 99.3125V104.75L485.23 110H480.293V101.438C477.168 104.396 473.751 106.667 470.043 108.25C466.335 109.833 462.564 110.625 458.73 110.625ZM464.855 100.563C467.355 100.563 469.96 100.042 472.668 99C475.376 97.9167 477.918 96.4583 480.293 94.625V56C476.21 52.6667 471.751 51 466.918 51C462.168 51 458.126 52.125 454.793 54.375C451.46 56.625 448.939 59.7083 447.23 63.625C445.564 67.5417 444.73 71.9792 444.73 76.9375C444.73 81.6458 445.48 85.7708 446.98 89.3125C448.48 92.8542 450.73 95.625 453.73 97.625C456.772 99.5833 460.48 100.563 464.855 100.563ZM541.293 110.625C535.168 110.625 529.647 109.229 524.73 106.438C519.814 103.646 515.96 99.7708 513.168 94.8125C510.418 89.8125 509.043 84.1875 509.043 77.9375C509.043 71.6042 510.46 65.8333 513.293 60.625C516.126 55.4167 520.001 51.3125 524.918 48.3125C529.876 45.3125 535.376 43.8125 541.418 43.8125C546.001 43.8125 550.272 44.7708 554.23 46.6875C558.189 48.6042 561.501 51.2917 564.168 54.75C566.876 58.2083 568.668 62.1667 569.543 66.625L524.168 80.375C525.418 85.875 527.897 90.1875 531.605 93.3125C535.355 96.3958 539.96 97.9375 545.418 97.9375C550.001 97.9375 554.105 96.8542 557.73 94.6875C561.355 92.4792 564.564 89.1458 567.355 84.6875L572.168 86.1875C571.001 91.1042 568.939 95.4167 565.98 99.125C563.064 102.792 559.48 105.625 555.23 107.625C550.98 109.625 546.335 110.625 541.293 110.625ZM553.293 64.75C552.71 61.9583 551.751 59.5208 550.418 57.4375C549.126 55.3125 547.501 53.6875 545.543 52.5625C543.585 51.3958 541.397 50.8125 538.98 50.8125C535.939 50.8125 533.231 51.7083 530.856 53.5C528.481 55.2917 526.626 57.8333 525.293 61.125C523.96 64.375 523.293 68.1458 523.293 72.4375C523.293 73.1458 523.314 73.7083 523.355 74.125L553.293 64.75Z" fill="currentColor"></path><path d="M54.375 118.75L56.125 111L58.125 101L59.75 93L61.25 83.125L62.125 79.875L62 79.625L61.375 79.75L53.875 90L42.5 105.375L33.5 114.875L31.375 115.75L27.625 113.875L28 110.375L30.125 107.375L42.5 91.5L50 81.625L54.875 76L54.75 75.25H54.5L21.5 96.75L15.625 97.5L13 95.125L13.375 91.25L14.625 90L24.5 83.125L49.125 69.375L49.5 68.125L49.125 67.5H47.875L43.75 67.25L29.75 66.875L17.625 66.375L5.75 65.75L2.75 65.125L0 61.375L0.25 59.5L2.75 57.875L6.375 58.125L14.25 58.75L26.125 59.5L34.75 60L47.5 61.375H49.5L49.75 60.5L49.125 60L48.625 59.5L36.25 51.25L23 42.5L16 37.375L12.25 34.75L10.375 32.375L9.625 27.125L13 23.375L17.625 23.75L18.75 24L23.375 27.625L33.25 35.25L46.25 44.875L48.125 46.375L49 45.875V45.5L48.125 44.125L41.125 31.375L33.625 18.375L30.25 13L29.375 9.75C29.0417 8.625 28.875 7.375 28.875 6L32.75 0.750006L34.875 0L40.125 0.750006L42.25 2.625L45.5 10L50.625 21.625L58.75 37.375L61.125 42.125L62.375 46.375L62.875 47.75H63.75V47L64.375 38L65.625 27.125L66.875 13.125L67.25 9.125L69.25 4.375L73.125 1.87501L76.125 3.25L78.625 6.875L78.25 9.125L76.875 18.75L73.875 33.875L72 44.125H73.125L74.375 42.75L79.5 36L88.125 25.25L91.875 21L96.375 16.25L99.25 14H104.625L108.5 19.875L106.75 26L101.25 33L96.625 38.875L90 47.75L86 54.875L86.375 55.375H87.25L102.125 52.125L110.25 50.75L119.75 49.125L124.125 51.125L124.625 53.125L122.875 57.375L112.625 59.875L100.625 62.25L82.75 66.5L82.5 66.625L82.75 67L90.75 67.75L94.25 68H102.75L118.5 69.125L122.625 71.875L125 75.125L124.625 77.75L118.25 80.875L109.75 78.875L89.75 74.125L83 72.5H82V73L87.75 78.625L98.125 88L111.25 100.125L111.875 103.125L110.25 105.625L108.5 105.375L97 96.625L92.5 92.75L82.5 84.375H81.875V85.25L84.125 88.625L96.375 107L97 112.625L96.125 114.375L92.875 115.5L89.5 114.875L82.25 104.875L74.875 93.5L68.875 83.375L68.25 83.875L64.625 121.625L63 123.5L59.25 125L56.125 122.625L54.375 118.75Z" fill="var(--swatch--clay)"></path></svg></div></a><nav role="navigation" class="nav_desktop_layout"><div class="nav_links_component is-desktop"><ul data-wf--nav-links--variant="desktop" role="list" class="nav_links_wrap w-list-unstyled"><li class="nav_links_item"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1609" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1609" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" class="nav_links_link w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3">Meet Claude</div><div class="nav_links_svg is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop u-theme-white is-mega w-dropdown-list"><div class="nav_dropdown_main_content"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop is-mega"><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption">Products</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1616" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1616" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/product/overview" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Claude</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da161c" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da161c" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/product/claude-code" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Claude Code</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a><link rel="prefetch" href="/product/claude-code"/></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:17fb9876-b736-8f80-31fc-3794ee59b864" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="17fb9876-b736-8f80-31fc-3794ee59b864" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/product/cowork" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Claude Cowork</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a><link rel="prefetch" href="/product/cowork"/></li></ul></div><div class="nav_dropdown_divider_wrap is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption">Features</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:0d66bd52-32f7-610e-d561-5b800b7b5c5d" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="0d66bd52-32f7-610e-d561-5b800b7b5c5d" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/claude-for-chrome" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Claude for Chrome</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:2eaf9bcf-cd9d-0cab-98e9-fd557ab36337" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="2eaf9bcf-cd9d-0cab-98e9-fd557ab36337" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/claude-for-slack" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Claude for Slack</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:0d66bd52-32f7-610e-d561-5b800b7b5c63" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="0d66bd52-32f7-610e-d561-5b800b7b5c63" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/claude-for-excel" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Claude for Excel</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:2adbb0b3-8292-73ff-5c67-2b54f3851386" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="2adbb0b3-8292-73ff-5c67-2b54f3851386" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/claude-for-powerpoint" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Claude for PowerPoint</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:b8348064-e12a-49c3-d1a6-ae9e3d8a2ed6" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="b8348064-e12a-49c3-d1a6-ae9e3d8a2ed6" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/skills" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Skills</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption">Models</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1628" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1628" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://www.anthropic.com/claude/opus" target="_blank" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Opus</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da162e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da162e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://www.anthropic.com/claude/sonnet" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Sonnet</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1634" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1634" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://www.anthropic.com/claude/haiku" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Haiku</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da163b" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da163b" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" class="nav_links_link w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3">Platform</div><div class="nav_links_svg is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop u-theme-white w-dropdown-list"><div class="nav_dropdown_main_content"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop"><div class="nav_dropdown_list_wrap"><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1646" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1646" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/platform/api" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Overview</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da164c" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da164c" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://platform.claude.com/docs" target="_blank" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Developer docs</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1652" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1652" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="http://claude.com/pricing#api" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Pricing</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap"><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da165c" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da165c" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://platform.claude.com/" target="_blank" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Console login</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1663" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1663" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" class="nav_links_link w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3">Solutions</div><div class="nav_links_svg is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop u-theme-white is-mega is-solutions w-dropdown-list"><div class="nav_dropdown_main_content"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop is-mega"><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption">Use cases</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1670" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1670" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/agents" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">AI agents</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:8183f85b-a564-1ee6-d6d4-cdc7f697defd" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8183f85b-a564-1ee6-d6d4-cdc7f697defd" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/claude-code-security" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Claude Code Security</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1676" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1676" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/coding" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Coding</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega is-2col"><div class="nav_dropdown_label u-text-style-caption">Industries</div><ul role="list" class="nav_dropdown_list is-2col"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1688" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1688" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/customer-support" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Customer support</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da168e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da168e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/education" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Education</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da1694" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1694" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/financial-services" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Financial services</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da169a" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da169a" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/government" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Government</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:3530836f-7486-2799-6904-4f7f19a5db17" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="3530836f-7486-2799-6904-4f7f19a5db17" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/healthcare" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Healthcare</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:cf7ff432-aaa5-0836-66eb-ab807dd3a24e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="cf7ff432-aaa5-0836-66eb-ab807dd3a24e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/life-sciences" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Life sciences</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:6b7d2291-f5df-77c0-c3ee-cedf58cca606" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="6b7d2291-f5df-77c0-c3ee-cedf58cca606" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/solutions/nonprofits" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Nonprofits</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da16a1" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da16a1" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" class="nav_links_link w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3">Pricing</div><div class="nav_links_svg is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop u-theme-white w-dropdown-list"><div class="nav_dropdown_main_content"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop"><div class="nav_dropdown_list_wrap"><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da16ac" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da16ac" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/pricing" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Overview</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a><link rel="prefetch" href="/pricing"/></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:6b53d7fa-2217-7bb1-2471-b31c79468345" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="6b53d7fa-2217-7bb1-2471-b31c79468345" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/pricing#api" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">API</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_list_wrap"><div class="nav_dropdown_label u-text-style-caption">Pricing</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:64ebc799-6686-7e36-b92e-ce8e39404c87" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="64ebc799-6686-7e36-b92e-ce8e39404c87" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/pricing/max" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Max plan</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:64ebc799-6686-7e36-b92e-ce8e39404c8d" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="64ebc799-6686-7e36-b92e-ce8e39404c8d" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/pricing/team" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Team plan</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:64ebc799-6686-7e36-b92e-ce8e39404c93" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="64ebc799-6686-7e36-b92e-ce8e39404c93" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/pricing/enterprise" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Enterprise plan</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da16c5" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da16c5" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" class="nav_links_link w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3">Resources</div><div class="nav_links_svg is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop u-theme-white is-mega is-learn is-resources w-dropdown-list"><div class="nav_dropdown_main_content"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop is-mega"><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption">Insights</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:1ef4ecb2-4b7e-14d0-78d8-a296d5da16d6" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da16d6" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/blog" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Blog</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:705fc154-c8e5-f733-f5d9-7d39619c57dc" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="705fc154-c8e5-f733-f5d9-7d39619c57dc" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/customers" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Customer stories</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:06814488-5abc-c011-c6df-209d7e94f1e8" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="06814488-5abc-c011-c6df-209d7e94f1e8" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://www.anthropic.com/news" target="_blank" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Anthropic news</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption">Learn</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:eba0fd5d-f972-1c2c-8678-8d86826275ae" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="eba0fd5d-f972-1c2c-8678-8d86826275ae" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://www.anthropic.com/learn" target="_blank" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Anthropic Academy</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:7585281a-b756-7653-2822-428b5287f546" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="7585281a-b756-7653-2822-428b5287f546" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/resources/courses" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Courses</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:ccd1744a-4d2e-f3c8-aaf9-f99beee1f36e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="ccd1744a-4d2e-f3c8-aaf9-f99beee1f36e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/resources/tutorials" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Tutorials</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:3e7f49d6-851d-467e-b638-c1d397d44276" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="3e7f49d6-851d-467e-b638-c1d397d44276" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/resources/use-cases" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Use cases</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption">Tools</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:c343bb22-30a4-2fa5-4901-cd3cc04494aa" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="c343bb22-30a4-2fa5-4901-cd3cc04494aa" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/connectors" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Connectors</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:8b0d3a7b-effe-05fe-8448-72c1dcb9ed7a" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8b0d3a7b-effe-05fe-8448-72c1dcb9ed7a" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/plugins" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Plugins</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption">Connect</div><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:848375b5-fd68-560a-2bdb-dc32bceabe71" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="848375b5-fd68-560a-2bdb-dc32bceabe71" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://www.anthropic.com/events" target="_blank" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Events</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:8d0c28df-abf6-c765-214a-0662d4626ce2" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8d0c28df-abf6-c765-214a-0662d4626ce2" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="/community" class="nav_dropdown_link w-inline-block"><div class="nav_dropdown_text">Community</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f782:8af5136a-8811-447c-b5ba-a0acc01a0ed5" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8af5136a-8811-447c-b5ba-a0acc01a0ed5" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f782%22%7D%5D" href="https://claude.ai/login" class="nav_links_link w-inline-block"><div class="nav_links_text u-text-style-body-3">Login</div></a></li></ul><ul data-wf--nav-actions--variant="desktop" role="list" class="nav_actions_wrap w-list-unstyled"><li class="nav_buttons_item is-main is-desktop"><div data-wf--button-small--style="tertiary" class="button_small_wrap w-variant-a8c9bb6a-76f8-d6fa-8374-826ae4429994"><div class="u-embed-css w-embed"><style>
+.button_small_icon {
+  transition: color 300ms ease;
 }
-
-const LOVE_WORDS=["豆豆们今天有没有乖乖待在格子里 🟡","库存充足，拼图安心 ✨","记得定期更新库存哦～","豆子虽小，作品不小 💛","认真管理的你最可爱了","今天拼了几粒？快来记录一下","库存快不足了？快补货！","每一粒豆子都有它的位置 🌟","拼豆人最有耐心了","快去拼一张吧，加油！🎨"];
-
-function FoxBtn({T,tn}){
-  const [msg,setMsg]=useState(null);const [vis,setVis]=useState(false);const [bounce,setBounce]=useState(false);const [sparkle,setSparkle]=useState(false);
-  function handleClick(){const w=LOVE_WORDS[Math.floor(Math.random()*LOVE_WORDS.length)];setMsg(w);setVis(true);setBounce(true);setSparkle(true);setTimeout(()=>setBounce(false),350);setTimeout(()=>setSparkle(false),800);setTimeout(()=>setVis(false),3200);}
-  return(
-    <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
-      {vis&&<div style={{position:"absolute",left:58,top:"50%",transform:"translateY(-50%)",background:tn==="sky"?"#ffffff":"#1e3352",border:`1.5px solid ${T.border}`,borderRadius:18,padding:"9px 16px",fontSize:12,fontWeight:700,color:T.text,whiteSpace:"nowrap",boxShadow:T.cardShadow,zIndex:999,animation:"popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-        <style>{`@keyframes popIn{from{opacity:0;transform:translateY(-50%) scale(0.7);}to{opacity:1;transform:translateY(-50%) scale(1);}}`}</style>
-        <div style={{position:"absolute",left:-7,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:`7px solid ${T.border}`}}/>
-        <div style={{position:"absolute",left:-5,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"5px solid transparent",borderBottom:"5px solid transparent",borderRight:`6px solid ${tn==="sky"?"#ffffff":"#1e3352"}`}}/>
-        {msg}
-      </div>}
-      {sparkle&&<div style={{position:"absolute",left:14,top:-10,fontSize:13,animation:"floatUp 0.8s ease both",zIndex:998,pointerEvents:"none"}}>
-        <style>{`@keyframes floatUp{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(-28px) scale(1.4);}}`}</style>✨
-      </div>}
-      <div onClick={handleClick} style={{cursor:"pointer",userSelect:"none",transform:bounce?"scale(0.82)":"scale(1)",transition:"transform 0.25s cubic-bezier(0.34,1.56,0.64,1)"}}>
-        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* 大豆子 中间 */}
-          <circle cx="22" cy="22" r="11" fill={tn==="sky"?"#FFD700":"#FFB800"}/>
-          <circle cx="22" cy="22" r="11" fill="url(#beadGrad)" />
-          <circle cx="18" cy="18" r="3.5" fill="rgba(255,255,255,0.35)"/>
-          {/* 小豆子 右上 */}
-          <circle cx="35" cy="12" r="6" fill={tn==="sky"?"#FFB347":"#FF9900"}/>
-          <circle cx="35" cy="12" r="6" fill="url(#beadGrad2)"/>
-          <circle cx="33" cy="10" r="2" fill="rgba(255,255,255,0.3)"/>
-          {/* 小豆子 左下 */}
-          <circle cx="10" cy="34" r="5" fill={tn==="sky"?"#FFEAA0":"#FFD060"}/>
-          <circle cx="10" cy="34" r="5" fill="url(#beadGrad3)"/>
-          <circle cx="9" cy="33" r="1.5" fill="rgba(255,255,255,0.35)"/>
-          {/* 小豆子 左上 */}
-          <circle cx="9" cy="11" r="4" fill={tn==="sky"?"#FFD700":"#FFB800"}/>
-          <circle cx="9" cy="11" r="4" fill="url(#beadGrad)"/>
-          <circle cx="8" cy="10" r="1.2" fill="rgba(255,255,255,0.3)"/>
-          {/* 小豆子 右下 */}
-          <circle cx="34" cy="34" r="4.5" fill={tn==="sky"?"#FFB347":"#FF9900"}/>
-          <circle cx="34" cy="34" r="4.5" fill="url(#beadGrad2)"/>
-          <circle cx="32.5" cy="32.5" r="1.5" fill="rgba(255,255,255,0.3)"/>
-          <defs>
-            <radialGradient id="beadGrad" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.4)"/>
-              <stop offset="100%" stopColor="rgba(0,0,0,0.08)"/>
-            </radialGradient>
-            <radialGradient id="beadGrad2" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.35)"/>
-              <stop offset="100%" stopColor="rgba(0,0,0,0.1)"/>
-            </radialGradient>
-            <radialGradient id="beadGrad3" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.4)"/>
-              <stop offset="100%" stopColor="rgba(0,0,0,0.06)"/>
-            </radialGradient>
-          </defs>
-        </svg>
-      </div>
-    </div>
-  );
+.button_small_wrap:hover .button_small_icon {
+  color: var(--_button-style---icon-hover); 
 }
+.button_small_wrap:focus-within .button_small_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_small_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_small_text u-text-style-body-3">Contact sales</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f783%22%7D%2C%7B%22componentId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429989%22%2C%22instanceId%22%3A%22da64b636-37e9-0796-81ea-5cd7ca5a39de%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429990%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="/contact-sales" data-cta="" target="" data-cta-copy="Contact sales" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f783:da64b636-37e9-0796-81ea-5cd7ca5a39de:a8c9bb6a-76f8-d6fa-8374-826ae4429990:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Contact sales</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Contact sales</span></button></div></div></li><li class="nav_buttons_item is-main is-desktop"><div data-wf--button-small--style="primary" class="button_small_wrap"><div class="u-embed-css w-embed"><style>
+.button_small_icon {
+  transition: color 300ms ease;
+}
+.button_small_wrap:hover .button_small_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_small_wrap:focus-within .button_small_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_small_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_small_text u-text-style-body-3">Try Claude</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f783%22%7D%2C%7B%22componentId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429989%22%2C%22instanceId%22%3A%22e768fa2b-759d-e1f2-9772-e9d56c2c1b8b%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429990%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="https://claude.ai/" data-cta="" target="" data-cta-copy="Try Claude" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f783:e768fa2b-759d-e1f2-9772-e9d56c2c1b8b:a8c9bb6a-76f8-d6fa-8374-826ae4429990:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Try Claude</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Try Claude</span></button></div></div></li><li class="nav_buttons_item is-main is-mobile"><div data-wf--button-main--style="tertiary" class="button_main_wrap w-variant-53cd577f-e297-ccd8-fb9d-999cb11e323c"><div class="u-embed-css w-embed"><style>
+.button_main_icon {
+  transition: color 300ms ease;
+}
+.button_main_wrap:hover .button_main_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_main_wrap:focus-within .button_main_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_main_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_main_text u-text-style-body-2">Contact sales</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f783%22%7D%2C%7B%22componentId%22%3A%2266f74833-d8fd-b1f3-8ebc-b729cc29bb73%22%2C%22instanceId%22%3A%2263b3804e-4c21-a1bf-5f8f-46671c6a1e8e%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%225452a68c-3977-d772-6b86-a81d519c54c1%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Navigation" data-wf-event-ids="157059830" href="/contact-sales" data-cta="" target="" data-cta-copy="Contact sales" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f783:63b3804e-4c21-a1bf-5f8f-46671c6a1e8e:5452a68c-3977-d772-6b86-a81d519c54c1:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Contact sales</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Contact sales</span></button></div></div></li><li class="nav_buttons_item is-main is-mobile"><div data-wf--button-main--style="primary" class="button_main_wrap"><div class="u-embed-css w-embed"><style>
+.button_main_icon {
+  transition: color 300ms ease;
+}
+.button_main_wrap:hover .button_main_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_main_wrap:focus-within .button_main_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_main_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_main_text u-text-style-body-2">Try Claude</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f783%22%7D%2C%7B%22componentId%22%3A%2266f74833-d8fd-b1f3-8ebc-b729cc29bb73%22%2C%22instanceId%22%3A%22af97366c-0754-5f4e-9756-0242d6ba32a9%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%225452a68c-3977-d772-6b86-a81d519c54c1%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="https://claude.ai/" data-cta="" target="" data-cta-copy="Try Claude" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f783:af97366c-0754-5f4e-9756-0242d6ba32a9:5452a68c-3977-d772-6b86-a81d519c54c1:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Try Claude</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Try Claude</span></button></div></div></li></ul></div></nav></div></div><nav class="nav_wrap is-mobile"><div class="nav_mobile_contain u-container"><a aria-label="Home Page" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f786" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8eeb7b4d-a73d-ddb2-ba6b-673912a3f786" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%5D" href="#" class="nav_logo_wrap w-inline-block"><div STYLE="" class="u-max-width-full"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 573 125" fill="none" class="u-svg"><path d="M200.168 110.625C190.376 110.625 181.647 108.688 173.98 104.813C166.355 100.896 160.397 95.4167 156.105 88.375C151.814 81.3333 149.668 73.25 149.668 64.125C149.668 54.4167 151.855 45.7917 156.23 38.25C160.647 30.7083 166.751 24.8542 174.543 20.6875C182.335 16.4792 191.189 14.375 201.105 14.375C207.064 14.375 213.001 15.0208 218.918 16.3125C224.876 17.5625 230.105 19.5208 234.605 22.1875V42.75H228.98C227.397 35.2083 224.293 29.7292 219.668 26.3125C215.085 22.8958 208.814 21.1875 200.855 21.1875C193.23 21.1875 186.897 22.8958 181.855 26.3125C176.814 29.7292 173.085 34.5 170.668 40.625C168.251 46.7083 167.043 53.7917 167.043 61.875C167.043 69.8333 168.397 76.9792 171.105 83.3125C173.814 89.6458 177.835 94.6458 183.168 98.3125C188.501 101.979 194.918 103.813 202.418 103.813C207.501 103.813 211.855 102.813 215.48 100.813C219.147 98.8125 222.23 96.0833 224.73 92.625C227.23 89.125 229.564 84.8333 231.73 79.75H237.605L233.605 102.313C229.272 105.104 224.105 107.188 218.105 108.563C212.105 109.938 206.126 110.625 200.168 110.625ZM243.168 103.938C245.626 103.646 247.543 103.271 248.918 102.813C250.335 102.313 251.355 101.646 251.98 100.813C252.605 99.9792 252.918 98.9167 252.918 97.625V29.5625L243.168 25.875V21.6875L262.793 14.375H267.793V97.625C267.793 98.9167 268.105 99.9792 268.73 100.813C269.355 101.646 270.355 102.313 271.73 102.813C273.147 103.271 275.085 103.646 277.543 103.938V109.375H243.168V103.938ZM300.355 110.625C296.772 110.625 293.605 109.958 290.855 108.625C288.105 107.292 285.96 105.417 284.418 103C282.918 100.583 282.168 97.7917 282.168 94.625C282.168 90 283.626 86.1875 286.543 83.1875C289.501 80.1458 294.043 77.75 300.168 76L322.855 69.5625V62.75C322.855 58.2917 321.793 54.9167 319.668 52.625C317.585 50.3333 314.48 49.1875 310.355 49.1875C306.73 49.1875 303.855 50.2917 301.73 52.5C299.647 54.7083 298.605 57.7083 298.605 61.5V67.125H288.48C287.272 66.375 286.335 65.3958 285.668 64.1875C285.043 62.9375 284.73 61.5625 284.73 60.0625C284.73 57.1042 285.876 54.3958 288.168 51.9375C290.46 49.4375 293.564 47.4583 297.48 46C301.397 44.5417 305.689 43.8125 310.355 43.8125C316.189 43.8125 321.147 44.6875 325.23 46.4375C329.314 48.1875 332.418 50.7708 334.543 54.1875C336.668 57.6042 337.73 61.7292 337.73 66.5625V96.25C337.73 97.7083 338.022 98.875 338.605 99.75C339.23 100.625 340.23 101.333 341.605 101.875C343.022 102.375 344.98 102.771 347.48 103.063V108.5C343.855 109.792 340.376 110.438 337.043 110.438C333.001 110.438 329.751 109.479 327.293 107.563C324.876 105.646 323.439 102.896 322.98 99.3125C319.939 103.063 316.522 105.896 312.73 107.813C308.939 109.688 304.814 110.625 300.355 110.625ZM307.668 100.625C310.335 100.625 312.98 100 315.605 98.75C318.272 97.4583 320.689 95.6667 322.855 93.375V75.3125L305.855 80.375C302.939 81.25 300.71 82.625 299.168 84.5C297.626 86.3333 296.855 88.5833 296.855 91.25C296.855 93.0833 297.314 94.7083 298.23 96.125C299.147 97.5417 300.418 98.6458 302.043 99.4375C303.71 100.229 305.585 100.625 307.668 100.625ZM376.543 110.625C369.876 110.625 364.814 108.938 361.355 105.563C357.897 102.146 356.168 97.1667 356.168 90.625V58.375L346.418 54.9375V50.75L366.105 43.8125H371.043V88.0625C371.043 92.0208 372.043 94.9583 374.043 96.875C376.043 98.7917 379.126 99.75 383.293 99.75C385.96 99.75 388.814 99.1458 391.855 97.9375C394.939 96.7292 397.814 95.0625 400.48 92.9375V58.375L390.73 54.9375V50.75L410.418 43.8125H415.355V92.5C415.355 93.9583 415.647 95.125 416.23 96C416.855 96.875 417.855 97.5625 419.23 98.0625C420.605 98.5625 422.564 98.9792 425.105 99.3125V104.75L405.418 110H400.48V98.9375C396.98 102.563 393.085 105.417 388.793 107.5C384.543 109.583 380.46 110.625 376.543 110.625ZM458.73 110.625C453.105 110.625 448.043 109.354 443.543 106.813C439.085 104.229 435.585 100.688 433.043 96.1875C430.501 91.6458 429.23 86.5625 429.23 80.9375C429.23 73.6042 430.751 67.125 433.793 61.5C436.876 55.875 441.189 51.5208 446.73 48.4375C452.272 45.3542 458.689 43.8125 465.98 43.8125C468.355 43.8125 470.772 44.0625 473.23 44.5625C475.73 45.0625 478.085 45.7708 480.293 46.6875V29.5625L470.543 25.875V21.6875L490.168 14.375H495.168V92.5C495.168 93.9583 495.46 95.125 496.043 96C496.668 96.875 497.668 97.5625 499.043 98.0625C500.418 98.5625 502.376 98.9792 504.918 99.3125V104.75L485.23 110H480.293V101.438C477.168 104.396 473.751 106.667 470.043 108.25C466.335 109.833 462.564 110.625 458.73 110.625ZM464.855 100.563C467.355 100.563 469.96 100.042 472.668 99C475.376 97.9167 477.918 96.4583 480.293 94.625V56C476.21 52.6667 471.751 51 466.918 51C462.168 51 458.126 52.125 454.793 54.375C451.46 56.625 448.939 59.7083 447.23 63.625C445.564 67.5417 444.73 71.9792 444.73 76.9375C444.73 81.6458 445.48 85.7708 446.98 89.3125C448.48 92.8542 450.73 95.625 453.73 97.625C456.772 99.5833 460.48 100.563 464.855 100.563ZM541.293 110.625C535.168 110.625 529.647 109.229 524.73 106.438C519.814 103.646 515.96 99.7708 513.168 94.8125C510.418 89.8125 509.043 84.1875 509.043 77.9375C509.043 71.6042 510.46 65.8333 513.293 60.625C516.126 55.4167 520.001 51.3125 524.918 48.3125C529.876 45.3125 535.376 43.8125 541.418 43.8125C546.001 43.8125 550.272 44.7708 554.23 46.6875C558.189 48.6042 561.501 51.2917 564.168 54.75C566.876 58.2083 568.668 62.1667 569.543 66.625L524.168 80.375C525.418 85.875 527.897 90.1875 531.605 93.3125C535.355 96.3958 539.96 97.9375 545.418 97.9375C550.001 97.9375 554.105 96.8542 557.73 94.6875C561.355 92.4792 564.564 89.1458 567.355 84.6875L572.168 86.1875C571.001 91.1042 568.939 95.4167 565.98 99.125C563.064 102.792 559.48 105.625 555.23 107.625C550.98 109.625 546.335 110.625 541.293 110.625ZM553.293 64.75C552.71 61.9583 551.751 59.5208 550.418 57.4375C549.126 55.3125 547.501 53.6875 545.543 52.5625C543.585 51.3958 541.397 50.8125 538.98 50.8125C535.939 50.8125 533.231 51.7083 530.856 53.5C528.481 55.2917 526.626 57.8333 525.293 61.125C523.96 64.375 523.293 68.1458 523.293 72.4375C523.293 73.1458 523.314 73.7083 523.355 74.125L553.293 64.75Z" fill="currentColor"></path><path d="M54.375 118.75L56.125 111L58.125 101L59.75 93L61.25 83.125L62.125 79.875L62 79.625L61.375 79.75L53.875 90L42.5 105.375L33.5 114.875L31.375 115.75L27.625 113.875L28 110.375L30.125 107.375L42.5 91.5L50 81.625L54.875 76L54.75 75.25H54.5L21.5 96.75L15.625 97.5L13 95.125L13.375 91.25L14.625 90L24.5 83.125L49.125 69.375L49.5 68.125L49.125 67.5H47.875L43.75 67.25L29.75 66.875L17.625 66.375L5.75 65.75L2.75 65.125L0 61.375L0.25 59.5L2.75 57.875L6.375 58.125L14.25 58.75L26.125 59.5L34.75 60L47.5 61.375H49.5L49.75 60.5L49.125 60L48.625 59.5L36.25 51.25L23 42.5L16 37.375L12.25 34.75L10.375 32.375L9.625 27.125L13 23.375L17.625 23.75L18.75 24L23.375 27.625L33.25 35.25L46.25 44.875L48.125 46.375L49 45.875V45.5L48.125 44.125L41.125 31.375L33.625 18.375L30.25 13L29.375 9.75C29.0417 8.625 28.875 7.375 28.875 6L32.75 0.750006L34.875 0L40.125 0.750006L42.25 2.625L45.5 10L50.625 21.625L58.75 37.375L61.125 42.125L62.375 46.375L62.875 47.75H63.75V47L64.375 38L65.625 27.125L66.875 13.125L67.25 9.125L69.25 4.375L73.125 1.87501L76.125 3.25L78.625 6.875L78.25 9.125L76.875 18.75L73.875 33.875L72 44.125H73.125L74.375 42.75L79.5 36L88.125 25.25L91.875 21L96.375 16.25L99.25 14H104.625L108.5 19.875L106.75 26L101.25 33L96.625 38.875L90 47.75L86 54.875L86.375 55.375H87.25L102.125 52.125L110.25 50.75L119.75 49.125L124.125 51.125L124.625 53.125L122.875 57.375L112.625 59.875L100.625 62.25L82.75 66.5L82.5 66.625L82.75 67L90.75 67.75L94.25 68H102.75L118.5 69.125L122.625 71.875L125 75.125L124.625 77.75L118.25 80.875L109.75 78.875L89.75 74.125L83 72.5H82V73L87.75 78.625L98.125 88L111.25 100.125L111.875 103.125L110.25 105.625L108.5 105.375L97 96.625L92.5 92.75L82.5 84.375H81.875V85.25L84.125 88.625L96.375 107L97 112.625L96.125 114.375L92.875 115.5L89.5 114.875L82.25 104.875L74.875 93.5L68.875 83.375L68.25 83.875L64.625 121.625L63 123.5L59.25 125L56.125 122.625L54.375 118.75Z" fill="var(--swatch--clay)"></path></svg></div></a><div class="nav_mobile_layout"><div class="nav_actions_mobile"><ul data-wf--nav-actions--variant="desktop" role="list" class="nav_actions_wrap w-list-unstyled"><li class="nav_buttons_item is-main is-desktop"><div data-wf--button-small--style="tertiary" class="button_small_wrap w-variant-a8c9bb6a-76f8-d6fa-8374-826ae4429994"><div class="u-embed-css w-embed"><style>
+.button_small_icon {
+  transition: color 300ms ease;
+}
+.button_small_wrap:hover .button_small_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_small_wrap:focus-within .button_small_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_small_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_small_text u-text-style-body-3">Contact sales</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f78a%22%7D%2C%7B%22componentId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429989%22%2C%22instanceId%22%3A%22da64b636-37e9-0796-81ea-5cd7ca5a39de%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429990%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="/contact-sales" data-cta="" target="" data-cta-copy="Contact sales" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f78a:da64b636-37e9-0796-81ea-5cd7ca5a39de:a8c9bb6a-76f8-d6fa-8374-826ae4429990:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Contact sales</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Contact sales</span></button></div></div></li><li class="nav_buttons_item is-main is-desktop"><div data-wf--button-small--style="primary" class="button_small_wrap"><div class="u-embed-css w-embed"><style>
+.button_small_icon {
+  transition: color 300ms ease;
+}
+.button_small_wrap:hover .button_small_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_small_wrap:focus-within .button_small_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_small_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_small_text u-text-style-body-3">Try Claude</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f78a%22%7D%2C%7B%22componentId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429989%22%2C%22instanceId%22%3A%22e768fa2b-759d-e1f2-9772-e9d56c2c1b8b%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429990%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="https://claude.ai/" data-cta="" target="" data-cta-copy="Try Claude" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f78a:e768fa2b-759d-e1f2-9772-e9d56c2c1b8b:a8c9bb6a-76f8-d6fa-8374-826ae4429990:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Try Claude</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Try Claude</span></button></div></div></li><li class="nav_buttons_item is-main is-mobile"><div data-wf--button-main--style="tertiary" class="button_main_wrap w-variant-53cd577f-e297-ccd8-fb9d-999cb11e323c"><div class="u-embed-css w-embed"><style>
+.button_main_icon {
+  transition: color 300ms ease;
+}
+.button_main_wrap:hover .button_main_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_main_wrap:focus-within .button_main_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_main_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_main_text u-text-style-body-2">Contact sales</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f78a%22%7D%2C%7B%22componentId%22%3A%2266f74833-d8fd-b1f3-8ebc-b729cc29bb73%22%2C%22instanceId%22%3A%2263b3804e-4c21-a1bf-5f8f-46671c6a1e8e%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%225452a68c-3977-d772-6b86-a81d519c54c1%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Navigation" data-wf-event-ids="157059830" href="/contact-sales" data-cta="" target="" data-cta-copy="Contact sales" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f78a:63b3804e-4c21-a1bf-5f8f-46671c6a1e8e:5452a68c-3977-d772-6b86-a81d519c54c1:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Contact sales</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Contact sales</span></button></div></div></li><li class="nav_buttons_item is-main is-mobile"><div data-wf--button-main--style="primary" class="button_main_wrap"><div class="u-embed-css w-embed"><style>
+.button_main_icon {
+  transition: color 300ms ease;
+}
+.button_main_wrap:hover .button_main_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_main_wrap:focus-within .button_main_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_main_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_main_text u-text-style-body-2">Try Claude</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f78a%22%7D%2C%7B%22componentId%22%3A%2266f74833-d8fd-b1f3-8ebc-b729cc29bb73%22%2C%22instanceId%22%3A%22af97366c-0754-5f4e-9756-0242d6ba32a9%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%225452a68c-3977-d772-6b86-a81d519c54c1%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="https://claude.ai/" data-cta="" target="" data-cta-copy="Try Claude" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f78a:af97366c-0754-5f4e-9756-0242d6ba32a9:5452a68c-3977-d772-6b86-a81d519c54c1:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Try Claude</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Try Claude</span></button></div></div></li></ul></div><button aria-controls="nav-menu" aria-expanded="false" aria-label="Open Menu" class="nav_btn_wrap"><div class="nav_btn_layout"><div class="nav_btn_line"></div><div class="nav_btn_line"></div><div class="nav_btn_line is-bottom"></div></div></button><div class="nav_menu_wrap u-theme-white"><div class="nav_menu_inner"><div class="nav_menu_links_wrap"><ul data-wf--nav-links--variant="mobile" role="list" class="nav_links_wrap w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-list-unstyled"><li class="nav_links_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1609" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1609" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" class="nav_links_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3 w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Meet Claude</div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb u-theme-white is-mega w-dropdown-list"><div class="nav_dropdown_main_content w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Products</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1616" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1616" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/product/overview" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Claude</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da161c" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da161c" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/product/claude-code" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Claude Code</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a><link rel="prefetch" href="/product/claude-code"/></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:17fb9876-b736-8f80-31fc-3794ee59b864" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="17fb9876-b736-8f80-31fc-3794ee59b864" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/product/cowork" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Claude Cowork</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a><link rel="prefetch" href="/product/cowork"/></li></ul></div><div class="nav_dropdown_divider_wrap w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Features</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:0d66bd52-32f7-610e-d561-5b800b7b5c5d" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="0d66bd52-32f7-610e-d561-5b800b7b5c5d" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/claude-for-chrome" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Claude for Chrome</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:2eaf9bcf-cd9d-0cab-98e9-fd557ab36337" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="2eaf9bcf-cd9d-0cab-98e9-fd557ab36337" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/claude-for-slack" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Claude for Slack</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:0d66bd52-32f7-610e-d561-5b800b7b5c63" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="0d66bd52-32f7-610e-d561-5b800b7b5c63" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/claude-for-excel" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Claude for Excel</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:2adbb0b3-8292-73ff-5c67-2b54f3851386" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="2adbb0b3-8292-73ff-5c67-2b54f3851386" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/claude-for-powerpoint" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Claude for PowerPoint</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:b8348064-e12a-49c3-d1a6-ae9e3d8a2ed6" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="b8348064-e12a-49c3-d1a6-ae9e3d8a2ed6" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/skills" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Skills</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Models</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1628" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1628" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://www.anthropic.com/claude/opus" target="_blank" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Opus</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da162e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da162e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://www.anthropic.com/claude/sonnet" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Sonnet</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1634" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1634" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://www.anthropic.com/claude/haiku" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Haiku</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da163b" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da163b" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" class="nav_links_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3 w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Platform</div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb u-theme-white w-dropdown-list"><div class="nav_dropdown_main_content w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div class="nav_dropdown_list_wrap"><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1646" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1646" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/platform/api" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Overview</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da164c" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da164c" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://platform.claude.com/docs" target="_blank" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Developer docs</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1652" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1652" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="http://claude.com/pricing#api" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Pricing</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap"><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da165c" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da165c" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://platform.claude.com/" target="_blank" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Console login</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1663" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1663" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" class="nav_links_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3 w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Solutions</div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb u-theme-white is-mega is-solutions w-dropdown-list"><div class="nav_dropdown_main_content w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Use cases</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1670" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1670" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/agents" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">AI agents</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:8183f85b-a564-1ee6-d6d4-cdc7f697defd" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8183f85b-a564-1ee6-d6d4-cdc7f697defd" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/claude-code-security" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Claude Code Security</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1676" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1676" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/coding" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Coding</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega is-2col"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Industries</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-2col"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1688" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1688" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/customer-support" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Customer support</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da168e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da168e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/education" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Education</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da1694" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da1694" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/financial-services" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Financial services</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da169a" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da169a" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/government" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Government</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:3530836f-7486-2799-6904-4f7f19a5db17" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="3530836f-7486-2799-6904-4f7f19a5db17" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/healthcare" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Healthcare</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:cf7ff432-aaa5-0836-66eb-ab807dd3a24e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="cf7ff432-aaa5-0836-66eb-ab807dd3a24e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/life-sciences" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Life sciences</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:6b7d2291-f5df-77c0-c3ee-cedf58cca606" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="6b7d2291-f5df-77c0-c3ee-cedf58cca606" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/solutions/nonprofits" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Nonprofits</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da16a1" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da16a1" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" class="nav_links_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3 w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Pricing</div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb u-theme-white w-dropdown-list"><div class="nav_dropdown_main_content w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div class="nav_dropdown_list_wrap"><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da16ac" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da16ac" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/pricing" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Overview</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a><link rel="prefetch" href="/pricing"/></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:6b53d7fa-2217-7bb1-2471-b31c79468345" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="6b53d7fa-2217-7bb1-2471-b31c79468345" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/pricing#api" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">API</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_list_wrap"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Pricing</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:64ebc799-6686-7e36-b92e-ce8e39404c87" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="64ebc799-6686-7e36-b92e-ce8e39404c87" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/pricing/max" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Max plan</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:64ebc799-6686-7e36-b92e-ce8e39404c8d" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="64ebc799-6686-7e36-b92e-ce8e39404c8d" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/pricing/team" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Team plan</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:64ebc799-6686-7e36-b92e-ce8e39404c93" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="64ebc799-6686-7e36-b92e-ce8e39404c93" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/pricing/enterprise" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Enterprise plan</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-delay="400" data-hover="true" class="nav_dropdown_component w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da16c5" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da16c5" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" class="nav_links_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-dropdown-toggle"><div class="nav_links_text u-text-style-body-3 w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Resources</div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb u-theme-white is-mega is-learn is-resources w-dropdown-list"><div class="nav_dropdown_main_content w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Insights</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:1ef4ecb2-4b7e-14d0-78d8-a296d5da16d6" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="1ef4ecb2-4b7e-14d0-78d8-a296d5da16d6" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/blog" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Blog</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:705fc154-c8e5-f733-f5d9-7d39619c57dc" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="705fc154-c8e5-f733-f5d9-7d39619c57dc" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/customers" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Customer stories</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:06814488-5abc-c011-c6df-209d7e94f1e8" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="06814488-5abc-c011-c6df-209d7e94f1e8" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://www.anthropic.com/news" target="_blank" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Anthropic news</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Learn</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:eba0fd5d-f972-1c2c-8678-8d86826275ae" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="eba0fd5d-f972-1c2c-8678-8d86826275ae" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://www.anthropic.com/learn" target="_blank" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Anthropic Academy</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:7585281a-b756-7653-2822-428b5287f546" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="7585281a-b756-7653-2822-428b5287f546" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/resources/courses" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Courses</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:ccd1744a-4d2e-f3c8-aaf9-f99beee1f36e" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="ccd1744a-4d2e-f3c8-aaf9-f99beee1f36e" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/resources/tutorials" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Tutorials</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:3e7f49d6-851d-467e-b638-c1d397d44276" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="3e7f49d6-851d-467e-b638-c1d397d44276" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/resources/use-cases" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Use cases</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Tools</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:c343bb22-30a4-2fa5-4901-cd3cc04494aa" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="c343bb22-30a4-2fa5-4901-cd3cc04494aa" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/connectors" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Connectors</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:8b0d3a7b-effe-05fe-8448-72c1dcb9ed7a" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8b0d3a7b-effe-05fe-8448-72c1dcb9ed7a" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/plugins" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Plugins</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div><div class="nav_dropdown_divider_wrap w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb is-mega"><div class="nav_dropdown_divider_fill"></div></div><div class="nav_dropdown_list_wrap is-mega"><div class="nav_dropdown_label u-text-style-caption w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Connect</div><ul role="list" class="nav_dropdown_list w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:848375b5-fd68-560a-2bdb-dc32bceabe71" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="848375b5-fd68-560a-2bdb-dc32bceabe71" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://www.anthropic.com/events" target="_blank" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Events</div><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li><li class="nav_dropdown_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:8d0c28df-abf6-c765-214a-0662d4626ce2" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8d0c28df-abf6-c765-214a-0662d4626ce2" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="/community" class="nav_dropdown_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_dropdown_text">Community</div><div class="nav_dropdown_icon u-display-none"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.5 3C9.77614 3 10 3.22386 10 3.5C10 3.77614 9.77614 4 9.5 4H4.5C4.22386 4 4 4.22386 4 4.5V15.5C4 15.7761 4.22386 16 4.5 16H15.5C15.7761 16 16 15.7761 16 15.5V10.5C16 10.2239 16.2239 10 16.5 10C16.7761 10 17 10.2239 17 10.5V15.5C17 16.3284 16.3284 17 15.5 17H4.5C3.67157 17 3 16.3284 3 15.5V4.5C3 3.67157 3.67157 3 4.5 3H9.5ZM16.5 3C16.5374 3 16.5747 3.00436 16.6113 3.0127C16.6347 3.01803 16.6574 3.02559 16.6797 3.03418C16.687 3.03701 16.6939 3.04076 16.7012 3.04395C16.7213 3.05283 16.7409 3.06272 16.7598 3.07422C16.7675 3.07892 16.7757 3.08274 16.7832 3.08789C16.8082 3.10508 16.8317 3.12471 16.8535 3.14648L16.918 3.22461C16.9289 3.24116 16.9356 3.25988 16.9443 3.27734C16.95 3.28857 16.9572 3.29894 16.9619 3.31055C16.9789 3.35212 16.9888 3.39547 16.9941 3.43945C16.9966 3.45953 17 3.47957 17 3.5V7.5C17 7.77614 16.7761 8 16.5 8C16.2239 8 16 7.77614 16 7.5V4.70703L11.8535 8.85352C11.6583 9.04878 11.3417 9.04878 11.1465 8.85352C10.9512 8.65825 10.9512 8.34175 11.1465 8.14648L15.293 4H12.5C12.2239 4 12 3.77614 12 3.5C12 3.22386 12.2239 3 12.5 3H16.5Z" fill="currentColor"></path></svg></div></div></a></li></ul></div></div></div></nav></div></li><li class="nav_links_item w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb"><a data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f793:8af5136a-8811-447c-b5ba-a0acc01a0ed5" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="8af5136a-8811-447c-b5ba-a0acc01a0ed5" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%221ef4ecb2-4b7e-14d0-78d8-a296d5da1606%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f793%22%7D%5D" href="https://claude.ai/login" class="nav_links_link w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb w-inline-block"><div class="nav_links_text u-text-style-body-3 w-variant-a32dbd8b-fe5b-f07d-4c02-33134a110ceb">Login</div></a></li></ul></div><div class="nav_menu_actions_wrap"><ul data-wf--nav-actions--variant="mobile" role="list" class="nav_actions_wrap w-variant-8af8ad28-28c5-f3ef-7a42-268c913b0cc3 w-list-unstyled"><li class="nav_buttons_item is-main is-desktop w-variant-8af8ad28-28c5-f3ef-7a42-268c913b0cc3"><div data-wf--button-small--style="tertiary" class="button_small_wrap w-variant-a8c9bb6a-76f8-d6fa-8374-826ae4429994"><div class="u-embed-css w-embed"><style>
+.button_small_icon {
+  transition: color 300ms ease;
+}
+.button_small_wrap:hover .button_small_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_small_wrap:focus-within .button_small_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_small_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_small_text u-text-style-body-3">Contact sales</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f795%22%7D%2C%7B%22componentId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429989%22%2C%22instanceId%22%3A%22da64b636-37e9-0796-81ea-5cd7ca5a39de%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429990%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="/contact-sales" data-cta="" target="" data-cta-copy="Contact sales" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f795:da64b636-37e9-0796-81ea-5cd7ca5a39de:a8c9bb6a-76f8-d6fa-8374-826ae4429990:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Contact sales</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Contact sales</span></button></div></div></li><li class="nav_buttons_item is-main is-desktop w-variant-8af8ad28-28c5-f3ef-7a42-268c913b0cc3"><div data-wf--button-small--style="primary" class="button_small_wrap"><div class="u-embed-css w-embed"><style>
+.button_small_icon {
+  transition: color 300ms ease;
+}
+.button_small_wrap:hover .button_small_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_small_wrap:focus-within .button_small_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_small_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_small_text u-text-style-body-3">Try Claude</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f795%22%7D%2C%7B%22componentId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429989%22%2C%22instanceId%22%3A%22e768fa2b-759d-e1f2-9772-e9d56c2c1b8b%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22a8c9bb6a-76f8-d6fa-8374-826ae4429990%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="https://claude.ai/" data-cta="" target="" data-cta-copy="Try Claude" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f795:e768fa2b-759d-e1f2-9772-e9d56c2c1b8b:a8c9bb6a-76f8-d6fa-8374-826ae4429990:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Try Claude</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Try Claude</span></button></div></div></li><li class="nav_buttons_item is-main is-mobile w-variant-8af8ad28-28c5-f3ef-7a42-268c913b0cc3"><div data-wf--button-main--style="tertiary" class="button_main_wrap w-variant-53cd577f-e297-ccd8-fb9d-999cb11e323c"><div class="u-embed-css w-embed"><style>
+.button_main_icon {
+  transition: color 300ms ease;
+}
+.button_main_wrap:hover .button_main_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_main_wrap:focus-within .button_main_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_main_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_main_text u-text-style-body-2">Contact sales</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f795%22%7D%2C%7B%22componentId%22%3A%2266f74833-d8fd-b1f3-8ebc-b729cc29bb73%22%2C%22instanceId%22%3A%2263b3804e-4c21-a1bf-5f8f-46671c6a1e8e%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%225452a68c-3977-d772-6b86-a81d519c54c1%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Navigation" data-wf-event-ids="157059830" href="/contact-sales" data-cta="" target="" data-cta-copy="Contact sales" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f795:63b3804e-4c21-a1bf-5f8f-46671c6a1e8e:5452a68c-3977-d772-6b86-a81d519c54c1:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Contact sales</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Contact sales</span></button></div></div></li><li class="nav_buttons_item is-main is-mobile w-variant-8af8ad28-28c5-f3ef-7a42-268c913b0cc3"><div data-wf--button-main--style="primary" class="button_main_wrap"><div class="u-embed-css w-embed"><style>
+.button_main_icon {
+  transition: color 300ms ease;
+}
+.button_main_wrap:hover .button_main_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_main_wrap:focus-within .button_main_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_main_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_main_text u-text-style-body-2">Try Claude</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%2C%7B%22componentId%22%3A%2260eb5ba6-285f-1bdb-c758-d9e2d037c899%22%2C%22instanceId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f795%22%7D%2C%7B%22componentId%22%3A%2266f74833-d8fd-b1f3-8ebc-b729cc29bb73%22%2C%22instanceId%22%3A%22af97366c-0754-5f4e-9756-0242d6ba32a9%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%225452a68c-3977-d772-6b86-a81d519c54c1%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="https://claude.ai/" data-cta="" target="" data-cta-copy="Try Claude" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:8eeb7b4d-a73d-ddb2-ba6b-673912a3f795:af97366c-0754-5f4e-9756-0242d6ba32a9:5452a68c-3977-d772-6b86-a81d519c54c1:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Try Claude</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Try Claude</span></button></div></div></li></ul></div></div></div></div></div></nav><div class="nav_secondary_wrap"><div class="nav_secondary_contain u-container"><nav class="breadcrumb_nav"><ol itemtype="https://schema.org/BreadcrumbList" itemscope="https://schema.org/BreadcrumbList" role="list" class="breadcrumb_list w-list-unstyled"><li itemprop="itemListElement" itemscope="https://schema.org/ListItem" itemtype="https://schema.org/ListItem" class="breadcrumb_item is_first"><div class="u-position-relative"><div itemprop="name" class="breadcrumb_text u-text-style-caption">App unavailable in region</div><a itemprop="item" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:c8246a9d-33a7-4914-6b7a-8af16b2e9590" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="c8246a9d-33a7-4914-6b7a-8af16b2e9590" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%5D" href="#" class="breadcrumb_text u-text-style-caption is_linked w-inline-block"><div itemprop="name">App unavailable in region</div></a></div><meta itemprop="position" content="1"/></li></ol></nav><div data-delay="400" data-hover="true" class="nav_dropdown_component is-secondary w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:9ef0b0a3-55f5-ffb6-15cf-5cdbc4295afb" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="9ef0b0a3-55f5-ffb6-15cf-5cdbc4295afb" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%5D" class="nav_links_link is-secondary w-dropdown-toggle"><div class="nav_links_text u-text-style-caption">Explore here</div><div class="nav_links_svg is-desktop"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M14.128 7.16482C14.3126 6.95983 14.6298 6.94336 14.835 7.12771C15.0402 7.31242 15.0567 7.62952 14.8721 7.83477L10.372 12.835L10.2939 12.9053C10.2093 12.9667 10.1063 13 9.99995 13C9.85833 12.9999 9.72264 12.9402 9.62788 12.835L5.12778 7.83477L5.0682 7.75273C4.95072 7.55225 4.98544 7.28926 5.16489 7.12771C5.34445 6.96617 5.60969 6.95939 5.79674 7.09744L5.87193 7.16482L9.99995 11.7519L14.128 7.16482Z" fill="currentColor"></path></svg></div></div><div class="nav_links_svg is-mobile"><div class="nav_links_svg_line"></div><div class="nav_links_svg_line is-2"></div></div></div><nav class="nav_dropdown_main_wrap is-desktop u-theme-white is-secondary w-dropdown-list"><div class="nav_dropdown_main_content"><div data-lenis-prevent="" class="nav_dropdown_main_scroll is-desktop"><div class="nav_dropdown_list_wrap u-margin-trim"><ul role="list" class="nav_dropdown_list"><li class="nav_dropdown_item"><a class="nav_dropdown_link is-secondary w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%5D" data-ask-page="" data-wf-element-id="08758fec-e442-5fd8-780a-f70e70f5a32c" data-cta-position="Explore here dropdown" href="#" data-cta="" data-cta-copy="Ask Claude about this page" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:08758fec-e442-5fd8-780a-f70e70f5a32c" data-wf-ao-click-engagement-tracking="true"><div class="nav_dropdown_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M10 2.5C14.1421 2.5 17.5 5.85786 17.5 10C17.5 14.1421 14.1421 17.5 10 17.5H3C2.79779 17.5 2.61549 17.3782 2.53809 17.1914C2.4607 17.0046 2.50349 16.7895 2.64648 16.6465L4.35547 14.9365C3.20124 13.6175 2.5 11.8906 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5ZM10 3.5C6.41015 3.5 3.5 6.41015 3.5 10C3.5 11.7952 4.22659 13.4199 5.40332 14.5967L5.46582 14.6729C5.52017 14.7544 5.5498 14.8508 5.5498 14.9502C5.5498 15.0828 5.49709 15.2099 5.40332 15.3037L4.20703 16.5H10C13.5899 16.5 16.5 13.5899 16.5 10C16.5 6.41015 13.5899 3.5 10 3.5ZM13.29 9.30371C13.3986 9.05001 13.6925 8.93174 13.9463 9.04004C14.2 9.14863 14.3183 9.44253 14.21 9.69629C13.8506 10.536 13.1645 11.25 12.25 11.25C11.6372 11.25 11.128 10.9289 10.75 10.4648C10.372 10.9289 9.86276 11.25 9.25 11.25C8.63724 11.25 8.12801 10.9289 7.75 10.4648C7.37198 10.9289 6.86276 11.25 6.25 11.25C5.97386 11.25 5.75 11.0261 5.75 10.75C5.75 10.4739 5.97386 10.25 6.25 10.25C6.58764 10.25 7.00448 9.97056 7.29004 9.30371L7.32422 9.2373C7.41431 9.09121 7.5749 9 7.75 9C7.9501 9 8.13123 9.11975 8.20996 9.30371L8.32227 9.53516C8.59804 10.0359 8.95442 10.25 9.25 10.25C9.58764 10.25 10.0045 9.97056 10.29 9.30371L10.3242 9.2373C10.4143 9.09121 10.5749 9 10.75 9C10.9501 9 11.1312 9.11975 11.21 9.30371L11.3223 9.53516C11.598 10.0359 11.9544 10.25 12.25 10.25C12.5876 10.25 13.0045 9.97056 13.29 9.30371Z" fill="currentColor"></path></svg></div></div><div class="nav_dropdown_text">Ask questions about this page</div></a></li><li class="nav_dropdown_item"><a class="nav_dropdown_link is-secondary w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%228eeb7b4d-a73d-ddb2-ba6b-673912a3f779%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80a7%22%7D%5D" data-wf-element-id="9ef0b0a3-55f5-ffb6-15cf-5cdbc4295b0b" data-cta-position="Explore here dropdown" href="#" data-cta="" data-cta-copy="Copy markdown" id="copy-as-markdown" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80a7:9ef0b0a3-55f5-ffb6-15cf-5cdbc4295b0b" data-wf-ao-click-engagement-tracking="true"><div class="nav_dropdown_icon"><div class="icon_wrap"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 21" fill="none" class="u-svg"><path d="M12.5 3.60938C13.3284 3.60938 14 4.28095 14 5.10938V6.60938H15.5C16.3284 6.60938 17 7.28095 17 8.10938V16.1094C17 16.9378 16.3284 17.6094 15.5 17.6094H7.5C6.67157 17.6094 6 16.9378 6 16.1094V14.6094H4.5C3.67157 14.6094 3 13.9378 3 13.1094V5.10938C3 4.28095 3.67157 3.60938 4.5 3.60938H12.5ZM14 13.1094C14 13.9378 13.3284 14.6094 12.5 14.6094H7V16.1094C7 16.3855 7.22386 16.6094 7.5 16.6094H15.5C15.7761 16.6094 16 16.3855 16 16.1094V8.10938C16 7.83323 15.7761 7.60938 15.5 7.60938H14V13.1094ZM4.5 4.60938C4.22386 4.60938 4 4.83323 4 5.10938V13.1094C4 13.3855 4.22386 13.6094 4.5 13.6094H12.5C12.7761 13.6094 13 13.3855 13 13.1094V5.10938C13 4.83323 12.7761 4.60938 12.5 4.60938H4.5Z" fill="currentColor"></path></svg></div></div><div class="nav_dropdown_text">Copy as markdown</div></a></li></ul></div></div></div></nav></div></div></div><div aria-hidden="true" class="transition_wrap"></div></div><main id="main" class="page_main"><section data-wf--section--theme="ivory" class="u-section" id=""><div class="u-section-divider"></div><div data-wf--spacer--section-space="page-top" class="u-section-spacer w-variant-e359d2da-de19-6775-b122-3e06f925f39e u-ignore-trim"></div><div class="section_contain u-container u-margin-trim u-threshold-small"><div data-wf--content-wrapper--alignment="inherit" class="u-display-contents"><div class="u-content-wrapper u-margin-trim u-align-self-center u-width-full u-alignment-center"><div data-animate-header-wrap="" data-wf--module-header-main--heading-style="display-2" class="header_main_wrap u-margin-trim w-variant-e4c5303d-3e1e-77db-2099-2ea92a43e8c7 u-alignment-center u-alignment-unset-below"><div class="u-pictogram-wrap"><div class="header_icon"><div class="pictogram_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 96 96" fill="none" class="u-svg"><path d="M63.1623 12.0312C63.1623 12.0312 62.3885 33.1532 63.1623 33.1858C63.936 33.2184 83.904 33.8424 84 33.9154C84.096 33.9884 84.0077 13.5001 84.0077 13.5001L63.1623 12.0312Z" fill="var(--_theme---pictogram-accent)"></path><path d="M55.9231 21.6979C55.9385 23.5718 55.9532 25.4457 55.9673 27.3196C55.9826 30.1324 56.167 30.1305 56.1823 32.9433C56.1977 35.7542 55.9346 35.7561 55.95 38.567C55.95 38.88 55.9538 39.1545 55.9558 39.4003C55.9596 39.4579 55.9519 39.5097 55.9634 39.5539C55.9788 39.598 56.0114 39.6288 56.0479 39.6403C56.0844 39.6537 56.1209 39.646 56.1554 39.6499C56.8812 39.6768 57.5263 39.7017 58.8972 39.7516C61.7062 39.8649 61.7119 39.7344 64.5209 39.8457C67.3298 39.959 67.326 40.0704 70.135 40.1836C71.5404 40.2393 72.2431 40.2585 72.9439 40.2758C73.2953 40.2854 73.6466 40.295 74.0863 40.3084C74.3052 40.3161 74.5471 40.3238 74.8217 40.3334C74.958 40.3392 75.1039 40.343 75.2594 40.3488C75.3708 40.3526 75.486 40.3584 75.6031 40.3622C75.7548 40.368 75.9122 40.3718 76.0678 40.3891C76.3289 40.4275 76.542 40.5004 76.7378 40.6156C76.9298 40.7308 77.0892 40.8806 77.2082 41.04C77.3292 41.1993 77.4079 41.3683 77.4598 41.5276C77.4924 41.7024 77.5212 41.8656 77.5481 42.0134C77.5634 42.2918 77.5788 42.5452 77.5903 42.7833C77.6038 42.9465 77.6153 43.0982 77.6268 43.246C77.6518 43.5398 77.6748 43.8086 77.6998 44.1024C77.7478 44.686 77.7938 45.3561 77.8342 46.4659C77.9378 49.2748 77.8898 49.2768 77.9974 52.0838C78.1106 54.8889 78.0146 54.8947 78.1452 57.696C78.2124 59.0937 78.2911 59.7964 78.3814 60.4627C78.3929 60.5452 78.4044 60.6259 78.4159 60.7104L78.4236 60.7737L78.4274 60.8044L78.4313 60.8083C78.4313 60.8083 78.437 60.816 78.4351 60.8198C78.4351 60.8217 78.4351 60.8236 78.4313 60.8256C78.1241 60.9196 77.7842 61.0329 77.4655 61.15C77.239 61.2249 79.2972 60.5414 78.4274 60.8313V60.8448L78.4332 60.8601L78.4409 60.8908C78.462 60.9753 78.4793 61.0617 78.4966 61.152C78.5042 61.1961 78.5119 61.2422 78.5215 61.2883C78.5273 61.3267 78.533 61.367 78.5388 61.4073C78.5446 61.4611 78.5522 61.5168 78.5599 61.5744C78.6175 62.0371 78.6655 62.5632 78.7135 63.2716C78.8921 66.0902 78.7884 66.094 78.9478 68.9049C79.1014 71.7139 78.9862 71.7216 79.134 74.5305C79.2799 77.3395 79.5026 77.328 79.6447 80.1388C79.6793 80.8416 79.7004 81.3676 79.7119 81.8073C79.7177 82.0262 79.7215 82.224 79.7254 82.4121C79.7254 82.5062 79.7273 82.5964 79.7292 82.6848V82.7712L79.7177 83.0976C79.7081 83.3836 79.6966 83.6716 79.687 83.9769C79.7004 84.1305 79.6313 84.2822 79.5583 84.4358C79.4796 84.5875 79.3759 84.7372 79.2415 84.8736C79.1071 85.008 78.942 85.127 78.7558 85.2153C78.5676 85.3017 78.3679 85.3593 78.1126 85.3804C77.9858 85.3881 77.8514 85.3862 77.7132 85.3862C77.5846 85.3862 77.454 85.3862 77.3177 85.3862C77.1622 85.3862 76.997 85.3862 76.8223 85.3862C74.0095 85.3862 74.0095 85.2652 71.1967 85.2652C68.3839 85.2652 68.3858 85.4534 65.5769 85.4534C62.7679 85.4534 62.7679 85.3305 59.957 85.3305C57.1462 85.3305 57.1462 85.4169 54.3353 85.4169C51.5244 85.4169 51.5225 85.2307 48.7116 85.2307C45.9007 85.2307 45.9007 85.4188 43.0898 85.4188C40.279 85.4188 40.279 85.2441 37.4681 85.2441C35.5929 85.239 33.7183 85.2332 31.8444 85.2268C29.9705 85.2204 28.0966 85.2313 26.2226 85.2595C24.3474 85.2492 22.4729 85.239 20.599 85.2288C17.7881 85.2288 17.7881 85.3516 14.9753 85.3516C14.2726 85.3516 13.7446 85.344 13.3049 85.3324C13.0111 85.3248 12.7462 85.319 12.4966 85.3132C12.3257 85.3132 12.1644 85.2979 12.0185 85.2652C11.8726 85.2326 11.7439 85.1865 11.6134 85.1193C11.358 84.9888 11.1314 84.7795 10.974 84.5126C10.8166 84.2438 10.7436 83.9443 10.7474 83.5449C10.7513 83.2608 10.757 82.9478 10.7609 82.5926C10.7609 82.318 10.7647 82.0108 10.7666 81.6595C10.7686 78.8467 10.6073 78.8467 10.6092 76.0358C10.6111 73.223 10.4825 73.223 10.4844 70.4102C10.4863 67.5974 10.5631 67.5974 10.567 64.7865C10.5759 62.9113 10.5849 61.0361 10.5938 59.1609C10.5958 56.3481 10.7705 56.3481 10.7724 53.5353C10.7634 51.6601 10.7551 49.7849 10.7474 47.9097C10.7494 45.0969 10.5478 45.0969 10.5516 42.2841C10.5516 39.4713 10.711 39.4713 10.7129 36.6585C10.7129 33.8457 10.663 33.8457 10.663 31.031C10.663 28.2163 10.7762 28.2201 10.7762 25.4073C10.7762 24 10.757 23.2972 10.7378 22.5945C10.7302 22.2432 10.7206 21.8918 10.711 21.4521C10.711 21.2908 10.7071 21.1238 10.7052 20.9452C10.6994 20.7206 10.7033 20.4748 10.7628 20.256C10.8146 20.0371 10.9222 19.8105 11.0911 19.607C11.2601 19.4035 11.4943 19.2268 11.767 19.1251C12.0319 19.0233 12.3334 18.9984 12.6233 19.008C12.8383 19.008 13.038 19.0099 13.2281 19.0118C13.5026 19.0176 13.7446 19.0214 13.9634 19.0252C14.4031 19.0368 14.7545 19.0521 15.1058 19.0656C15.8086 19.0963 16.5132 19.1251 17.9186 19.1251C20.7314 19.1251 20.7314 19.0214 23.5442 19.0214C26.357 19.0214 26.359 19.0579 29.1718 19.0579C31.047 19.0502 32.9215 19.0419 34.7954 19.0329C37.6102 19.0329 37.6102 18.9177 40.4249 18.9177C43.2396 18.9177 43.2415 19.0867 46.0582 19.0867C48.8748 19.0867 48.8748 19.1212 51.6914 19.1212C53.863 19.1212 54.2642 19.4496 54.2642 20.0486C54.2642 20.6476 53.8649 21.0547 51.6914 21.0547C48.8806 21.0547 48.8806 21.0028 46.0697 21.0028C44.1945 20.9977 42.3199 20.9932 40.446 20.9894C37.6351 20.9894 37.6351 21.1468 34.8223 21.1468C32.0095 21.1468 32.0114 20.9952 29.2006 20.9952C26.3897 20.9952 26.3897 21.2524 23.5769 21.2524C20.7641 21.2524 20.7641 21.2102 17.9532 21.2102C16.5478 21.2102 15.845 21.1795 15.1423 21.1507C14.791 21.1353 14.4396 21.12 13.9999 21.1084C13.7042 21.1027 13.349 21.0969 12.8767 21.0892C12.8172 21.0931 12.7788 21.1468 12.7788 21.191C12.7788 21.2736 12.7769 21.3465 12.775 21.4137C12.7711 21.8534 12.7673 22.2048 12.7654 22.5561C12.7577 23.2588 12.75 23.9616 12.75 25.367C12.7423 27.2422 12.7346 29.1168 12.727 30.9907C12.727 33.8016 12.6598 33.8016 12.6598 36.6144C12.6598 39.4272 12.702 39.4272 12.702 42.238C12.711 44.112 12.7193 45.9865 12.727 47.8617C12.725 50.6726 12.869 50.6745 12.8671 53.4854C12.8652 56.2982 12.9286 56.2982 12.9266 59.1091C12.9247 61.92 12.8729 61.92 12.871 64.7328C12.869 67.5456 12.8326 67.5456 12.8306 70.3584C12.8287 73.1692 12.7519 73.1692 12.75 75.9782C12.7481 78.7872 12.8018 78.7891 12.7999 81.598C12.7999 81.9494 12.798 82.2566 12.7961 82.5312C12.7961 82.6675 12.7942 82.798 12.7922 82.919C12.7922 82.9497 12.7922 82.9804 12.7922 83.0092V83.0784C12.7884 83.1072 12.7807 83.134 12.7846 83.1609C12.7884 83.1878 12.8038 83.2108 12.8249 83.2224C12.846 83.2358 12.871 83.2358 12.8998 83.2396C12.9132 83.2396 12.9286 83.2435 12.9439 83.2454C13.038 83.2454 13.1378 83.2492 13.2396 83.2512C13.6793 83.2569 14.2054 83.2608 14.9081 83.2608C16.7833 83.2556 18.6578 83.2512 20.5318 83.2473C23.3426 83.2473 23.3426 83.1628 26.1535 83.1628C28.9644 83.1628 28.9644 83.3203 31.7753 83.3203C34.5862 83.3203 34.5881 83.0553 37.399 83.0553C39.2729 83.0579 41.1468 83.0598 43.0207 83.0611C44.8959 83.0611 46.7711 83.0617 48.6463 83.063C50.5202 83.0604 52.3948 83.0585 54.27 83.0572C57.0828 83.0572 57.0828 83.2876 59.8937 83.2876C62.7046 83.2876 62.7065 83.2358 65.5174 83.2358C68.3282 83.2358 68.3302 83.1321 71.143 83.1321C73.9558 83.1321 73.9558 83.0745 76.7666 83.0745C76.9433 83.0745 77.1065 83.0764 77.262 83.0784H77.3484C77.3561 83.0784 77.3503 83.0784 77.3522 83.0784H77.3542L77.3599 83.086C77.3695 83.0937 77.3868 83.1072 77.4079 83.111C77.429 83.111 77.4521 83.1187 77.4674 83.0937C77.4828 83.0361 77.4982 82.9824 77.5135 82.9286L77.5366 82.8345C77.5423 82.7673 77.5462 82.6598 77.55 82.5715C77.5577 82.3833 77.5634 82.1856 77.5673 81.9667C77.573 81.527 77.5654 80.999 77.5289 80.2963C77.3868 77.4873 77.2697 77.4931 77.1238 74.6841C76.9759 71.8771 76.8953 71.8809 76.7417 69.0739C76.5823 66.2688 76.6226 66.2649 76.446 63.4675C76.398 62.7724 76.3558 62.2464 76.3058 61.8336C76.3001 61.7817 76.2943 61.7299 76.2886 61.68L76.2809 61.6108C76.2809 61.6108 76.277 61.5993 76.2751 61.5936C76.2732 61.582 76.2732 61.5724 76.2751 61.5609V61.5513L76.3442 61.5302C76.5382 61.4668 76.7321 61.4035 76.9241 61.3363L77.2121 61.2345C77.4348 61.1596 75.4284 61.8278 76.277 61.5456V61.5321L76.2674 61.4995L76.2521 61.4342C76.2329 61.3478 76.2156 61.2633 76.2002 61.1769L76.1791 61.0502L76.1695 60.9696C76.158 60.8755 76.1465 60.7833 76.1369 60.6912C76.0505 59.9558 75.9833 59.2588 75.9142 57.8457C75.7836 55.0272 76.0121 55.0176 75.8988 52.2048C75.7894 49.3939 75.6703 49.3977 75.5686 46.5868C75.5282 45.4694 75.4841 44.7955 75.438 44.208C75.415 43.9142 75.3938 43.6396 75.3708 43.344C75.3593 43.1961 75.3497 43.0406 75.3362 42.8736C75.3305 42.768 75.3266 42.7564 75.3228 42.72C75.319 42.6854 75.3151 42.6508 75.3132 42.6124C75.3055 42.6067 75.2978 42.6048 75.2902 42.6048C73.5532 42.5395 71.8169 42.4748 70.0812 42.4108C68.2073 42.3366 66.3334 42.2617 64.4594 42.1862C61.6486 42.0729 61.6562 41.854 58.8454 41.7427C58.0966 41.7081 57.5455 41.6851 57.0847 41.664C56.5356 41.6352 56.0902 41.6121 55.614 41.5872C55.3375 41.566 55.0879 41.5084 54.8402 41.374C54.5945 41.2377 54.3545 41.0131 54.2028 40.7059C54.1241 40.5523 54.078 40.3872 54.0473 40.1932C54.0166 39.9993 54.0281 39.7747 54.0242 39.5443C54.0242 39.2659 54.0223 38.9548 54.0204 38.6016C54.005 35.7868 53.9263 35.7868 53.9129 32.9721C53.8975 30.1555 53.8361 30.1555 53.8226 27.3388C53.8092 24.5222 53.9244 24.5222 53.909 21.7056C53.909 21.4348 53.9129 21.1987 53.9244 20.9952C53.9302 20.8934 53.9378 20.7993 53.9455 20.7129L53.9494 20.6803C54.055 20.6803 54.1586 20.6803 54.2623 20.6784H54.2738C54.2604 20.688 54.2738 20.6784 54.2719 20.6745C54.2719 20.6707 54.27 20.7014 54.2758 20.6246C54.2777 20.5728 54.2758 20.5152 54.2738 20.4537C54.2681 20.3308 54.27 20.1945 54.2738 20.0448C54.2758 19.895 54.2585 19.7568 54.2873 19.6339C54.318 19.5168 54.4063 19.392 54.6751 19.3747C54.8057 19.3708 54.9842 19.3977 55.1858 19.511C55.3836 19.6224 55.6121 19.8259 55.7561 20.1657C55.7906 20.2502 55.8214 20.3424 55.8406 20.4422C55.8521 20.4921 55.8598 20.542 55.8636 20.5958C55.8674 20.6323 55.8713 20.6688 55.8732 20.7052C55.8828 20.7916 55.8905 20.8857 55.8982 20.9875C55.9116 21.191 55.9193 21.4252 55.9212 21.696L55.9231 21.6979Z" fill="currentColor"></path><path d="M55.1052 81.2467C54.9055 76.7942 55.0553 76.7884 54.8556 72.336C54.6578 67.8816 54.7058 67.8796 54.5138 63.4272C54.4313 58.9708 54.2777 58.9747 54.1932 54.5164C54.1106 50.0582 54.0473 50.0601 53.9628 45.6019C53.9417 44.5132 53.9417 43.6896 53.9494 43.0003C53.9551 42.6566 53.9628 42.3456 53.9686 42.0518C53.9705 41.9788 53.9724 41.9059 53.9743 41.8348C53.9782 41.8137 53.9801 41.8195 53.9839 41.8099C53.9916 41.7964 53.9974 41.783 54.005 41.7638L54.0223 41.7139L54.03 41.6851L54.0338 41.6697C54.0338 41.6697 54.03 41.6678 54.0281 41.6659C54.0108 41.6601 53.9858 41.6524 53.9513 41.6467C53.9359 41.6448 53.9206 41.6409 53.9052 41.639H53.8918L53.8841 41.6371C53.8822 41.6371 53.8822 41.6371 53.863 41.6371C53.8073 41.6371 53.7516 41.6409 53.694 41.6428C53.4674 41.6486 53.2236 41.6544 52.9606 41.662C52.4402 41.6755 51.8374 41.6928 51.1231 41.712C48.8902 41.7753 47.7746 41.808 46.6572 41.8406C45.5417 41.8752 44.4281 41.9078 42.197 41.9289C37.735 41.9616 37.735 41.9865 33.2729 41.998C32.9945 41.998 32.7314 41.998 32.4857 41.998C32.4242 41.998 32.3628 41.998 32.3033 41.998H32.1938L32.1055 41.9923C31.9903 41.9865 31.877 41.9808 31.7695 41.9769C31.3337 41.9539 30.9497 41.9347 30.6022 41.9174C29.9052 41.8752 29.3484 41.8425 28.7897 41.8099C27.6742 41.7408 26.5606 41.6697 24.3295 41.5776C19.8674 41.3913 19.8655 41.4873 15.4034 41.3011C12.1087 41.1628 11.6844 40.7116 11.7074 40.1529C11.7305 39.5942 12.1874 39.2563 15.4764 39.3926C19.9231 39.5788 19.9289 39.3868 24.3737 39.5731C26.597 39.6652 27.7068 39.767 28.8185 39.8668C29.3734 39.9168 29.9282 39.9667 30.6233 40.0166C30.9708 40.0377 31.3529 40.0627 31.7868 40.0896C31.8962 40.0953 32.0076 40.1011 32.1228 40.1068C32.1766 40.1088 32.2495 40.1145 32.2822 40.1126C32.3417 40.1126 32.4012 40.1126 32.4607 40.1126C32.7065 40.1126 32.9676 40.1126 33.246 40.1126C37.6985 40.1011 37.6985 40.1395 42.151 40.1068C44.3762 40.0876 45.4879 40.0128 46.5996 39.9379C47.7094 39.8611 48.823 39.79 51.0367 39.7305C51.7567 39.7094 52.3596 39.6921 52.878 39.6787C53.1334 39.671 53.3695 39.6633 53.5865 39.6576C53.742 39.6499 53.8937 39.6441 54.0377 39.6364C54.2374 39.623 54.4274 39.6096 54.6118 39.5923C54.9497 39.8265 55.1858 39.9859 55.3375 40.0819C55.3606 40.0972 55.3778 40.1068 55.4028 40.1241L55.4892 40.1971C55.5468 40.2451 55.6025 40.2931 55.6601 40.3411C55.7714 40.4371 55.8809 40.5331 55.9903 40.6272C55.9903 40.8883 55.9903 41.1475 55.9903 41.4124C55.9903 41.5392 55.9903 41.6678 55.9903 41.7984C55.9903 41.8694 55.9884 41.9424 55.9865 42.0153C55.9846 42.3091 55.9807 42.6182 55.9769 42.96C55.975 43.6435 55.9788 44.4576 55.9999 45.527C56.0498 48.494 56.0991 51.4617 56.1478 54.43C56.1964 57.3984 56.2604 60.368 56.3398 63.3388C56.5298 67.7932 56.6988 67.7875 56.8946 72.2419C57.0943 76.6963 57.1404 76.6944 57.3401 81.1488C57.4879 84.4377 56.9081 84.263 56.3494 84.288C55.7906 84.3129 55.2511 84.5376 55.1033 81.2448L55.1052 81.2467Z" fill="currentColor"></path><path d="M14.0422 62.8492C17.4137 62.807 17.4156 62.9568 20.7852 62.9088C24.1567 62.855 24.1586 62.9107 27.5263 62.8416C29.2102 62.8032 30.0492 62.7417 30.8825 62.6726C31.0879 62.6553 31.2953 62.6361 31.5142 62.6169C31.6198 62.6073 31.7292 62.5958 31.8444 62.5862C31.8982 62.5804 31.9538 62.5747 32.0114 62.5689C32.0518 62.5632 32.094 62.5574 32.1362 62.5516C32.1094 62.5555 32.0806 62.5593 32.0537 62.567C32.0479 62.5612 32.0498 62.5843 32.0518 62.5996L32.0556 62.6496L32.0671 62.7475C32.0767 62.8128 32.0882 62.878 32.1036 62.9433C32.1343 63.072 32.1804 63.1968 32.238 63.3158C32.2668 63.3753 32.2994 63.4348 32.3359 63.4905L32.3628 63.5328C31.3356 61.7913 32.0825 63.0489 31.854 62.6592L31.8924 62.64C31.973 62.6016 32.0614 62.5689 32.1516 62.544C32.1977 62.5324 32.2418 62.5209 32.2879 62.5132L32.357 62.5017H32.3762C32.4626 62.4921 32.551 62.4825 32.6431 62.4748C32.7967 62.4652 32.9676 62.4537 33.1346 62.448C33.4745 62.4345 33.847 62.4249 34.2732 62.4192C37.6639 62.3904 37.6582 62.3366 41.0374 62.3385C44.4146 62.35 44.4127 62.5843 47.79 62.6035C51.1634 62.6265 51.1654 62.5536 54.5388 62.5804C54.965 62.5881 55.3106 62.5766 55.7042 62.6016C56.0326 62.6188 56.3225 62.6323 56.5855 62.6457C57.1116 62.6707 57.534 62.6899 57.9545 62.7091C58.7974 62.7494 59.6402 62.7897 61.3241 62.8723C64.6956 63.0412 64.6918 63.1353 68.0633 63.2947C71.4329 63.4425 71.4406 63.3542 74.8025 63.4675C76.039 63.502 76.7378 63.6192 77.1122 63.792C77.4886 63.9628 77.5884 64.2105 77.6018 64.4889C77.6498 65.038 77.2524 65.4489 74.7468 65.374C71.3638 65.2608 71.358 65.4432 67.9826 65.2953C64.6092 65.1379 64.6188 64.9209 61.2473 64.752C59.5615 64.6656 58.7186 64.6118 57.8777 64.558C57.4572 64.5312 57.0348 64.5043 56.5087 64.4716C56.2457 64.4563 55.9558 64.439 55.6274 64.4198C55.5526 64.416 55.4758 64.4102 55.3951 64.4064C55.3126 64.4064 55.2281 64.4064 55.1417 64.4044C54.9554 64.4044 54.7577 64.4006 54.5465 64.3987C51.173 64.3699 51.1711 64.6041 47.7996 64.5811C44.4262 64.5619 44.4281 64.3833 41.0546 64.3718C37.687 64.368 37.6812 64.3411 34.3231 64.3718C33.9046 64.3776 33.5378 64.3833 33.2172 64.3948C33.0598 64.4006 32.9119 64.4064 32.7718 64.4121C32.7122 64.416 32.6566 64.4198 32.6009 64.4256C32.597 64.4256 32.5433 64.4313 32.6182 64.4217C32.6412 64.4179 32.6642 64.4121 32.6892 64.4044L32.6988 64.4006C32.6988 64.4006 32.7026 64.4006 32.7026 64.3968L32.6988 64.3699C32.693 64.3353 32.6873 64.3008 32.6796 64.2662C32.6662 64.1971 32.647 64.128 32.6258 64.0627C32.5836 63.9283 32.526 63.7996 32.455 63.6787L32.3993 63.5884C31.998 62.9088 32.9292 64.487 32.8313 64.3276L32.8255 64.3315L32.8121 64.3372L32.7583 64.3622C32.6854 64.3948 32.6086 64.4198 32.5298 64.439C32.4914 64.4486 32.453 64.4563 32.4146 64.462L32.3801 64.4659L32.3206 64.4716C32.2802 64.4755 32.2418 64.4793 32.2015 64.4832C32.1228 64.4908 32.0652 64.4928 31.9999 64.4985C31.8751 64.5062 31.7542 64.5139 31.637 64.5216C31.4086 64.5331 31.1954 64.5446 30.9804 64.5542C30.1279 64.5926 29.2831 64.6214 27.5916 64.6598C24.2086 64.7289 24.2124 64.8883 20.8313 64.942C17.4521 64.99 17.4521 65.038 14.0729 65.0784C11.5769 65.1072 11.7228 64.535 11.717 63.9763C11.7113 63.4156 11.5538 62.8704 14.046 62.8416L14.0422 62.8492Z" fill="currentColor"></path><path d="M34.0044 22.3795C33.8873 25.6608 33.7375 25.6569 33.6204 28.9382C33.5033 32.2214 33.4495 32.2195 33.3324 35.5046C33.2729 37.1462 33.2825 37.968 33.2921 38.7897C33.2959 39.2006 33.3017 39.6115 33.2978 40.1241C33.294 40.3814 33.2902 40.6636 33.2844 40.9843C33.2882 41.3049 33.2921 41.664 33.2959 42.0748C33.317 45.358 33.3804 45.36 33.4034 48.6432C33.4246 51.9283 33.1922 51.9283 33.2134 55.2134C33.2345 58.4966 33.3094 58.4966 33.3305 61.7798C33.3382 62.5977 33.3382 63.2256 33.3497 63.7228C33.365 64.2374 33.3785 64.6483 33.39 65.0592C33.413 65.8809 33.4361 66.7027 33.4841 68.3481C33.5666 71.639 33.4726 71.6409 33.5609 74.9318C33.6511 78.2227 33.7452 78.2208 33.847 81.5059C33.8854 82.7174 33.8047 83.4067 33.6454 83.7926C33.5647 83.9846 33.4668 84.1017 33.3535 84.1708C33.2959 84.2035 33.2364 84.2284 33.1711 84.238C33.1058 84.2534 33.0444 84.2784 32.9772 84.2918C32.9081 84.3052 32.8409 84.3244 32.7737 84.311C32.7065 84.2937 32.645 84.2745 32.5836 84.238C32.4646 84.1689 32.3609 84.0537 32.2706 83.8598C32.0921 83.4739 31.975 82.7846 31.9366 81.5673C31.8348 78.2764 31.6466 78.2841 31.5564 74.9952C31.47 71.7062 31.685 71.7004 31.6025 68.4134C31.5622 66.7699 31.5506 65.9462 31.541 65.1244C31.5353 64.7136 31.5295 64.3027 31.5218 63.7881C31.5199 63.2716 31.5161 62.6515 31.5103 61.8259C31.4892 58.5331 31.255 58.535 31.2319 55.2422C31.2108 51.9475 31.3855 51.9475 31.3644 48.6547C31.3554 46.4608 31.3471 44.2662 31.3394 42.071C31.3356 41.6601 31.3337 41.2992 31.3318 40.9766C31.3414 40.656 31.351 40.3718 31.3606 40.1145C31.3759 39.6 31.3874 39.1891 31.399 38.7763C31.4258 37.9526 31.4508 37.1308 31.5046 35.4854C31.6217 32.1907 31.4604 32.1888 31.5775 28.894C31.6946 25.5993 31.6486 25.5974 31.7657 22.3027C31.8521 19.87 32.4166 20.039 32.9753 20.0582C33.534 20.0774 34.0889 19.9507 34.0006 22.3776L34.0044 22.3795Z" fill="currentColor"></path><path d="M65.7113 10.9824C69.9622 11.136 69.9564 11.2838 74.2073 11.4374C78.4601 11.591 78.4582 11.6428 82.709 11.7964C82.8242 11.8003 82.9375 11.8041 83.047 11.808C83.2217 11.8156 83.3945 11.8156 83.55 11.8483C83.863 11.9078 84.1356 12.0518 84.3468 12.2361C84.558 12.4204 84.7058 12.6432 84.798 12.8659C84.8441 12.9772 84.8748 13.0886 84.8959 13.198C84.9132 13.3075 84.919 13.4169 84.9305 13.5206C84.9343 13.7222 84.9401 13.9161 84.9439 14.1004C84.9478 14.2425 84.9535 14.3788 84.9574 14.5094C84.967 14.7705 84.9766 15.0144 84.9842 15.2448C85.0034 15.7094 85.0226 16.1299 85.0418 16.583C85.0783 17.4873 85.1129 18.5126 85.1244 20.2329C85.1494 24.4915 85.2166 24.4896 85.2204 28.752C85.2204 30.0211 85.1935 30.9139 85.157 31.6569C85.1378 32.0275 85.1167 32.3616 85.0937 32.688C85.0783 32.9011 85.063 33.1084 85.0476 33.3196C85.0342 33.4675 85.0284 33.6192 85.0111 33.7632C84.9842 33.9014 84.9593 34.0416 84.9324 34.1836C84.894 34.2604 84.8575 34.3372 84.8172 34.416C84.7999 34.4582 84.7692 34.4851 84.7462 34.5196C84.7231 34.5523 84.6924 34.5888 84.6559 34.6195C84.5177 34.7385 84.3545 34.8192 84.1529 34.8787C83.9513 34.9324 83.719 34.9574 83.4751 34.9728C83.3542 34.9804 83.2294 34.9843 83.1026 34.9881C83.0162 34.9881 82.9279 34.99 82.8377 34.992C82.229 34.992 81.534 34.9804 80.6642 34.9651C78.5273 34.9132 77.4578 34.8864 76.3903 34.8595C75.3247 34.8307 74.2572 34.8019 72.1298 34.6905C70.0006 34.5772 68.9369 34.5216 67.8732 34.464C67.3414 34.4352 66.8095 34.4044 66.1433 34.368C65.8111 34.3488 65.4444 34.3257 65.0297 34.3027C64.8223 34.2892 64.6015 34.2758 64.3673 34.2624C64.2079 34.2528 64.0428 34.2412 63.8719 34.2297C63.6358 34.2163 63.4092 34.1625 63.1922 34.0627C62.7564 33.8592 62.4454 33.4963 62.2937 33.1046C62.2207 32.9068 62.1785 32.7072 62.1746 32.4998C62.1689 32.398 62.1746 32.2944 62.1727 32.1945C62.1727 32.1312 62.1727 32.0697 62.1727 32.0083C62.1766 31.5916 62.1804 31.2268 62.1823 30.8928C62.1938 30.2265 62.2054 29.6947 62.215 29.1628C62.238 28.0972 62.261 27.0316 62.261 24.9024C62.261 20.6419 62.165 20.6419 62.165 16.3814C62.165 13.2345 62.599 12.8121 63.1577 12.8121C63.7164 12.8121 64.0735 13.2345 64.0735 16.3814C64.0735 20.6342 64.2655 20.6342 64.2655 24.887C64.2655 27.0144 64.2118 28.078 64.158 29.1417C64.1311 29.6736 64.1042 30.2054 64.0831 30.8697C64.0754 31.2019 64.0678 31.5686 64.0582 31.9833C64.0582 32.0332 64.0582 32.0851 64.0562 32.135V32.1676C64.0543 32.1907 64.0505 32.2137 64.0562 32.2387C64.0658 32.2867 64.1023 32.3328 64.1542 32.3539C64.181 32.3654 64.2079 32.3654 64.2348 32.3673C64.3116 32.3731 64.3865 32.3769 64.4594 32.3827C64.6937 32.398 64.9126 32.4115 65.1199 32.4249C65.5346 32.4518 65.8994 32.4768 66.2297 32.4979C66.8921 32.542 67.422 32.5785 67.9519 32.615C69.0118 32.686 70.0716 32.759 72.1932 32.8723C74.3148 32.9836 75.3785 32.974 76.4402 32.9606C77.502 32.9452 78.5657 32.9376 80.6719 32.9856C81.5417 33.0028 82.231 33.0124 82.7878 33.0086C82.8223 33.0086 82.8569 33.0086 82.8895 33.0086H82.9318C82.9318 33.0086 82.9318 33.0086 82.9337 33.0086L82.9471 33.0124C82.9586 33.0163 82.9682 33.0182 82.9778 33.022C82.9894 33.024 83.0009 33.0278 83.0143 33.0278C83.0239 33.024 83.0258 33.0163 83.0316 33.0086C83.0546 33.1968 83.1046 32.2982 83.1314 31.63C83.1602 30.8985 83.1814 30.0211 83.1833 28.7769C83.1814 24.5299 83.1948 24.528 83.1698 20.2771C83.1526 18.6259 83.143 17.616 83.1334 16.6982C83.1218 15.8208 83.1103 15.0316 83.093 13.8086C83.0911 13.7894 83.0988 13.7395 83.0585 13.6896C83.0393 13.6665 83.0086 13.6435 82.9702 13.6377C82.951 13.6339 82.9318 13.6358 82.9106 13.6339C82.8319 13.632 82.7494 13.6281 82.6649 13.6243C78.4063 13.4707 78.4006 13.632 74.1439 13.4784C69.8854 13.3248 69.8854 13.3708 65.6268 13.2172C65.2332 13.2038 64.8934 13.1827 64.5977 13.1539C64.4498 13.1404 64.3135 13.1251 64.1887 13.1078C64.1254 13.0982 64.0658 13.0905 64.0082 13.0809L63.9449 13.0694H63.9353L63.9334 13.0675C63.9257 13.2825 63.943 12.7756 63.941 12.8275C63.941 12.8236 63.941 12.816 63.941 12.8121C63.9353 12.7891 63.9468 12.8198 63.9468 12.8121C63.9468 12.8121 63.9449 12.8083 63.9334 12.8044C63.8335 12.766 63.703 12.7872 63.5705 12.7968C63.438 12.8102 63.2978 12.8083 63.1577 12.8044C63.0175 12.8025 62.8774 12.8236 62.7487 12.7737C62.6278 12.7238 62.4818 12.5894 62.5049 12.2265C62.5222 12.0499 62.5913 11.8156 62.7852 11.5737C62.9772 11.3376 63.3132 11.0822 63.8028 11.0131C63.8623 11.0054 63.9257 11.0016 63.989 10.9977C64.0198 10.9958 64.0505 10.992 64.0831 10.99C64.1407 10.9862 64.2022 10.9824 64.2655 10.9785C64.3922 10.9708 64.5286 10.967 64.6764 10.9632C64.9721 10.9574 65.3138 10.9632 65.7074 10.9766L65.7113 10.9824Z" fill="currentColor"></path></svg></div></div></div><div data-animate-header-heading="" class="c-heading-header u-child-contain u-mb-text w-variant-e4c5303d-3e1e-77db-2099-2ea92a43e8c7 w-richtext u-max-width-30ch"><h1>App unavailable</h1></div><div data-animate-header-text="" class="header_main_text u-foreground-tertiary u-child-contain u-text-wrap-pretty w-variant-e4c5303d-3e1e-77db-2099-2ea92a43e8c7 w-richtext u-mb-text u-max-width-45ch"><p>Unfortunately, Claude is only available in certain regions right now. Please contact support if you think you’re getting this message in error.</p></div><div data-animate-header-cta="" class="header_main_cta"><div data-wf--button-wrapper--mobile-styling="full-width-mobile" id="" class="u-display-contents"><div class="u-button-group w-variant-92fe68b6-7437-d0c6-3fc0-cc8114f8d03d"><div class="u-display-contents"><div data-wf--button-main--style="primary" class="button_main_wrap"><div class="u-embed-css w-embed"><style>
+.button_main_icon {
+  transition: color 300ms ease;
+}
+.button_main_wrap:hover .button_main_icon {
+  color: var(--_button-style---icon-hover); 
+}
+.button_main_wrap:focus-within .button_main_icon {
+  color: var(--_button-style---text-hover) !important;
+}
+.button_main_wrap:focus-within {
+  color: var(--_button-style---text-hover) !important;
+}
+</style></div><div aria-hidden="true" class="button_main_text u-text-style-body-2">View supported countries</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%2266f74833-d8fd-b1f3-8ebc-b729cc29bb73%22%2C%22instanceId%22%3A%229560ac48-c28b-9fd6-5547-dda309f28b18%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%225452a68c-3977-d772-6b86-a81d519c54c1%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="157059830" href="https://www.anthropic.com/supported-countries" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="9560ac48-c28b-9fd6-5547-dda309f28b18:5452a68c-3977-d772-6b86-a81d519c54c1:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">View supported countries</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">View supported countries</span></button></div></div></div></div></div></div><div data-wf--spacer--section-space="none" class="u-section-spacer u-ignore-trim"></div></div></div></div></div><div data-wf--spacer--section-space="main" class="u-section-spacer w-variant-60a7ad7d-02b0-6682-95a5-2218e6fd1490 u-ignore-trim"></div></section></main><section class="footer_wrap u-section"><div class="u-embed-css w-embed"><style>
+  @container (width < 52em) {
+    .footer_layout {
+      display: flex;
+      column-gap: var(--_spacing---space--4rem);
+      row-gap: var(--_spacing---space--4rem);
+    }
+    .footer_content_wrap.u-column-custom {
+      display: contents;
+    }
+  }
 
+  .footer_link {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  .footer_links_list:has(.footer_link:hover) .footer_link:not(:hover) {
+    opacity: 0.4;
+  }
+</style></div><div data-wf--background-color--background-color="background-primary" class="background_wrap w-variant-cd5f9287-5b9f-b1bf-cfe9-3449eb06f297 u-cover-absolute"></div><div data-wf--spacer--section-space="small" class="u-section-spacer w-variant-d422cbd0-f212-c815-68df-63414354c21d u-ignore-trim"></div><div class="footer_contain u-container"><div class="footer_layout u-grid-custom"><div class="footer_content_wrap u-column-custom"><div class="footer_content_top"><div class="footer_logo"><div STYLE="" class="u-max-width-full"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 573 125" fill="none" class="u-svg"><path d="M200.168 110.625C190.376 110.625 181.647 108.688 173.98 104.813C166.355 100.896 160.397 95.4167 156.105 88.375C151.814 81.3333 149.668 73.25 149.668 64.125C149.668 54.4167 151.855 45.7917 156.23 38.25C160.647 30.7083 166.751 24.8542 174.543 20.6875C182.335 16.4792 191.189 14.375 201.105 14.375C207.064 14.375 213.001 15.0208 218.918 16.3125C224.876 17.5625 230.105 19.5208 234.605 22.1875V42.75H228.98C227.397 35.2083 224.293 29.7292 219.668 26.3125C215.085 22.8958 208.814 21.1875 200.855 21.1875C193.23 21.1875 186.897 22.8958 181.855 26.3125C176.814 29.7292 173.085 34.5 170.668 40.625C168.251 46.7083 167.043 53.7917 167.043 61.875C167.043 69.8333 168.397 76.9792 171.105 83.3125C173.814 89.6458 177.835 94.6458 183.168 98.3125C188.501 101.979 194.918 103.813 202.418 103.813C207.501 103.813 211.855 102.813 215.48 100.813C219.147 98.8125 222.23 96.0833 224.73 92.625C227.23 89.125 229.564 84.8333 231.73 79.75H237.605L233.605 102.313C229.272 105.104 224.105 107.188 218.105 108.563C212.105 109.938 206.126 110.625 200.168 110.625ZM243.168 103.938C245.626 103.646 247.543 103.271 248.918 102.813C250.335 102.313 251.355 101.646 251.98 100.813C252.605 99.9792 252.918 98.9167 252.918 97.625V29.5625L243.168 25.875V21.6875L262.793 14.375H267.793V97.625C267.793 98.9167 268.105 99.9792 268.73 100.813C269.355 101.646 270.355 102.313 271.73 102.813C273.147 103.271 275.085 103.646 277.543 103.938V109.375H243.168V103.938ZM300.355 110.625C296.772 110.625 293.605 109.958 290.855 108.625C288.105 107.292 285.96 105.417 284.418 103C282.918 100.583 282.168 97.7917 282.168 94.625C282.168 90 283.626 86.1875 286.543 83.1875C289.501 80.1458 294.043 77.75 300.168 76L322.855 69.5625V62.75C322.855 58.2917 321.793 54.9167 319.668 52.625C317.585 50.3333 314.48 49.1875 310.355 49.1875C306.73 49.1875 303.855 50.2917 301.73 52.5C299.647 54.7083 298.605 57.7083 298.605 61.5V67.125H288.48C287.272 66.375 286.335 65.3958 285.668 64.1875C285.043 62.9375 284.73 61.5625 284.73 60.0625C284.73 57.1042 285.876 54.3958 288.168 51.9375C290.46 49.4375 293.564 47.4583 297.48 46C301.397 44.5417 305.689 43.8125 310.355 43.8125C316.189 43.8125 321.147 44.6875 325.23 46.4375C329.314 48.1875 332.418 50.7708 334.543 54.1875C336.668 57.6042 337.73 61.7292 337.73 66.5625V96.25C337.73 97.7083 338.022 98.875 338.605 99.75C339.23 100.625 340.23 101.333 341.605 101.875C343.022 102.375 344.98 102.771 347.48 103.063V108.5C343.855 109.792 340.376 110.438 337.043 110.438C333.001 110.438 329.751 109.479 327.293 107.563C324.876 105.646 323.439 102.896 322.98 99.3125C319.939 103.063 316.522 105.896 312.73 107.813C308.939 109.688 304.814 110.625 300.355 110.625ZM307.668 100.625C310.335 100.625 312.98 100 315.605 98.75C318.272 97.4583 320.689 95.6667 322.855 93.375V75.3125L305.855 80.375C302.939 81.25 300.71 82.625 299.168 84.5C297.626 86.3333 296.855 88.5833 296.855 91.25C296.855 93.0833 297.314 94.7083 298.23 96.125C299.147 97.5417 300.418 98.6458 302.043 99.4375C303.71 100.229 305.585 100.625 307.668 100.625ZM376.543 110.625C369.876 110.625 364.814 108.938 361.355 105.563C357.897 102.146 356.168 97.1667 356.168 90.625V58.375L346.418 54.9375V50.75L366.105 43.8125H371.043V88.0625C371.043 92.0208 372.043 94.9583 374.043 96.875C376.043 98.7917 379.126 99.75 383.293 99.75C385.96 99.75 388.814 99.1458 391.855 97.9375C394.939 96.7292 397.814 95.0625 400.48 92.9375V58.375L390.73 54.9375V50.75L410.418 43.8125H415.355V92.5C415.355 93.9583 415.647 95.125 416.23 96C416.855 96.875 417.855 97.5625 419.23 98.0625C420.605 98.5625 422.564 98.9792 425.105 99.3125V104.75L405.418 110H400.48V98.9375C396.98 102.563 393.085 105.417 388.793 107.5C384.543 109.583 380.46 110.625 376.543 110.625ZM458.73 110.625C453.105 110.625 448.043 109.354 443.543 106.813C439.085 104.229 435.585 100.688 433.043 96.1875C430.501 91.6458 429.23 86.5625 429.23 80.9375C429.23 73.6042 430.751 67.125 433.793 61.5C436.876 55.875 441.189 51.5208 446.73 48.4375C452.272 45.3542 458.689 43.8125 465.98 43.8125C468.355 43.8125 470.772 44.0625 473.23 44.5625C475.73 45.0625 478.085 45.7708 480.293 46.6875V29.5625L470.543 25.875V21.6875L490.168 14.375H495.168V92.5C495.168 93.9583 495.46 95.125 496.043 96C496.668 96.875 497.668 97.5625 499.043 98.0625C500.418 98.5625 502.376 98.9792 504.918 99.3125V104.75L485.23 110H480.293V101.438C477.168 104.396 473.751 106.667 470.043 108.25C466.335 109.833 462.564 110.625 458.73 110.625ZM464.855 100.563C467.355 100.563 469.96 100.042 472.668 99C475.376 97.9167 477.918 96.4583 480.293 94.625V56C476.21 52.6667 471.751 51 466.918 51C462.168 51 458.126 52.125 454.793 54.375C451.46 56.625 448.939 59.7083 447.23 63.625C445.564 67.5417 444.73 71.9792 444.73 76.9375C444.73 81.6458 445.48 85.7708 446.98 89.3125C448.48 92.8542 450.73 95.625 453.73 97.625C456.772 99.5833 460.48 100.563 464.855 100.563ZM541.293 110.625C535.168 110.625 529.647 109.229 524.73 106.438C519.814 103.646 515.96 99.7708 513.168 94.8125C510.418 89.8125 509.043 84.1875 509.043 77.9375C509.043 71.6042 510.46 65.8333 513.293 60.625C516.126 55.4167 520.001 51.3125 524.918 48.3125C529.876 45.3125 535.376 43.8125 541.418 43.8125C546.001 43.8125 550.272 44.7708 554.23 46.6875C558.189 48.6042 561.501 51.2917 564.168 54.75C566.876 58.2083 568.668 62.1667 569.543 66.625L524.168 80.375C525.418 85.875 527.897 90.1875 531.605 93.3125C535.355 96.3958 539.96 97.9375 545.418 97.9375C550.001 97.9375 554.105 96.8542 557.73 94.6875C561.355 92.4792 564.564 89.1458 567.355 84.6875L572.168 86.1875C571.001 91.1042 568.939 95.4167 565.98 99.125C563.064 102.792 559.48 105.625 555.23 107.625C550.98 109.625 546.335 110.625 541.293 110.625ZM553.293 64.75C552.71 61.9583 551.751 59.5208 550.418 57.4375C549.126 55.3125 547.501 53.6875 545.543 52.5625C543.585 51.3958 541.397 50.8125 538.98 50.8125C535.939 50.8125 533.231 51.7083 530.856 53.5C528.481 55.2917 526.626 57.8333 525.293 61.125C523.96 64.375 523.293 68.1458 523.293 72.4375C523.293 73.1458 523.314 73.7083 523.355 74.125L553.293 64.75Z" fill="currentColor"></path><path d="M54.375 118.75L56.125 111L58.125 101L59.75 93L61.25 83.125L62.125 79.875L62 79.625L61.375 79.75L53.875 90L42.5 105.375L33.5 114.875L31.375 115.75L27.625 113.875L28 110.375L30.125 107.375L42.5 91.5L50 81.625L54.875 76L54.75 75.25H54.5L21.5 96.75L15.625 97.5L13 95.125L13.375 91.25L14.625 90L24.5 83.125L49.125 69.375L49.5 68.125L49.125 67.5H47.875L43.75 67.25L29.75 66.875L17.625 66.375L5.75 65.75L2.75 65.125L0 61.375L0.25 59.5L2.75 57.875L6.375 58.125L14.25 58.75L26.125 59.5L34.75 60L47.5 61.375H49.5L49.75 60.5L49.125 60L48.625 59.5L36.25 51.25L23 42.5L16 37.375L12.25 34.75L10.375 32.375L9.625 27.125L13 23.375L17.625 23.75L18.75 24L23.375 27.625L33.25 35.25L46.25 44.875L48.125 46.375L49 45.875V45.5L48.125 44.125L41.125 31.375L33.625 18.375L30.25 13L29.375 9.75C29.0417 8.625 28.875 7.375 28.875 6L32.75 0.750006L34.875 0L40.125 0.750006L42.25 2.625L45.5 10L50.625 21.625L58.75 37.375L61.125 42.125L62.375 46.375L62.875 47.75H63.75V47L64.375 38L65.625 27.125L66.875 13.125L67.25 9.125L69.25 4.375L73.125 1.87501L76.125 3.25L78.625 6.875L78.25 9.125L76.875 18.75L73.875 33.875L72 44.125H73.125L74.375 42.75L79.5 36L88.125 25.25L91.875 21L96.375 16.25L99.25 14H104.625L108.5 19.875L106.75 26L101.25 33L96.625 38.875L90 47.75L86 54.875L86.375 55.375H87.25L102.125 52.125L110.25 50.75L119.75 49.125L124.125 51.125L124.625 53.125L122.875 57.375L112.625 59.875L100.625 62.25L82.75 66.5L82.5 66.625L82.75 67L90.75 67.75L94.25 68H102.75L118.5 69.125L122.625 71.875L125 75.125L124.625 77.75L118.25 80.875L109.75 78.875L89.75 74.125L83 72.5H82V73L87.75 78.625L98.125 88L111.25 100.125L111.875 103.125L110.25 105.625L108.5 105.375L97 96.625L92.5 92.75L82.5 84.375H81.875V85.25L84.125 88.625L96.375 107L97 112.625L96.125 114.375L92.875 115.5L89.5 114.875L82.25 104.875L74.875 93.5L68.875 83.375L68.25 83.875L64.625 121.625L63 123.5L59.25 125L56.125 122.625L54.375 118.75Z" fill="var(--swatch--clay)"></path></svg></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%229488861d-1af6-4a34-cc55-1c4b098f0ac6%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Footer section" data-wf-event-ids="" href="https://claude.com" data-cta="" target="" data-cta-copy="Claude logo" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:9488861d-1af6-4a34-cc55-1c4b098f0ac6:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Homepage</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Homepage</span></button></div></div><div class="footer_prompt"><div data-prompt-scope="" class="prompt_wrap"><div class="u-display-contents"><div class="form_footer_prompt_wrap w-form"><form method="get" name="wf-form-Footer-Prompt" data-name="Footer Prompt" data-claude-mode="intercept" data-claude-form="" id="wf-form-Footer-Prompt" class="form_footer_prompt_list" data-wf-page-id="68bd5cf2687bfe3893fd2b7f" data-wf-element-id="f35deeee-ff20-8187-beb0-116f6969e231"><div class="form_footer_prompt"><textarea class="form_footer_prompt_textarea u-text-style-caption w-input" data-autogrow="" data-claude-textarea="" maxlength="5000" name="field" data-name="Field" placeholder="How can I help you today?" id="footerPrompt"></textarea><div data-wf--button-icon-tiny--style="brand" data-claude-button="" class="button_icon_tiny_wrap w-variant-65d2c5b5-e995-8873-5672-27bf4768a028 u-flex-noshrink"><div class="button_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M10 3C10.1326 3.00003 10.2598 3.05274 10.3535 3.14648L15.3536 8.14648C15.5486 8.34174 15.5487 8.6583 15.3536 8.85352C15.1583 9.04873 14.8418 9.04863 14.6465 8.85352L10.5 4.70703V16.5C10.5 16.7761 10.2761 16.9999 10 17C9.72389 17 9.50003 16.7761 9.50003 16.5V4.70703L5.35353 8.85352C5.15827 9.04862 4.84172 9.04868 4.6465 8.85352C4.45128 8.6583 4.45138 8.34176 4.6465 8.14648L9.64651 3.14648L9.72268 3.08398C9.8042 3.02967 9.90062 3 10 3Z" fill="currentColor"></path></svg></div></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%22f35deeee-ff20-8187-beb0-116f6969e230%22%2C%22instanceId%22%3A%22b91e573b-50ce-8ec0-03d4-11e2d70a9a29%22%7D%2C%7B%22componentId%22%3A%2265d2c5b5-e995-8873-5672-27bf4768a021%22%2C%22instanceId%22%3A%22f35deeee-ff20-8187-beb0-116f6969e234%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2265d2c5b5-e995-8873-5672-27bf4768a023%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:b91e573b-50ce-8ec0-03d4-11e2d70a9a29:f35deeee-ff20-8187-beb0-116f6969e234:65d2c5b5-e995-8873-5672-27bf4768a023:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Next</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Next</span></button></div></div></div></form><div class="w-form-done"><div>Thank you! Your submission has been received!</div></div><div class="w-form-fail"><div>Oops! Something went wrong while submitting the form.</div></div></div></div><div class="prompt_button_list"><div class="u-embed-js w-embed w-script"><script>
+  (function () {
+    const ROOT_SEL = "[data-prompt-scope]";
+    const TRIGGER_SEL = "[data-prompt-trigger]";
+    const MENU_ATTR = "data-prompt-menu";
+    const CLOSE_SEL = "[data-prompt-menu-close]";
+    const ACTION_SEL = "a, button, [data-prompt-menu-action]";
+    const ITEM_SEL = "[data-prompt-item], li, .menu-item, .w-dyn-item";
+
+    // ---------- Claude helper ----------
+    function buildClaudeUrl(text) {
+      const url = new URL("https://claude.ai/new");
+      url.searchParams.set("q", text || "");
+      return url.toString();
+    }
+    function openClaude(text) {
+      const q = (text || "").trim();
+      if (!q) return;
+      window.open(buildClaudeUrl(q), "_blank", "noopener");
+    }
+
+    // ---------- Utilities ----------
+    let uid = 0;
+    function makeId(prefix = "prompt-menu") {
+      uid += 1;
+      return `${prefix}-${Date.now().toString(36)}-${uid}`;
+    }
+
+    // Limit queries to elements that belong to THIS scope (ignore nested scopes)
+    function qsaInScope(root, sel) {
+      return Array.from(root.querySelectorAll(sel)).filter(
+        (el) => el.closest(ROOT_SEL) === root
+      );
+    }
+
+    // Lightweight shield to stop click-through during the brief close animation
+    function deployClickShield(ms = 300) {
+      const sh = document.createElement("div");
+      sh.style.cssText =
+        "position:fixed;inset:0;z-index:2147483647;pointer-events:auto;background:transparent";
+      document.body.appendChild(sh);
+      setTimeout(() => {
+        sh.remove();
+      }, ms);
+    }
+
+    // Pairing: find which menu a trigger controls (no manual ids needed)
+    function resolveMenuForTrigger(root, trigger) {
+      // 1) explicit data-prompt-trigger="x" -> [data-prompt-menu="x"]
+      const explicit = trigger.getAttribute("data-prompt-trigger");
+      if (explicit) {
+        const m = qsaInScope(root, `[${MENU_ATTR}="${explicit}"]`)[0];
+        if (m) return m;
+      }
+      // 2) aria-controls
+      const ctrl = trigger.getAttribute("aria-controls");
+      if (ctrl) {
+        const m = qsaInScope(root, `#${ctrl.replace(/(["'\\])/g, "\\$1")}`)[0];
+        if (m) return m;
+      }
+      // 3) nearest following sibling with [data-prompt-menu]
+      let sib = trigger.nextElementSibling;
+      while (sib && sib !== root) {
+        if (
+          sib.hasAttribute &&
+          sib.hasAttribute(MENU_ATTR) &&
+          sib.closest(ROOT_SEL) === root
+        )
+          return sib;
+        sib = sib.nextElementSibling;
+      }
+      // 4) first menu in this root
+      return qsaInScope(root, `[${MENU_ATTR}]`)[0] || null;
+    }
+
+    function ensurePairing(trigger, menu) {
+      if (!menu.id) menu.id = makeId();
+      trigger.setAttribute("aria-controls", menu.id);
+      if (trigger.tagName === "BUTTON" && !trigger.hasAttribute("type"))
+        trigger.type = "button";
+    }
+
+    // ---------- Animations (GSAP) ----------
+    function revealMenu(menu) {
+      return new Promise((resolve) => {
+        gsap.set(menu, {
+          visibility: "visible",
+          pointerEvents: "auto",
+          willChange: "transform, opacity",
+        });
+        gsap.killTweensOf(menu);
+        gsap.fromTo(
+          menu,
+          { opacity: 0, scale: 0.96 },
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 0.28,
+            ease: "power3.out",
+            clearProps: "willChange",
+            onComplete: resolve,
+          }
+        );
+      });
+    }
+    function hideMenu(menu) {
+      return new Promise((resolve) => {
+        gsap.killTweensOf(menu);
+        gsap.to(menu, {
+          opacity: 0,
+          duration: 0.2,
+          ease: "power2.out",
+          onComplete: () => {
+            gsap.set(menu, {
+              visibility: "hidden",
+              pointerEvents: "none",
+              clearProps: "opacity,scale,willChange",
+            });
+            resolve();
+          },
+        });
+      });
+    }
+
+    // ---------- Per-scope controller ----------
+    const stateMap = new WeakMap(); // root -> { openMenuEl, openTrigger, isAnimating }
+
+    function getState(root) {
+      let s = stateMap.get(root);
+      if (!s) {
+        s = { openMenuEl: null, openTrigger: null, isAnimating: false };
+        stateMap.set(root, s);
+      }
+      return s;
+    }
+
+    function setTriggersInteractive(root, enabled) {
+      qsaInScope(root, TRIGGER_SEL).forEach((el) => {
+        el.style.pointerEvents = enabled ? "auto" : "none";
+      });
+    }
+
+    // ---------- Button fade animations ----------
+    function fadeOutButtons(root) {
+      return new Promise((resolve) => {
+        const buttons = qsaInScope(root, TRIGGER_SEL);
+        if (buttons.length === 0) {
+          resolve();
+          return;
+        }
+
+        gsap.killTweensOf(buttons);
+        gsap.to(buttons, {
+          autoAlpha: 0,
+          duration: 0.2,
+          ease: "power2.out",
+          onComplete: resolve,
+        });
+      });
+    }
+
+    function fadeInButtons(root) {
+      return new Promise((resolve) => {
+        const buttons = qsaInScope(root, TRIGGER_SEL);
+        if (buttons.length === 0) {
+          resolve();
+          return;
+        }
+
+        gsap.killTweensOf(buttons);
+        gsap.to(buttons, {
+          autoAlpha: 1,
+          duration: 0.2,
+          ease: "power2.out",
+          onComplete: resolve,
+        });
+      });
+    }
+
+    async function openMenuIn(root, menu, trigger) {
+      const s = getState(root);
+      if (s.isAnimating || s.openMenuEl === menu) return;
+      s.isAnimating = true;
+
+      // close any currently open in THIS scope only
+      if (s.openMenuEl && s.openMenuEl !== menu) {
+        await hideMenu(s.openMenuEl);
+        if (s.openTrigger) s.openTrigger.setAttribute("aria-expanded", "false");
+      }
+
+      // Fade out buttons when opening menu
+      await fadeOutButtons(root);
+
+      await revealMenu(menu);
+      s.openMenuEl = menu;
+      s.openTrigger = trigger || null;
+      if (s.openTrigger) s.openTrigger.setAttribute("aria-expanded", "true");
+
+      // Disable only this scope's triggers while open
+      setTriggersInteractive(root, false);
+
+      s.isAnimating = false;
+    }
+
+    async function closeMenuIn(root) {
+      const s = getState(root);
+      if (!s.openMenuEl || s.isAnimating) return;
+      s.isAnimating = true;
+
+      deployClickShield(280); // prevent click-through during closing
+      await hideMenu(s.openMenuEl);
+
+      if (s.openTrigger) s.openTrigger.setAttribute("aria-expanded", "false");
+      s.openMenuEl = null;
+      s.openTrigger = null;
+
+      // Re-enable only this scope's triggers
+      setTriggersInteractive(root, true);
+
+      // Fade in buttons when closing menu
+      await fadeInButtons(root);
+
+      s.isAnimating = false;
+    }
+
+    // ---------- Initializer ----------
+    const initedRoots = new WeakSet();
+
+    function initScope(root) {
+      if (!root || initedRoots.has(root)) return;
+      initedRoots.add(root);
+
+      if (!window.gsap) {
+        console.warn("GSAP is required for prompt menus.");
+        return;
+      }
+
+      // Normalize ALL menus in this scope to hidden on init (prevents “open on load” bugs)
+      qsaInScope(root, `[${MENU_ATTR}]`).forEach((menu) => {
+        if (menu.dataset.pmMenuInit) return;
+        menu.dataset.pmMenuInit = "true";
+        gsap.set(menu, {
+          visibility: "hidden",
+          opacity: 0,
+          scale: 1,
+          pointerEvents: "none",
+        });
+
+        // Optional close button
+        const closer = menu.querySelector(CLOSE_SEL);
+        if (closer) {
+          if (closer.tagName === "BUTTON" && !closer.hasAttribute("type"))
+            closer.type = "button";
+          closer.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeMenuIn(root);
+          });
+        }
+
+        // Menu item -> Claude
+        menu.addEventListener("click", (e) => {
+          const target = e.target.closest(ACTION_SEL);
+          if (!target || !menu.contains(target)) return;
+
+          const container = target.closest(ITEM_SEL) || target;
+          const hiddenP = container.querySelector("[data-prompt-menu-text]");
+          if (!hiddenP) return;
+
+          e.preventDefault();
+          e.stopPropagation();
+
+          const text = hiddenP.textContent || hiddenP.innerText || "";
+          openClaude(text);
+
+          // close after action
+          closeMenuIn(root);
+        });
+      });
+
+      // Bind triggers (auto-wire)
+      qsaInScope(root, TRIGGER_SEL).forEach((trigger) => {
+        if (trigger.dataset.pmTrigInit) return;
+        trigger.dataset.pmTrigInit = "true";
+
+        const menu = resolveMenuForTrigger(root, trigger);
+        if (menu) ensurePairing(trigger, menu);
+
+        trigger.setAttribute("aria-expanded", "false");
+
+        trigger.addEventListener("click", async (e) => {
+          e.preventDefault();
+
+          const targetMenu = resolveMenuForTrigger(root, trigger);
+          if (!targetMenu) return;
+
+          const s = getState(root);
+          if (s.openMenuEl === targetMenu) {
+            await closeMenuIn(root); // toggle close
+            return;
+          }
+          await openMenuIn(root, targetMenu, trigger);
+        });
+      });
+
+      // Outside click (this scope only)
+      document.addEventListener("click", (e) => {
+        const s = getState(root);
+        if (!s.openMenuEl) return;
+        const insideMenu = s.openMenuEl.contains(e.target);
+        const onTrigger =
+          !!e.target.closest(TRIGGER_SEL) && root.contains(e.target);
+        if (!insideMenu && !onTrigger) closeMenuIn(root);
+      });
+
+      // ESC (this scope only)
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeMenuIn(root);
+      });
+    }
+
+    // ---------- Boot + observe ----------
+    function boot(container = document) {
+      const roots = container.querySelectorAll
+        ? container.querySelectorAll(ROOT_SEL)
+        : [];
+      roots.forEach(initScope);
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => boot(), {
+        once: true,
+      });
+    } else {
+      boot();
+    }
+
+    const mo = new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const node of m.addedNodes || []) {
+          if (node.nodeType !== 1) continue;
+          if (node.matches && node.matches(ROOT_SEL)) initScope(node);
+          if (node.querySelectorAll) {
+            node.querySelectorAll(ROOT_SEL).forEach(initScope);
+          }
+        }
+      }
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+  })();
+</script></div><div class="u-embed-js w-embed w-script"><script>
+(function () {
+  // ---------- Claude helper ----------
+  function buildClaudeUrl(text) {
+    const url = new URL('https://claude.ai/new');
+    url.searchParams.set('q', text || '');
+    return url.toString();
+  }
+
+  // ---------- Auto-grow helpers ----------
+  function sizeTextarea(el) {
+    // Ensure UA defaults don't force a starting height
+    el.setAttribute('rows', el.getAttribute('data-min-rows') || '1');
+    el.style.minHeight = '0px';
+    el.style.height = 'auto'; // allow shrink
+    el.style.height = el.scrollHeight + 'px'; // fit content
+  }
+
+  function initAutogrow(root = document) {
+    root.querySelectorAll('textarea[data-autogrow]').forEach((el) => {
+      if (el.dataset.autogrowInit) return;
+      el.dataset.autogrowInit = 'true';
+
+      // Respect your existing pattern for default text
+      const preset = el.getAttribute('data-default-text');
+      if (preset != null && !el.value) el.value = preset;
+
+      // Initial sizing
+      sizeTextarea(el);
+
+      // Resize as you type
+      el.addEventListener('input', () => sizeTextarea(el));
+
+      // In case fonts/styles load late and change line-height
+      window.addEventListener('load', () => sizeTextarea(el), { once: true });
+    });
+  }
+
+  // ---------- Claude form initializer ----------
+  function initClaudeForms(root = document) {
+    root.querySelectorAll('form[data-claude-form]').forEach((form) => {
+      if (form.dataset.claudeInit) return;
+      form.dataset.claudeInit = 'true';
+
+      const textarea = form.querySelector('[data-claude-textarea], textarea');
+      const trigger  = form.querySelector('[data-claude-button], button[type="button"], a[data-claude-button]');
+
+      if (!textarea || !trigger) {
+        console.warn('Claude form: missing textarea or trigger in', form);
+        return;
+      }
+
+      // If the trigger is a <button> but has no type, force "button" so it won't submit
+      if (trigger.tagName === 'BUTTON' && !trigger.hasAttribute('type')) {
+        trigger.type = 'button';
+      }
+
+      // Keep <a> from navigating away while still opening Claude
+      if (trigger.tagName === 'A') {
+        trigger.addEventListener('click', (e) => e.preventDefault());
+      }
+
+      // Optional: support data-default-text on the textarea
+      const preset = textarea.getAttribute('data-default-text');
+      if (preset != null && !textarea.value) textarea.value = preset;
+
+      // Click opens Claude; submission is optional
+      trigger.addEventListener('click', () => {
+        const text = (textarea.value || '').trim();
+        if (!text) {
+          textarea.focus();
+          return;
+        }
+
+        window.open(buildClaudeUrl(text), '_blank', 'noopener');
+
+        const mode = form.getAttribute('data-claude-mode') || 'intercept';
+        if (mode === 'also') {
+          // Submit after opening Claude
+          form.submit();
+        }
+        // intercept mode: do nothing (no submit)
+      });
+
+      // (Optional) Keep an <a data-claude-button> href in sync for right-click/open-in-new-tab UX
+      if (trigger.tagName === 'A') {
+        const syncHref = () => trigger.setAttribute('href', buildClaudeUrl((textarea.value || '').trim()));
+        syncHref();
+        textarea.addEventListener('input', syncHref);
+        textarea.addEventListener('change', syncHref);
+      }
+    });
+  }
+
+  // ---------- Boot ----------
+  function initAll(root = document) {
+    initAutogrow(root);
+    initClaudeForms(root);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => initAll(), { once: true });
+  } else {
+    initAll();
+  }
+
+  // Re-init if content is injected later (Webflow CMS / IX / tabs)
+  const mo = new MutationObserver((muts) => {
+    for (const m of muts) {
+      for (const node of m.addedNodes || []) {
+        if (node.nodeType === 1) initAll(node);
+      }
+    }
+  });
+  mo.observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script></div><div class="u-embed-css w-embed"><style>
+  .prompt_menu_item {
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .prompt_menu_item_base, .prompt_menu_item_icon {
+    transition: opacity 0.2s ease;
+  }
+  .prompt_menu_list .prompt_menu_item:first-child {
+    border-color: transparent;
+  }
+  .prompt_menu_item:hover {
+    border-color: transparent;
+    color: var(--_theme---foreground-primary);
+  }
+  .prompt_menu_item:hover .prompt_menu_item_base {
+    opacity: 1;
+  }
+  .prompt_menu_item:hover .prompt_menu_item_icon {
+    opacity: 1;
+  }
+  .prompt_menu_item:hover + .prompt_menu_item {
+    border-top-color: transparent;
+  }
+
+  .button_prompt_icon {
+    transition: color 0.3s ease;
+  }
+  .button_prompt_wrap:hover .button_prompt_icon {
+    color: var(--_button-style---icon-hover); 
+  }
+  .button_prompt_wrap:focus-within .button_prompt_icon {
+    color: var(--_button-style---text-hover) !important;
+  }
+  .button_prompt_wrap:focus-within {
+    color: var(--_button-style---text-hover) !important;
+  }
+
+</style></div><div data-prompt-trigger="1" class="button_prompt_wrap"><div class="button_prompt_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.72821 2.87934C10.0318 2.10869 10.9028 1.72933 11.6735 2.03266L14.4655 3.13226C15.236 3.43593 15.6145 4.30697 15.3112 5.07758L11.3903 15.0307C11.2954 15.2717 11.1394 15.4835 10.9391 15.6459L10.8513 15.7123L7.7077 17.8979C7.29581 18.1843 6.73463 17.9917 6.57294 17.5356L6.54657 17.4409L5.737 13.6987C5.67447 13.4092 5.69977 13.107 5.80829 12.8315L9.72821 2.87934ZM6.73798 13.1987C6.70201 13.2903 6.69385 13.3906 6.71454 13.4868L7.44501 16.8627L10.28 14.892L10.3376 14.8452C10.3909 14.7949 10.4325 14.7332 10.4597 14.6645L13.0974 7.96723L9.37567 6.50141L6.73798 13.1987ZM11.3073 2.96332C11.0504 2.86217 10.7601 2.98864 10.6589 3.24555L9.74188 5.57074L13.4636 7.03754L14.3806 4.71137C14.4817 4.45445 14.3552 4.16413 14.0983 4.06293L11.3073 2.96332Z" fill="currentColor"></path></svg></div></div><div aria-hidden="true" class="button_prompt_text u-text-style-caption">Write</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736011%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Footer" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="Write" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f77736011:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Button Text</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Button Text</span></button></div></div><div data-prompt-trigger="2" class="button_prompt_wrap"><div class="button_prompt_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M11.5859 2C11.9837 2.00004 12.3652 2.15818 12.6465 2.43945L15.5605 5.35352C15.8418 5.63478 16 6.01629 16 6.41406V16.5C16 17.3284 15.3284 18 14.5 18H5.5C4.72334 18 4.08461 17.4097 4.00781 16.6533L4 16.5V3.5C4 2.67157 4.67157 2 5.5 2H11.5859ZM5.5 3C5.22386 3 5 3.22386 5 3.5V16.5C5 16.7761 5.22386 17 5.5 17H14.5C14.7761 17 15 16.7761 15 16.5V7H12.5C11.6716 7 11 6.32843 11 5.5V3H5.5ZM12.54 13.3037C12.6486 13.05 12.9425 12.9317 13.1963 13.04C13.45 13.1486 13.5683 13.4425 13.46 13.6963C13.1651 14.3853 12.589 15 11.7998 15C11.3132 14.9999 10.908 14.7663 10.5996 14.4258C10.2913 14.7661 9.88667 14.9999 9.40039 15C8.91365 15 8.50769 14.7665 8.19922 14.4258C7.89083 14.7661 7.48636 15 7 15C6.72386 15 6.5 14.7761 6.5 14.5C6.5 14.2239 6.72386 14 7 14C7.21245 14 7.51918 13.8199 7.74023 13.3037L7.77441 13.2373C7.86451 13.0913 8.02513 13 8.2002 13C8.40022 13.0001 8.58145 13.1198 8.66016 13.3037C8.88121 13.8198 9.18796 14 9.40039 14C9.61284 13.9998 9.9197 13.8197 10.1406 13.3037L10.1748 13.2373C10.2649 13.0915 10.4248 13.0001 10.5996 13C10.7997 13 10.9808 13.1198 11.0596 13.3037C11.2806 13.8198 11.5874 13.9999 11.7998 14C12.0122 14 12.319 13.8198 12.54 13.3037ZM12.54 9.30371C12.6486 9.05001 12.9425 8.93174 13.1963 9.04004C13.45 9.14863 13.5683 9.44253 13.46 9.69629C13.1651 10.3853 12.589 11 11.7998 11C11.3132 10.9999 10.908 10.7663 10.5996 10.4258C10.2913 10.7661 9.88667 10.9999 9.40039 11C8.91365 11 8.50769 10.7665 8.19922 10.4258C7.89083 10.7661 7.48636 11 7 11C6.72386 11 6.5 10.7761 6.5 10.5C6.5 10.2239 6.72386 10 7 10C7.21245 10 7.51918 9.8199 7.74023 9.30371L7.77441 9.2373C7.86451 9.09126 8.02513 9 8.2002 9C8.40022 9.00008 8.58145 9.11981 8.66016 9.30371C8.88121 9.8198 9.18796 10 9.40039 10C9.61284 9.99978 9.9197 9.81969 10.1406 9.30371L10.1748 9.2373C10.2649 9.09147 10.4248 9.00014 10.5996 9C10.7997 9 10.9808 9.11975 11.0596 9.30371C11.2806 9.8198 11.5874 9.99989 11.7998 10C12.0122 10 12.319 9.81985 12.54 9.30371ZM12 5.5C12 5.77614 12.2239 6 12.5 6H14.793L12 3.20703V5.5Z" fill="currentColor"></path></svg></div></div><div aria-hidden="true" class="button_prompt_text u-text-style-caption">Learn</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736018%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Footer" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="Learn" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f77736018:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Button Text</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Button Text</span></button></div></div><div data-prompt-trigger="3" class="button_prompt_wrap"><div class="button_prompt_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M11.6318 4.01757C11.898 4.09032 12.055 4.36555 11.9824 4.63183L8.98242 15.6318C8.90966 15.8981 8.63449 16.0551 8.36816 15.9824C8.10193 15.9097 7.94495 15.6345 8.01758 15.3682L11.0176 4.36816C11.0904 4.102 11.3656 3.94497 11.6318 4.01757ZM13.124 6.17089C13.3059 5.96325 13.6213 5.9423 13.8291 6.12402L17.8291 9.62402L17.9014 9.70215C17.9647 9.78754 18 9.89182 18 10C18 10.1441 17.9375 10.281 17.8291 10.376L13.8291 13.876L13.7471 13.9346C13.5449 14.0498 13.2833 14.011 13.124 13.8291C12.9649 13.6472 12.9606 13.3824 13.1016 13.1973L13.1709 13.124L16.7412 10L13.1709 6.87597C12.9632 6.69411 12.9422 6.37866 13.124 6.17089ZM6.25293 6.06542C6.45509 5.95025 6.71675 5.98908 6.87598 6.17089C7.03513 6.35279 7.03933 6.6176 6.89844 6.80273L6.8291 6.87597L3.25879 10L6.8291 13.124C7.03682 13.3059 7.05771 13.6213 6.87598 13.8291C6.69413 14.0369 6.37869 14.0578 6.1709 13.876L2.1709 10.376L2.09863 10.2979C2.03528 10.2124 2 10.1082 2 10C2.00005 9.85591 2.06247 9.71893 2.1709 9.62402L6.1709 6.12402L6.25293 6.06542Z" fill="currentColor"></path></svg></div></div><div aria-hidden="true" class="button_prompt_text u-text-style-caption">Code</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f7773601f%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Footer" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="Code" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f7773601f:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Button Text</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Button Text</span></button></div></div><div data-prompt-menu="1" class="prompt_menu_wrap"><div class="prompt_menu_header"><div class="prompt_menu_label_wrap"><div class="prompt_menu_label_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M9.72821 2.87934C10.0318 2.10869 10.9028 1.72933 11.6735 2.03266L14.4655 3.13226C15.236 3.43593 15.6145 4.30697 15.3112 5.07758L11.3903 15.0307C11.2954 15.2717 11.1394 15.4835 10.9391 15.6459L10.8513 15.7123L7.7077 17.8979C7.29581 18.1843 6.73463 17.9917 6.57294 17.5356L6.54657 17.4409L5.737 13.6987C5.67447 13.4092 5.69977 13.107 5.80829 12.8315L9.72821 2.87934ZM6.73798 13.1987C6.70201 13.2903 6.69385 13.3906 6.71454 13.4868L7.44501 16.8627L10.28 14.892L10.3376 14.8452C10.3909 14.7949 10.4325 14.7332 10.4597 14.6645L13.0974 7.96723L9.37567 6.50141L6.73798 13.1987ZM11.3073 2.96332C11.0504 2.86217 10.7601 2.98864 10.6589 3.24555L9.74188 5.57074L13.4636 7.03754L14.3806 4.71137C14.4817 4.45445 14.3552 4.16413 14.0983 4.06293L11.3073 2.96332Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_label_text u-text-style-caption">Write</div></div><button aria-label="Close menu" data-prompt-menu-close="" class="prompt_menu_close_wrap"><span class="prompt_menu_close_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M15.1465 4.14642C15.3418 3.95121 15.6583 3.95118 15.8536 4.14642C16.0487 4.34168 16.0488 4.65822 15.8536 4.85346L10.7071 9.99997L15.8536 15.1465C16.0487 15.3417 16.0488 15.6583 15.8536 15.8535C15.6828 16.0244 15.4187 16.0461 15.2247 15.918L15.1465 15.8535L10 10.707L4.85352 15.8535C4.65827 16.0486 4.34168 16.0486 4.14648 15.8535C3.95129 15.6583 3.95142 15.3418 4.14648 15.1465L9.293 9.99997L4.14648 4.85346C3.95142 4.65818 3.95129 4.34162 4.14648 4.14642C4.34168 3.95128 4.65825 3.95138 4.85352 4.14642L10 9.29294L15.1465 4.14642Z" fill="currentColor"></path></svg></div></span></button></div><ul role="list" class="prompt_menu_list"><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Help me develop a unique voice for an audience</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736039%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f77736039:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you help me develop a unique voice for an audience? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Improve my writing style</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736042%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f77736042:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you improve my writing style? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Brainstorm creative ideas</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f7773604e%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f7773604e:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you brainstorm creative ideas? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li></ul></div><div data-prompt-menu="2" class="prompt_menu_wrap"><div class="prompt_menu_header"><div class="prompt_menu_label_wrap"><div class="prompt_menu_label_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M11.5859 2C11.9837 2.00004 12.3652 2.15818 12.6465 2.43945L15.5605 5.35352C15.8418 5.63478 16 6.01629 16 6.41406V16.5C16 17.3284 15.3284 18 14.5 18H5.5C4.72334 18 4.08461 17.4097 4.00781 16.6533L4 16.5V3.5C4 2.67157 4.67157 2 5.5 2H11.5859ZM5.5 3C5.22386 3 5 3.22386 5 3.5V16.5C5 16.7761 5.22386 17 5.5 17H14.5C14.7761 17 15 16.7761 15 16.5V7H12.5C11.6716 7 11 6.32843 11 5.5V3H5.5ZM12.54 13.3037C12.6486 13.05 12.9425 12.9317 13.1963 13.04C13.45 13.1486 13.5683 13.4425 13.46 13.6963C13.1651 14.3853 12.589 15 11.7998 15C11.3132 14.9999 10.908 14.7663 10.5996 14.4258C10.2913 14.7661 9.88667 14.9999 9.40039 15C8.91365 15 8.50769 14.7665 8.19922 14.4258C7.89083 14.7661 7.48636 15 7 15C6.72386 15 6.5 14.7761 6.5 14.5C6.5 14.2239 6.72386 14 7 14C7.21245 14 7.51918 13.8199 7.74023 13.3037L7.77441 13.2373C7.86451 13.0913 8.02513 13 8.2002 13C8.40022 13.0001 8.58145 13.1198 8.66016 13.3037C8.88121 13.8198 9.18796 14 9.40039 14C9.61284 13.9998 9.9197 13.8197 10.1406 13.3037L10.1748 13.2373C10.2649 13.0915 10.4248 13.0001 10.5996 13C10.7997 13 10.9808 13.1198 11.0596 13.3037C11.2806 13.8198 11.5874 13.9999 11.7998 14C12.0122 14 12.319 13.8198 12.54 13.3037ZM12.54 9.30371C12.6486 9.05001 12.9425 8.93174 13.1963 9.04004C13.45 9.14863 13.5683 9.44253 13.46 9.69629C13.1651 10.3853 12.589 11 11.7998 11C11.3132 10.9999 10.908 10.7663 10.5996 10.4258C10.2913 10.7661 9.88667 10.9999 9.40039 11C8.91365 11 8.50769 10.7665 8.19922 10.4258C7.89083 10.7661 7.48636 11 7 11C6.72386 11 6.5 10.7761 6.5 10.5C6.5 10.2239 6.72386 10 7 10C7.21245 10 7.51918 9.8199 7.74023 9.30371L7.77441 9.2373C7.86451 9.09126 8.02513 9 8.2002 9C8.40022 9.00008 8.58145 9.11981 8.66016 9.30371C8.88121 9.8198 9.18796 10 9.40039 10C9.61284 9.99978 9.9197 9.81969 10.1406 9.30371L10.1748 9.2373C10.2649 9.09147 10.4248 9.00014 10.5996 9C10.7997 9 10.9808 9.11975 11.0596 9.30371C11.2806 9.8198 11.5874 9.99989 11.7998 10C12.0122 10 12.319 9.81985 12.54 9.30371ZM12 5.5C12 5.77614 12.2239 6 12.5 6H14.793L12 3.20703V5.5Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_label_text u-text-style-caption">Learn</div></div><button aria-label="Close menu" data-prompt-menu-close="" class="prompt_menu_close_wrap"><span class="prompt_menu_close_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M15.1465 4.14642C15.3418 3.95121 15.6583 3.95118 15.8536 4.14642C16.0487 4.34168 16.0488 4.65822 15.8536 4.85346L10.7071 9.99997L15.8536 15.1465C16.0487 15.3417 16.0488 15.6583 15.8536 15.8535C15.6828 16.0244 15.4187 16.0461 15.2247 15.918L15.1465 15.8535L10 10.707L4.85352 15.8535C4.65827 16.0486 4.34168 16.0486 4.14648 15.8535C3.95129 15.6583 3.95142 15.3418 4.14648 15.1465L9.293 9.99997L4.14648 4.85346C3.95142 4.65818 3.95129 4.34162 4.14648 4.14642C4.34168 3.95128 4.65825 3.95138 4.85352 4.14642L10 9.29294L15.1465 4.14642Z" fill="currentColor"></path></svg></div></span></button></div><ul role="list" class="prompt_menu_list"><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Explain a complex topic simply</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736062%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f77736062:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you explain a complex topic simply? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Help me make sense of these ideas</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f7773606b%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f7773606b:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you help me make sense of these ideas? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Prepare for an exam or interview</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736077%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f77736077:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you prepare for an exam or interview? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li></ul></div><div data-prompt-menu="3" class="prompt_menu_wrap"><div class="prompt_menu_header"><div class="prompt_menu_label_wrap"><div class="prompt_menu_label_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M11.6318 4.01757C11.898 4.09032 12.055 4.36555 11.9824 4.63183L8.98242 15.6318C8.90966 15.8981 8.63449 16.0551 8.36816 15.9824C8.10193 15.9097 7.94495 15.6345 8.01758 15.3682L11.0176 4.36816C11.0904 4.102 11.3656 3.94497 11.6318 4.01757ZM13.124 6.17089C13.3059 5.96325 13.6213 5.9423 13.8291 6.12402L17.8291 9.62402L17.9014 9.70215C17.9647 9.78754 18 9.89182 18 10C18 10.1441 17.9375 10.281 17.8291 10.376L13.8291 13.876L13.7471 13.9346C13.5449 14.0498 13.2833 14.011 13.124 13.8291C12.9649 13.6472 12.9606 13.3824 13.1016 13.1973L13.1709 13.124L16.7412 10L13.1709 6.87597C12.9632 6.69411 12.9422 6.37866 13.124 6.17089ZM6.25293 6.06542C6.45509 5.95025 6.71675 5.98908 6.87598 6.17089C7.03513 6.35279 7.03933 6.6176 6.89844 6.80273L6.8291 6.87597L3.25879 10L6.8291 13.124C7.03682 13.3059 7.05771 13.6213 6.87598 13.8291C6.69413 14.0369 6.37869 14.0578 6.1709 13.876L2.1709 10.376L2.09863 10.2979C2.03528 10.2124 2 10.1082 2 10C2.00005 9.85591 2.06247 9.71893 2.1709 9.62402L6.1709 6.12402L6.25293 6.06542Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_label_text u-text-style-caption">Code</div></div><button aria-label="Close menu" data-prompt-menu-close="" class="prompt_menu_close_wrap"><span class="prompt_menu_close_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M15.1465 4.14642C15.3418 3.95121 15.6583 3.95118 15.8536 4.14642C16.0487 4.34168 16.0488 4.65822 15.8536 4.85346L10.7071 9.99997L15.8536 15.1465C16.0487 15.3417 16.0488 15.6583 15.8536 15.8535C15.6828 16.0244 15.4187 16.0461 15.2247 15.918L15.1465 15.8535L10 10.707L4.85352 15.8535C4.65827 16.0486 4.34168 16.0486 4.14648 15.8535C3.95129 15.6583 3.95142 15.3418 4.14648 15.1465L9.293 9.99997L4.14648 4.85346C3.95142 4.65818 3.95129 4.34162 4.14648 4.14642C4.34168 3.95128 4.65825 3.95138 4.85352 4.14642L10 9.29294L15.1465 4.14642Z" fill="currentColor"></path></svg></div></span></button></div><ul role="list" class="prompt_menu_list"><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Explain a programming concept</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f7773608b%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f7773608b:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you explain a programming concept? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Look over my code and give me tips</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736094%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f77736094:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you look over my code and give me tips? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Vibe code with me</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360a0%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f777360a0:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you vibe code with me? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to— like Google Drive, web search, etc.—if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can—an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li></ul></div><div data-prompt-menu="4" class="prompt_menu_wrap"><div class="prompt_menu_header"><div class="prompt_menu_label_wrap"><div class="prompt_menu_label_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M4.5 8.5C5.32843 8.5 6 9.17157 6 10C6 10.8284 5.32843 11.5 4.5 11.5C3.67157 11.5 3 10.8284 3 10C3 9.17157 3.67157 8.5 4.5 8.5ZM10 8.5C10.8284 8.5 11.5 9.17157 11.5 10C11.5 10.8284 10.8284 11.5 10 11.5C9.17157 11.5 8.5 10.8284 8.5 10C8.5 9.17157 9.17157 8.5 10 8.5ZM15.5 8.5C16.3284 8.5 17 9.17157 17 10C17 10.8284 16.3284 11.5 15.5 11.5C14.6716 11.5 14 10.8284 14 10C14 9.17157 14.6716 8.5 15.5 8.5Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_label_text u-text-style-caption">More</div></div><button aria-label="Close menu" data-prompt-menu-close="" class="prompt_menu_close_wrap"><span class="prompt_menu_close_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M15.1465 4.14642C15.3418 3.95121 15.6583 3.95118 15.8536 4.14642C16.0487 4.34168 16.0488 4.65822 15.8536 4.85346L10.7071 9.99997L15.8536 15.1465C16.0487 15.3417 16.0488 15.6583 15.8536 15.8535C15.6828 16.0244 15.4187 16.0461 15.2247 15.918L15.1465 15.8535L10 10.707L4.85352 15.8535C4.65827 16.0486 4.34168 16.0486 4.14648 15.8535C3.95129 15.6583 3.95142 15.3418 4.14648 15.1465L9.293 9.99997L4.14648 4.85346C3.95142 4.65818 3.95129 4.34162 4.14648 4.14642C4.34168 3.95128 4.65825 3.95138 4.85352 4.14642L10 9.29294L15.1465 4.14642Z" fill="currentColor"></path></svg></div></span></button></div><ul role="list" class="prompt_menu_list"><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Write case studies</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360b4%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f777360b4:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">This is another test</p></li><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Write grant proposals</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360bd%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f777360bd:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">Hi Claude! Could you write grant proposals? If you need more information from me, ask me 1-2 key questions right away. If you think I should upload any documents that would help you do a better job, let me know. You can use the tools you have access to — like Google Drive, web search, etc. — if they’ll help you better accomplish this task. Do not use analysis tool. Please keep your responses friendly, brief and conversational. <br/><br/>Please execute the task as soon as you can - an artifact would be great if it makes sense. If using an artifact, consider what kind of artifact (interactive, visual, checklist, etc.) might be most helpful for this specific task. Thanks for your help!</p></li><li data-prompt-item="" class="prompt_menu_item"><div class="prompt_menu_item_text u-text-style-body-3">Write video scripts</div><div class="prompt_menu_item_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.12771 5.16489C7.28926 4.98544 7.55225 4.95072 7.75273 5.0682L7.83477 5.12778L12.835 9.62788C12.9402 9.72264 12.9999 9.85833 13 9.99995C13 10.1063 12.9667 10.2093 12.9053 10.2939L12.835 10.372L7.83477 14.8721C7.62952 15.0567 7.31242 15.0402 7.12771 14.835C6.94336 14.6298 6.95983 14.3126 7.16482 14.128L11.7519 9.99995L7.16482 5.87193L7.09744 5.79674C6.95939 5.60969 6.96617 5.34444 7.12771 5.16489Z" fill="currentColor"></path></svg></div></div><div class="prompt_menu_item_base u-cover-absolute"></div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%227ccf3f04-0310-6e3b-5afa-268f77736006%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360cd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%227ccf3f04-0310-6e3b-5afa-268f777360c9%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="#" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7ccf3f04-0310-6e3b-5afa-268f777360cd:7ccf3f04-0310-6e3b-5afa-268f777360c9:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only"></span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only"></span></button></div><p data-prompt-menu-text="" class="prompt_menu_text u-display-none">this is a test</p></li></ul></div></div></div></div></div><div class="footer_content_bottom"><div class="footer_anthropic_link"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 133 12" fill="none" class="u-svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M0 0.194981V11.7972H6.0205C8.73304 11.7972 10.1389 10.5044 10.1389 8.4657C10.1389 7.07343 9.36155 6.06239 8.00529 5.68117C9.09692 5.36625 9.84121 4.38835 9.84121 3.29443C9.84121 1.37178 8.56764 0.194981 6.15282 0.194981H0ZM2.48098 6.85796H5.62355C6.9302 6.85796 7.55871 7.32205 7.55871 8.28338C7.55871 9.24471 6.9302 9.70881 5.62355 9.70881H2.48098V6.85796ZM2.48098 2.2668H5.77241C6.7648 2.2668 7.27753 2.69775 7.27753 3.52647C7.27753 4.3552 6.7648 4.78614 5.78895 4.78614H2.48098V2.2668Z" fill="currentColor"></path><path d="M18.1608 11.7972V7.18946L22.6265 0.194981H19.7982L16.8706 4.80272L13.8604 0.194981H10.9825L15.5971 7.13973V11.7972H18.1608Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M89.9633 6.01267C89.9633 2.48228 92.3285 -0.00390625 95.6696 -0.00390625C98.9941 -0.00390625 101.343 2.48228 101.343 6.01267C101.343 9.50991 98.9941 11.9961 95.6696 11.9961C92.3285 11.9961 89.9633 9.50991 89.9633 6.01267ZM98.7791 6.01267C98.7791 3.7088 97.6047 2.31654 95.6696 2.31654C93.7179 2.31654 92.527 3.7088 92.527 6.01267C92.527 8.28339 93.7179 9.67565 95.6696 9.67565C97.6047 9.67565 98.7791 8.28339 98.7791 6.01267Z" fill="currentColor"></path><path d="M50.4662 11.7972H47.6544L42.4443 3.67565V11.7972H40.0461V0.194987H42.8578L48.0679 8.31654V0.194987H50.4662V11.7972Z" fill="currentColor"></path><path d="M52.451 0.194987H62.7057V2.43256H58.8188V11.7972H56.3378V2.43256H52.451V0.194987Z" fill="currentColor"></path><path d="M67.1714 7.05687H72.6296V11.7972H75.1105V0.194987H72.6296V4.8193H67.1714V0.194987H64.6904V11.7972H67.1714V7.05687Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M109.315 0.194987H103.658V11.7972H106.139V7.58725H109.315C111.945 7.58725 113.549 6.19499 113.549 3.89112C113.549 1.58725 111.945 0.194987 109.315 0.194987ZM106.139 5.34968V2.43256H109.199C110.423 2.43256 111.068 2.9298 111.068 3.89112C111.068 4.85245 110.423 5.34968 109.199 5.34968H106.139Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M78.1704 0.194987H83.827C86.4569 0.194987 88.0612 1.53753 88.0612 3.72538C88.0612 5.26681 87.2673 6.37731 85.8945 6.9077L85.8922 6.9086L88.6401 11.7972H85.8945L83.4134 7.25576H80.6514V11.7972H78.1704V0.194987ZM80.6514 2.43256V5.01819H83.7113C84.9352 5.01819 85.5803 4.57068 85.5803 3.72538C85.5803 2.88007 84.9352 2.43256 83.7113 2.43256H80.6514Z" fill="currentColor"></path><path d="M133 7.90217H130.354C129.924 9.02924 129.064 9.67565 127.889 9.67565C125.937 9.67565 124.747 8.28339 124.747 6.01267C124.747 3.7088 125.937 2.31654 127.889 2.31654C129.064 2.31654 129.924 2.96294 130.354 4.09002H132.983C132.338 1.60383 130.403 -0.00390625 127.889 -0.00390625C124.548 -0.00390625 122.183 2.48228 122.183 6.01267C122.183 9.50991 124.548 11.9961 127.889 11.9961C130.42 11.9961 132.355 10.3718 133 7.90217Z" fill="currentColor"></path><path d="M117.072 0.194987H114.542L119.156 11.7972H121.687L117.072 0.194987Z" fill="currentColor"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M35.6465 11.7972L34.7028 9.36073H29.875L28.9313 11.7972H26.3511L30.9657 0.194987H33.6121L38.2267 11.7972H35.6465ZM32.2889 3.12869L33.8682 7.20604H30.7096L32.2889 3.12869Z" fill="currentColor"></path></svg><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%222fd4ba50-4a49-48ef-5abe-e52e442f7db2%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:2fd4ba50-4a49-48ef-5abe-e52e442f7db2:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Anthropic</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Anthropic</span></button></div></div><div class="footer_copyright u-text-style-micro">© <span data-current-year="">[year]</span> Anthropic PBC</div></div></div><div class="footer_links_wrap u-column-custom"><div class="footer_links_layout u-grid-custom"><div class="footer_links_col"><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Products</div><ul role="list" class="footer_links_list"><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde25384a%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/product/overview" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:84512419-220f-283b-ae01-195dde25384a:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude Code</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2264dfc281-0103-84b5-09d4-56b0cff7de83%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/product/claude-code" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:64dfc281-0103-84b5-09d4-56b0cff7de83:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude Code</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude Code</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude Code for Enterprise</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2236efe030-dd75-81a1-1cb8-67eec60943af%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/product/claude-code/enterprise" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:36efe030-dd75-81a1-1cb8-67eec60943af:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude Code for Enterprise</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude Code for Enterprise</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude Cowork</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2267985e53-a409-01da-de54-bad16a4bb83c%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/product/cowork" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:67985e53-a409-01da-de54-bad16a4bb83c:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude Cowork</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude Cowork</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Max plan</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%224482e47d-0bb5-3d60-e342-08770af9116f%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/pricing/max" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:4482e47d-0bb5-3d60-e342-08770af9116f:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Max plan</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Max plan</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Team plan</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22029d62f7-8d72-5fce-f8ff-412ba42f3886%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/pricing/team" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:029d62f7-8d72-5fce-f8ff-412ba42f3886:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Team plan</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Team plan</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Enterprise plan</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22d0303eaf-432a-41bd-9b49-5374a31f9701%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/pricing/enterprise" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:d0303eaf-432a-41bd-9b49-5374a31f9701:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Enterprise plan</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Enterprise plan</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Download app</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22c9240ff6-6cb3-7b7f-b40d-d579bf3ec0e0%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/download" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:c9240ff6-6cb3-7b7f-b40d-d579bf3ec0e0:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Download app</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Download app</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Pricing</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22bea9f4e0-1629-ff93-f3ec-d90326b9855d%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/pricing" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:bea9f4e0-1629-ff93-f3ec-d90326b9855d:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Pricing</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Pricing</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Log in</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%223c2427d3-4ef6-3bb0-97c0-2146ee269c86%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://claude.ai/login" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:3c2427d3-4ef6-3bb0-97c0-2146ee269c86:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Log in</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Log in</span></button></div></li></ul></div><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Features</div><ul role="list" class="footer_links_list"><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude for Chrome</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2230867ca6-7ba4-be5e-97f2-297e28f882b1%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/claude-for-chrome" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:30867ca6-7ba4-be5e-97f2-297e28f882b1:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude for Chrome</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude for Chrome</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude for Slack</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%228d7a0c56-25bc-0988-2d67-10822f038e69%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/claude-for-slack" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:8d7a0c56-25bc-0988-2d67-10822f038e69:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude for Slack</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude for Slack</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude for Excel</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22f51c6871-143e-680b-de1f-22dc2e851db5%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/claude-for-excel" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:f51c6871-143e-680b-de1f-22dc2e851db5:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude for Excel</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude for Excel</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude for PowerPoint</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%221b619c6c-0bec-d240-7658-389acd60700c%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/claude-for-powerpoint" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:1b619c6c-0bec-d240-7658-389acd60700c:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude for PowerPoint</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude for PowerPoint</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Skills</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22b668c6c0-1e38-80b4-766a-ff96858b6aaa%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/skills" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:b668c6c0-1e38-80b4-766a-ff96858b6aaa:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Skills</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Skills</span></button></div></li></ul></div><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Models</div><ul role="list" class="footer_links_list"><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Opus</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2202a8acb5-5aba-32af-6c43-a961263471c4%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/claude/opus" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:02a8acb5-5aba-32af-6c43-a961263471c4:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Opus</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Opus</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Sonnet</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2202a8acb5-5aba-32af-6c43-a961263471c6%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/claude/sonnet" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:02a8acb5-5aba-32af-6c43-a961263471c6:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Sonnet</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Sonnet</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Haiku</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2202a8acb5-5aba-32af-6c43-a961263471c8%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/claude/haiku" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:02a8acb5-5aba-32af-6c43-a961263471c8:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Haiku</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Haiku</span></button></div></li></ul></div></div><div class="footer_links_col"><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Solutions</div><ul role="list" class="footer_links_list"><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">AI agents</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%227813e3f6-9351-92a5-a180-a303ee2b4159%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/agents" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7813e3f6-9351-92a5-a180-a303ee2b4159:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">AI agents</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">AI agents</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude Code Security</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22ecf84006-47c5-03b7-7507-5e54cc91c9c9%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/claude-code-security" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:ecf84006-47c5-03b7-7507-5e54cc91c9c9:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude Code Security</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude Code Security</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Code modernization</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%223ec6191d-3ca2-53b0-c7a5-0b1c0022190a%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/code-modernization" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:3ec6191d-3ca2-53b0-c7a5-0b1c0022190a:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Code modernization</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Code modernization</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Coding</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%224a59ddf2-4eb3-d791-7150-33bda360f970%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/coding" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:4a59ddf2-4eb3-d791-7150-33bda360f970:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Coding</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Coding</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Customer support</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22268ced38-bc41-b632-fdbc-53d2e0670586%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/customer-support" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:268ced38-bc41-b632-fdbc-53d2e0670586:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Customer support</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Customer support</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Education</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22a95494e4-ee96-60b1-387c-75797288f060%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/education" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:a95494e4-ee96-60b1-387c-75797288f060:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Education</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Education</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Financial services</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2215bcf52e-d8df-65b4-9e18-4e30549675ff%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/financial-services" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:15bcf52e-d8df-65b4-9e18-4e30549675ff:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Financial services</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Financial services</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Government</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22c92bbc64-1c28-3794-1555-de375d015a4d%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/government" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:c92bbc64-1c28-3794-1555-de375d015a4d:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Government</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Government</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Healthcare</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%227eb39beb-7c4d-bfda-9adf-0c3e6fc43b2f%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/healthcare" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:7eb39beb-7c4d-bfda-9adf-0c3e6fc43b2f:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Healthcare</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Healthcare</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Life sciences</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%221d1c2793-e666-7970-e993-5963b6f32c0a%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/life-sciences" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:1d1c2793-e666-7970-e993-5963b6f32c0a:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Life sciences</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Life sciences</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Nonprofits</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%226d4cf836-eb49-e402-0994-fede74487cf2%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/solutions/nonprofits" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:6d4cf836-eb49-e402-0994-fede74487cf2:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Nonprofits</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Nonprofits</span></button></div></li></ul></div><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Claude Platform</div><ul role="list" class="footer_links_list"><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Overview</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%221fd33316-59c5-2cd5-2d3a-305a0f9ef115%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/platform/api" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:1fd33316-59c5-2cd5-2d3a-305a0f9ef115:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Overview</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Overview</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Developer docs</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22d43d70d2-09e6-f87a-7c73-526a1b3277ba%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://platform.claude.com/docs" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:d43d70d2-09e6-f87a-7c73-526a1b3277ba:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Developer docs</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Developer docs</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Pricing</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%224df021e8-2df2-bb92-935f-997ba27256fd%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://claude.com/pricing#api" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:4df021e8-2df2-bb92-935f-997ba27256fd:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Pricing</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Pricing</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Marketplace</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22526f54eb-f33c-0405-9ed8-5b81b8f654c1%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/platform/marketplace" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:526f54eb-f33c-0405-9ed8-5b81b8f654c1:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Marketplace</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Marketplace</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Amazon Bedrock</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22c834a20c-cf8e-a9fd-20bf-3e8a135bba79%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/partners/amazon-bedrock" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:c834a20c-cf8e-a9fd-20bf-3e8a135bba79:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Amazon Bedrock</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Amazon Bedrock</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Google Cloud’s Vertex AI</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2227e76ec5-3758-72bb-05fc-35f6cabc3421%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/partners/google-cloud-vertex-ai" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:27e76ec5-3758-72bb-05fc-35f6cabc3421:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Google Cloud’s Vertex AI</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Google Cloud’s Vertex AI</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Microsoft Foundry</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22da67671c-6e38-eddc-5e6a-86fab57b7992%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/partners/microsoft-foundry" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:da67671c-6e38-eddc-5e6a-86fab57b7992:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Microsoft Foundry</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Microsoft Foundry</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Regional compliance</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22db18a48f-6449-e6e0-3398-cdc4cadc2d37%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/regional-compliance" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:db18a48f-6449-e6e0-3398-cdc4cadc2d37:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Regional compliance</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Regional compliance</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Console login</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2261f9906b-8a66-b8f4-1b01-127a4c18f535%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://platform.claude.com/" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:61f9906b-8a66-b8f4-1b01-127a4c18f535:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Console login</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Console login</span></button></div></li></ul></div></div><div class="footer_links_col"><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Resources</div><ul role="list" class="footer_links_list"><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Blog</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22254d70fe-9fc2-4a04-c2e3-76dab742479c%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/blog" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:254d70fe-9fc2-4a04-c2e3-76dab742479c:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Blog</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Blog</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Claude partner network</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%225410eed3-4dff-88c3-8769-1d9dbb32c2a5%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/partners" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:5410eed3-4dff-88c3-8769-1d9dbb32c2a5:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Claude partner network</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Claude partner network</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Community</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%222333330d-f152-9676-49fd-26ad5c2879ff%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/community" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:2333330d-f152-9676-49fd-26ad5c2879ff:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Community</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Community</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Connectors</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%221947f4b8-64b6-e856-8f24-c58ba7ec7d68%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/connectors" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:1947f4b8-64b6-e856-8f24-c58ba7ec7d68:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Connectors</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Connectors</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Courses</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%225c20925d-5524-42fe-7b09-4afcf36e773a%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/learn" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:5c20925d-5524-42fe-7b09-4afcf36e773a:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Courses</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Courses</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Customer stories</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%224eb5bb11-d572-0896-bbfc-8a55660e2ec3%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/customers" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:4eb5bb11-d572-0896-bbfc-8a55660e2ec3:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Customer stories</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Customer stories</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Engineering at Anthropic</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%221dee1684-2896-4046-15ba-eb9e17b9e4aa%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/engineering" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:1dee1684-2896-4046-15ba-eb9e17b9e4aa:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Engineering at Anthropic</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Engineering at Anthropic</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Events</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22b1f33768-ad80-d283-2895-03b29de13c40%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/events" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:b1f33768-ad80-d283-2895-03b29de13c40:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Events</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Events</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Plugins</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%223f51022a-a8d5-89b4-9d8b-82a6b613c2aa%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/plugins" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:3f51022a-a8d5-89b4-9d8b-82a6b613c2aa:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Plugins</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Plugins</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Powered by Claude</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22deecab24-1269-3751-1c6c-b392c1b717ce%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/partners/powered-by-claude" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:deecab24-1269-3751-1c6c-b392c1b717ce:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Powered by Claude</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Powered by Claude</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Service partners</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2271ef3fe5-4ac8-efc1-6c85-bfc45aec6792%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/partners/services" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:71ef3fe5-4ac8-efc1-6c85-bfc45aec6792:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Service partners</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Service partners</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Startups program</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2259d464f5-3028-4463-8e17-b3d7a7c62c55%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/programs/startups" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:59d464f5-3028-4463-8e17-b3d7a7c62c55:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Startups program</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Startups program</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Tutorials</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22afa8c451-202d-5020-7cca-93ebed003c2f%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/resources/tutorials" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:afa8c451-202d-5020-7cca-93ebed003c2f:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Tutorials</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Tutorials</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Use cases</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22cfc36270-291b-1a08-fdeb-a43c63835016%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="/resources/use-cases" data-cta="" target="" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:cfc36270-291b-1a08-fdeb-a43c63835016:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Use cases</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Use cases</span></button></div></li></ul></div><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Company</div><ul role="list" class="footer_links_list"><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Anthropic</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22fb3fc523-b533-ed4b-ea54-3d8bfbffa0c6%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:fb3fc523-b533-ed4b-ea54-3d8bfbffa0c6:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Anthropic</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Anthropic</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Careers</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2274b442f7-23b4-df98-7313-14c8faa273d2%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/careers" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:74b442f7-23b4-df98-7313-14c8faa273d2:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Careers</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Careers</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Economic Futures</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22cb3997cd-68f5-f390-6284-7ccc68d32324%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/economic-futures" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:cb3997cd-68f5-f390-6284-7ccc68d32324:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Economic Futures</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Economic Futures</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Research</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%225c99587e-3ffb-e402-f030-c93346fbff5e%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/research" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:5c99587e-3ffb-e402-f030-c93346fbff5e:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Research</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Research</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">News</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22f5529cff-0244-aa92-4f73-a796ab07265d%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/news" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:f5529cff-0244-aa92-4f73-a796ab07265d:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">News</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">News</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Responsible Scaling Policy</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22b58bccd7-0a1a-5e63-c1ab-2261b21f5f27%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/news/announcing-our-updated-responsible-scaling-policy" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:b58bccd7-0a1a-5e63-c1ab-2261b21f5f27:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Responsible Scaling Policy</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Responsible Scaling Policy</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Security and compliance</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%225175cc63-a912-184d-0737-964c40728f4b%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://trust.anthropic.com/" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:5175cc63-a912-184d-0737-964c40728f4b:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Security and compliance</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Security and compliance</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Transparency</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22ca2ed98a-8c10-696e-dba9-0da709d86880%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://anthropic.com/transparency" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:ca2ed98a-8c10-696e-dba9-0da709d86880:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Transparency</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Transparency</span></button></div></li></ul></div></div><div class="footer_links_col"><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Help and security</div><ul role="list" class="footer_links_list"><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Availability</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%222cc08987-8b74-80a8-3f2f-45f8e44c2050%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/supported-countries" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:2cc08987-8b74-80a8-3f2f-45f8e44c2050:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Availability</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Availability</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Status</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%228636359a-70c5-81cf-1dd6-65b9b6b30255%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://status.anthropic.com/" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:8636359a-70c5-81cf-1dd6-65b9b6b30255:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Status</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Status</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Support center</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%228fde9ce0-05cf-ae08-f47e-18dbfb796bb7%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://support.claude.com/en/" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:8fde9ce0-05cf-ae08-f47e-18dbfb796bb7:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Support center</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Support center</span></button></div></li></ul></div><div class="footer_links_list_wrap"><div class="footer_links_heading u-text-style-caption">Terms and policies</div><ul role="list" class="footer_links_list"><li class="footer_link u-flex-horizontal-nowrap"><button id="privacy-choices-btn"><div id="privacy-choices-btn" aria-hidden="true" class="footer_link_text u-text-style-caption">Privacy choices</div></button><div><div class="privacy_choices_dialog w-embed"><style>
+  /* Dialog styling */
+  dialog#consent-container {
+    margin: 0;
+    padding: 8px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  }
+
+  dialog#consent-container.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  dialog#consent-container::backdrop {
+    background: transparent;
+  }
+
+  dialog button span {
+    display: inline !important;
+  }
+
+  /* Toggle switch styling */
+  .toggle_switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 24px;
+  }
+
+  .toggle_switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle_slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #87867f;
+    transition: .4s;
+    border-radius: 24px;
+  }
+
+  .toggle_slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .toggle_slider {
+    background-color: #d97757;
+  }
+
+  input:checked + .toggle_slider:before {
+    transform: translateX(12px);
+  }
+
+  input:disabled + .toggle_slider {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  @media only screen and (max-width: 501px) {
+    dialog#consent-container {
+      left: 8px !important;
+      bottom: 8px !important;
+      right: 8px !important;
+    }
+    #consent-banner {
+      padding: 24px 16px 16px !important;
+    }
+    #simple-options {
+      grid-template-columns: repeat(3, 1fr) !important;
+      grid-template-rows: auto auto !important;
+    }
+    #customize-btn {
+      grid-column: span 1 !important;
+    }
+    dialog button span {
+    	display: none !important;
+    }
+</style></div><div class="privacy_choices_dialog w-embed"><dialog id="consent-container" style="position: fixed; bottom: 24px; right: 24px; left: auto; max-width: 456px; padding: 0; background: transparent; z-index: 101; line-height: 1.25;">
+  <div id="consent-banner" class="u-flex-vertical-nowrap u-gap-1" style="background-color: #141413; border-radius: 24px; padding: 32px;">
+    <h3 class="u-text-style-h5" style="color: #fff;">Cookie settings</h3>
+    <p class="u-text-style-body-3" id="consent-description" style="color: #e8e6dc; font-size: 0.875rem; line-height: 1.25rem;">
+      We use cookies to deliver and improve our services, analyze site usage, and if you agree, to customize or personalize your experience and market our services to you. You can read our Cookie Policy <a href="https://www.anthropic.com/legal/cookies" style="color: #a1a0a0; text-decoration: underline;">here</a>.
+    </p>
+
+    <div id="simple-options" style="display: grid; gap: 8px; grid-template-columns: 1fr 1fr; text-align: center; width: 100%;">
+      <button id="customize-btn" style="grid-column: span 2; background: transparent; border: 1px solid #87867f; border-radius: 8px; color: #fff; padding: 8px 16px; cursor: pointer; font-weight: 500; font-size: 1rem;">
+        Customize<span> cookie settings</span>
+      </button>
+      <button id="reject-btn" style="background: transparent; border: 1px solid #87867f; border-radius: 8px; color: #fff; padding: 8px 16px; cursor: pointer; font-weight: 500; font-size: 1rem;">
+        Reject<span> all cookies</span>
+      </button>
+      <button id="accept-btn" style="background: #fff; border: none; border-radius: 8px; color: #141413; padding: 8px 16px; cursor: pointer; font-weight: 500; font-size: 1rem;">
+        Accept<span> all cookies</span>
+      </button>
+    </div>
+
+    <div id="detailed-options" style="display: none; width: 100%;">
+      <form id="consent-form">
+        <!-- Necessary option (always enabled) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #3d3d3a; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div>
+            <h6 style="color: #f0eee6; font-size: 0.75rem; margin-bottom: 8px; font-weight:500;">Necessary</h6>
+            <p style="color: #b0aea5; font-size: 0.75rem; margin: 0;">Enables security and basic functionality.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: #f0eee6; font-size: 0.75rem;">Required</span>
+            <label class="toggle_switch">
+              <input type="checkbox" checked disabled>
+              <span class="toggle_slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Analytics option -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #3d3d3a; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div>
+            <h6 style="color: #f0eee6; font-size: 0.75rem; margin-bottom: 8px; font-weight:500;">Analytics</h6>
+            <p style="color: #b0aea5; font-size: 0.75rem; margin: 0;">Enables tracking of site performance.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="analytics-status" style="color: #f0eee6; font-size: 0.75rem;">Off</span>
+            <label class="toggle_switch">
+              <input type="checkbox" id="analytics-consent">
+              <span class="toggle_slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Marketing option -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #3d3d3a; border-radius: 8px; padding: 12px; margin-bottom: 32px;">
+          <div>
+            <h6 style="color: #f0eee6; font-size: 0.75rem; margin-bottom: 8px; font-weight:500;">Marketing</h6>
+            <p style="color: #b0aea5; font-size: 0.75rem; margin: 0;">Enables ads personalization and tracking.</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="marketing-status" style="color: #f0eee6; font-size: 0.75rem;">Off</span>
+            <label class="toggle_switch">
+              <input type="checkbox" id="marketing-consent">
+              <span class="toggle_slider"></span>
+            </label>
+          </div>
+        </div>
+      </form>
+
+      <button id="save-preferences-btn" class="button_main_wrap" style="text-align: center; width: 100%; background: #fff; border: none; border-radius: 8px; color: #141413; padding: 8px 16px; cursor: pointer; font-weight: 500; font-size: 1rem;">
+        Save preferences
+      </button>
+    </div>
+  </div>
+</dialog></div></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Privacy policy</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22fbe840fc-d7c3-d757-9034-24e8883e623a%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/legal/privacy" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:fbe840fc-d7c3-d757-9034-24e8883e623a:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Privacy policy</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Privacy policy</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Responsible disclosure policy</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2266ef1335-230e-e00c-f0bb-4f8ee02a63d3%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/responsible-disclosure-policy" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:66ef1335-230e-e00c-f0bb-4f8ee02a63d3:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Responsible disclosure policy</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Responsible disclosure policy</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Terms of service: Commercial</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%22f9c01b92-f11a-e251-c8e7-12f265d861ac%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/legal/commercial-terms" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:f9c01b92-f11a-e251-c8e7-12f265d861ac:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Terms of service: Commercial</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Terms of service: Commercial</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Terms of service: Consumer</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%2200abd181-62bd-13f0-998b-67acbc29c0c4%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/legal/consumer-terms" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:00abd181-62bd-13f0-998b-67acbc29c0c4:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Terms of service: Consumer</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Terms of service: Consumer</span></button></div></li><li class="footer_link"><div aria-hidden="true" class="footer_link_text u-text-style-caption">Usage policy</div><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%2284512419-220f-283b-ae01-195dde253845%22%2C%22instanceId%22%3A%224446b13d-0f2d-d9f9-0ca3-ad9b32984b28%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%2284512419-220f-283b-ae01-195dde253848%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="" data-wf-event-ids="" href="https://www.anthropic.com/legal/aup" data-cta="" target="_blank" data-cta-copy="" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:4446b13d-0f2d-d9f9-0ca3-ad9b32984b28:84512419-220f-283b-ae01-195dde253848:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Usage policy</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Usage policy</span></button></div></li></ul></div></div></div></div></div><div class="footer_footer"><div class="footer_social_icon_wrap"><div class="footer_social_icon"><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22ceb5c3b7-6e83-47c7-d1db-6d141da2b8fb%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Footer" data-wf-event-ids="" href="https://x.com/claudeai" data-cta="" target="_blank" data-cta-copy="X.com" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:ceb5c3b7-6e83-47c7-d1db-6d141da2b8fb:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">x.com</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">x.com</span></button></div><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 17 17" fill="none" class="u-svg"><g clip-path="url(#clip0_10449_2796)"><path d="M10.058 7.1894L15.9061 0.417969H14.5203L9.44241 6.29751L5.38673 0.417969H0.708984L6.84197 9.30887L0.708984 16.4098H2.09487L7.45723 10.2008L11.7403 16.4098H16.4181L10.0577 7.1894H10.058ZM8.15987 9.3872L7.53847 8.50187L2.59422 1.45718H4.72285L8.71292 7.14247L9.33432 8.0278L14.5209 15.4178H12.3923L8.15987 9.38754V9.3872Z" fill="currentColor"></path></g><defs><clippath id="clip0_10449_2796"><rect width="15.7091" height="16" fill="currentColor" transform="translate(0.708984 0.417969)"></rect></clippath></defs></svg></div><div class="footer_social_icon"><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22ceb5c3b7-6e83-47c7-d1db-6d141da2b904%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Footer" data-wf-event-ids="" href="https://www.linkedin.com/showcase/claude/" data-cta="" target="_blank" data-cta-copy="Linkedin" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:ceb5c3b7-6e83-47c7-d1db-6d141da2b904:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">LinkedIn</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">LinkedIn</span></button></div><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 17 17" fill="none" class="u-svg"><path d="M14.3818 0.5625C15.3456 0.562625 16.1268 1.34386 16.127 2.30762V14.5264C16.1268 15.4902 15.3456 16.2714 14.3818 16.2715H2.16309C1.19933 16.2713 0.418093 15.4901 0.417969 14.5264V2.30762C0.418151 1.3439 1.19937 0.562682 2.16309 0.5625H14.3818ZM2.8252 14.0898H5.16797V6.52539H2.8252V14.0898ZM11.1924 6.29492C9.58733 6.29492 8.91211 7.54492 8.91211 7.54492V6.52539H6.66504V14.0898H8.91211V10.1191C8.91211 9.05529 9.40154 8.42188 10.3389 8.42188C11.2005 8.42189 11.6143 9.03057 11.6143 10.1191V14.0898H13.9453V9.30078C13.9453 7.2746 12.7967 6.29494 11.1924 6.29492ZM3.98535 2.74414C3.22012 2.74414 2.59961 3.36889 2.59961 4.13965C2.59963 4.91039 3.22014 5.53516 3.98535 5.53516C4.75044 5.53501 5.3701 4.9103 5.37012 4.13965C5.37012 3.36898 4.75046 2.74429 3.98535 2.74414Z" fill="currentColor"></path></svg></div><div class="footer_social_icon"><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22ceb5c3b7-6e83-47c7-d1db-6d141da2b909%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Footer" data-wf-event-ids="" href="https://www.youtube.com/@anthropic-ai" data-cta="" target="_blank" data-cta-copy="YouTube" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:ceb5c3b7-6e83-47c7-d1db-6d141da2b909:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">YouTube</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">YouTube</span></button></div><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 16 17" fill="none" class="u-svg"><g clip-path="url(#clip0_13050_28878)"><path d="M6.248 10.855V6.18441L10.354 8.51999L6.248 10.855ZM15.3808 4.71414C15.1954 4.03269 14.6716 3.50576 14.0058 3.31929L13.9917 3.31615C12.3192 3.10349 10.3849 2.98197 8.42172 2.98197C8.22216 2.98197 8.02312 2.98302 7.8246 2.98564L7.85498 2.98511C7.68632 2.98302 7.48781 2.98145 7.28824 2.98145C5.32508 2.98145 3.38968 3.10296 1.4899 3.33815L1.71722 3.3151C1.03787 3.50523 0.514081 4.03164 0.332326 4.69947L0.329184 4.71309C0.119668 5.81776 0.000244141 7.089 0.000244141 8.38799C0.000244141 8.43409 0.000244165 8.48018 0.000767954 8.52575V8.51842C0.000767954 8.55718 0.000244141 8.60327 0.000244141 8.64936C0.000244141 9.94836 0.120192 11.2191 0.349088 12.4515L0.329184 12.3237C0.514605 13.0052 1.03839 13.5321 1.70413 13.7186L1.71827 13.7217C3.39073 13.9344 5.32508 14.0559 7.28824 14.0559C7.48728 14.0559 7.68632 14.0549 7.88536 14.0522L7.85498 14.0528C8.02364 14.0549 8.22268 14.0564 8.42172 14.0564C10.3854 14.0564 12.3203 13.9349 14.2201 13.6997L13.9927 13.7228C14.6726 13.5332 15.1964 13.0062 15.3787 12.3384L15.3818 12.3248C15.5908 11.2201 15.7102 9.94888 15.7102 8.65041C15.7102 8.60432 15.7102 8.55823 15.7097 8.51266V8.51946C15.7097 8.4807 15.7102 8.43461 15.7102 8.38852C15.7102 7.08952 15.5903 5.81881 15.3614 4.58633L15.3808 4.71414Z" fill="currentColor"></path></g><defs><clippath id="clip0_13050_28878"><rect width="15.71" height="15.71" fill="currentColor" transform="translate(0 0.664551)"></rect></clippath></defs></svg></div><div class="footer_social_icon"><div class="clickable_wrap u-cover-absolute"><a class="clickable_link w-inline-block" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%220254e612-9509-0757-3332-f6be61ca6889%22%2C%22instanceId%22%3A%22ceb5c3b7-6e83-47c7-d1db-6d141da2b912%22%7D%5D" data-wf-element-id="0254e612-9509-0757-3332-f6be61ca688a" data-cta-position="Footer" data-wf-event-ids="" href="https://www.instagram.com/claudeai" data-cta="" target="_blank" data-cta-copy="Instagram" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:ceb5c3b7-6e83-47c7-d1db-6d141da2b912:0254e612-9509-0757-3332-f6be61ca688a" data-wf-ao-click-engagement-tracking="true"><span class="clickable_text u-sr-only">Instagram</span></a><button type="button" class="clickable_btn"><span class="clickable_text u-sr-only">Instagram</span></button></div><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 16 17" fill="none" class="u-svg"><g clip-path="url(#clip0_10449_2794)"><path d="M4.60152 0.617433C3.7658 0.656863 3.19508 0.790233 2.69616 0.986282C2.17981 1.18752 1.74215 1.45756 1.30669 1.89458C0.871239 2.33161 0.603085 2.76958 0.403265 3.28672C0.209886 3.78674 0.0788724 4.35792 0.041956 5.19412C0.00503965 6.03031 -0.00312908 6.2991 0.000955282 8.43208C0.00503964 10.5651 0.0144651 10.8324 0.0549946 11.6703C0.0948956 12.5059 0.227795 13.0765 0.423844 13.5755C0.625392 14.0919 0.895117 14.5294 1.3323 14.965C1.76948 15.4006 2.20714 15.6682 2.72554 15.8683C3.22509 16.0614 3.79643 16.193 4.63247 16.2296C5.4685 16.2662 5.7376 16.2747 7.86995 16.2706C10.0023 16.2665 10.2708 16.2571 11.1085 16.2173C11.9463 16.1776 12.5139 16.0438 13.0131 15.8487C13.5295 15.6466 13.9673 15.3774 14.4026 14.94C14.8379 14.5027 15.1059 14.0644 15.3055 13.547C15.4991 13.0474 15.6306 12.4761 15.6668 11.6407C15.7034 10.8023 15.7121 10.5346 15.708 8.40192C15.7039 6.26925 15.6943 6.00188 15.6546 5.16427C15.6148 4.32666 15.4818 3.75784 15.2859 3.25845C15.084 2.74209 14.8146 2.3049 14.3776 1.86898C13.9406 1.43305 13.502 1.16521 12.9847 0.966018C12.4848 0.772639 11.9138 0.640839 11.0777 0.604708C10.2417 0.568578 9.97262 0.559309 7.83948 0.563394C5.70634 0.567478 5.43929 0.576589 4.60152 0.617433ZM4.69326 14.8166C3.92744 14.7833 3.51162 14.656 3.23451 14.5495C2.86755 14.4081 2.60615 14.2372 2.32999 13.9637C2.05382 13.6902 1.88416 13.4279 1.74089 13.0617C1.63329 12.7846 1.50369 12.3692 1.46787 11.6034C1.42891 10.7757 1.42074 10.5272 1.41619 8.43019C1.41163 6.33319 1.41964 6.08498 1.45593 5.25696C1.48861 4.49177 1.61664 4.07548 1.72299 3.79852C1.86437 3.43109 2.03465 3.17016 2.30878 2.89415C2.5829 2.61814 2.84446 2.44817 3.21095 2.3049C3.48775 2.19682 3.90309 2.06832 4.6686 2.03188C5.49694 1.99261 5.74514 1.98475 7.84183 1.9802C9.93853 1.97564 10.1874 1.9835 11.016 2.01994C11.7812 2.05324 12.1977 2.18002 12.4743 2.28699C12.8414 2.42838 13.1027 2.59819 13.3787 2.87279C13.6547 3.14738 13.8248 3.408 13.9681 3.77527C14.0763 4.05128 14.2048 4.46647 14.2409 5.23245C14.2804 6.06079 14.2893 6.30915 14.2931 8.40569C14.2969 10.5022 14.2895 10.7512 14.2532 11.5789C14.2197 12.3447 14.0928 12.7607 13.9861 13.0381C13.8447 13.4049 13.6743 13.6665 13.4 13.9424C13.1257 14.2182 12.8645 14.3882 12.4979 14.5314C12.2214 14.6394 11.8056 14.7682 11.0407 14.8046C10.2123 14.8436 9.96413 14.8518 7.86665 14.8563C5.76918 14.8609 5.52176 14.8524 4.69342 14.8166M11.0964 4.21906C11.0968 4.40549 11.1523 4.58764 11.2562 4.74247C11.36 4.89731 11.5075 5.01787 11.6798 5.08891C11.8522 5.15995 12.0417 5.17829 12.2245 5.14159C12.4073 5.10489 12.5751 5.01481 12.7067 4.88274C12.8383 4.75067 12.9277 4.58255 12.9638 4.39963C12.9998 4.21671 12.9808 4.02722 12.9091 3.85512C12.8374 3.68302 12.7163 3.53603 12.5611 3.43276C12.4059 3.32949 12.2235 3.27457 12.0371 3.27494C11.7872 3.27544 11.5477 3.37518 11.3713 3.55223C11.1949 3.72927 11.096 3.96913 11.0964 4.21906ZM3.82156 8.42485C3.82596 10.6524 5.63502 12.4541 7.8621 12.4498C10.0892 12.4456 11.8921 10.6367 11.8879 8.40914C11.8836 6.18159 10.0741 4.37945 7.8467 4.38384C5.61931 4.38824 3.81732 6.19762 3.82156 8.42485ZM5.23632 8.42202C5.2353 7.90419 5.38786 7.39768 5.6747 6.96654C5.96154 6.53541 6.36979 6.19901 6.84781 5.9999C7.32584 5.80079 7.85217 5.74789 8.36026 5.84791C8.86835 5.94793 9.33536 6.19637 9.70225 6.56181C10.0691 6.92725 10.3194 7.39328 10.4215 7.90097C10.5235 8.40865 10.4727 8.93519 10.2755 9.41401C10.0782 9.89282 9.74347 10.3024 9.31348 10.5909C8.88348 10.8795 8.37758 11.034 7.85974 11.0351C7.5159 11.0358 7.17528 10.9688 6.85734 10.8378C6.53941 10.7069 6.25037 10.5146 6.00676 10.272C5.76314 10.0293 5.56972 9.74105 5.43752 9.42363C5.30533 9.10622 5.23696 8.76587 5.23632 8.42202Z" fill="currentColor"></path></g><defs><clippath id="clip0_10449_2794"><rect width="15.7091" height="15.7091" fill="currentColor" transform="translate(0 0.5625)"></rect></clippath></defs></svg></div></div><div class="locale_picker_component"><div class="w-locales-list"><div data-delay="0" data-hover="true" class="locale_picker_dropdown w-dropdown"><div data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:23dbb8ba-448e-cd48-ce32-75991afd1771:cd1ce2e1-ed23-1ec6-28c9-fc6c99a0876c" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="cd1ce2e1-ed23-1ec6-28c9-fc6c99a0876c" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%22cd1ce2e1-ed23-1ec6-28c9-fc6c99a08769%22%2C%22instanceId%22%3A%2223dbb8ba-448e-cd48-ce32-75991afd1771%22%7D%5D" class="locale_picker_dropdown_button w-dropdown-toggle"><div class="locale_picker_icon"><div class="icon_wrap u-display-contents"><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 20" fill="none" class="u-svg"><path d="M7.2705 3.0498C11.1054 1.5437 15.4369 3.42942 16.9473 7.26367C18.4585 11.1003 16.5729 15.4359 12.7363 16.9473C8.89982 18.4583 4.56416 16.5736 3.05272 12.7373C1.54288 8.90435 3.42282 4.57201 7.25194 3.05663C7.25547 3.05522 7.25914 3.05413 7.26269 3.05273C7.26523 3.05172 7.26795 3.05079 7.2705 3.0498ZM8.64159 14.5283C8.05764 14.958 7.56418 15.4198 7.17772 15.8896C8.21355 16.3858 9.37633 16.6096 10.5508 16.5098C10.2224 16.2862 9.89754 16.0029 9.58202 15.6748C9.26312 15.3432 8.94744 14.9583 8.64159 14.5283ZM13.1572 12.5351C12.5305 12.6659 11.8818 12.8585 11.2275 13.1162C10.5729 13.3741 9.96666 13.6758 9.41894 14.0078C9.6946 14.3937 9.97385 14.7371 10.2539 15.0283C10.7036 15.4959 11.1332 15.8156 11.5117 15.9863C11.8879 16.1559 12.1765 16.1643 12.3935 16.0791C12.6107 15.9936 12.8179 15.7903 12.9775 15.4092C13.1379 15.0262 13.2342 14.4991 13.2441 13.8506C13.2503 13.4466 13.2187 13.0053 13.1572 12.5351ZM3.63768 8.51855C3.34594 9.76629 3.4167 11.1121 3.92186 12.3945C4.42675 13.6762 5.29203 14.7083 6.35546 15.4219C6.82009 14.8304 7.4201 14.2628 8.12694 13.748C7.6691 12.9972 7.2458 12.1466 6.88378 11.2275C6.52163 10.3082 6.25055 9.397 6.07323 8.53515C5.20566 8.64053 4.38055 8.63422 3.63768 8.51855ZM16.081 12.3828C15.4777 12.3027 14.8015 12.3016 14.081 12.3857C14.1506 12.9087 14.1838 13.4053 14.1767 13.8652C14.1698 14.3208 14.124 14.75 14.0361 15.1377C14.9636 14.4096 15.6617 13.4524 16.081 12.3828ZM11.0947 6.7705C10.4885 7.14026 9.82394 7.47239 9.11425 7.75195C8.40436 8.03157 7.69176 8.2418 6.99608 8.38476C7.16147 9.17591 7.41289 10.0225 7.75292 10.8857C8.09272 11.7483 8.48601 12.5376 8.90429 13.2285C9.51056 12.8587 10.176 12.5276 10.8857 12.248C11.5954 11.9685 12.3075 11.7572 13.0029 11.6143C12.8376 10.8236 12.5869 9.97794 12.2471 9.11523C11.907 8.25206 11.5133 7.46188 11.0947 6.7705ZM13.6426 4.57714C13.178 5.16855 12.5788 5.73625 11.8721 6.25097C12.3302 7.00222 12.754 7.85307 13.1162 8.77245C13.4782 9.69152 13.7485 10.6024 13.9258 11.4639C14.7932 11.3584 15.6185 11.3649 16.3613 11.4805C16.6528 10.233 16.5841 8.88752 16.0791 7.60546C15.5738 6.32297 14.707 5.29067 13.6426 4.57714ZM5.9619 4.86327C5.03547 5.59096 4.33712 6.54756 3.91796 7.6162C4.52106 7.69641 5.19677 7.69821 5.91698 7.61425C5.84736 7.09104 5.81616 6.59385 5.82323 6.13378C5.83026 5.679 5.87418 5.25038 5.9619 4.86327ZM8.48827 4.01367C8.11174 3.8439 7.82256 3.83644 7.60546 3.92187C7.38849 4.0075 7.182 4.20998 7.02245 4.59081C6.86212 4.97369 6.76585 5.50006 6.75585 6.14843C6.74965 6.55226 6.78027 6.99382 6.84179 7.46386C7.46863 7.33317 8.11803 7.14252 8.77245 6.88476C9.42675 6.62702 10.0316 6.32305 10.5791 5.9912C10.3036 5.6057 10.0259 5.26167 9.74608 4.9707C9.29651 4.50322 8.8667 4.18435 8.48827 4.01367ZM12.8223 4.10937C11.7866 3.61351 10.6234 3.3904 9.44921 3.49023C9.77744 3.71355 10.1026 3.99633 10.418 4.32421C10.7368 4.65579 11.0526 5.04068 11.3584 5.4707C11.9424 5.04095 12.4358 4.57931 12.8223 4.10937Z" fill="currentColor"></path></svg></div></div><div>English (US)</div><svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 24 24" fill="none" aria-hidden="true" data-dropdown="arrow" class="locale_picker_dropdown_arrow"><path d="M16.293 9.29297L12 13.586L7.70697 9.29297L6.29297 10.707L12 16.414L17.707 10.707L16.293 9.29297Z" fill="currentColor"></path></svg></div><nav class="locale_picker_dropdown-content w-dropdown-list"><div role="list" class="locale_picker_dropdown-list w-locales-items"><div role="listitem" class="locale_picker_dropdown-item w-locales-item"><a hreflang="en-US" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:23dbb8ba-448e-cd48-ce32-75991afd1771:cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773_instance-0" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%22cd1ce2e1-ed23-1ec6-28c9-fc6c99a08769%22%2C%22instanceId%22%3A%2223dbb8ba-448e-cd48-ce32-75991afd1771%22%7D%5D" href="/app-unavailable-in-region" aria-current="page" class="locale_picker_dropdown-option w--current">English (US)</a></div><div role="listitem" class="locale_picker_dropdown-item w-locales-item"><a hreflang="ja-JP" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:23dbb8ba-448e-cd48-ce32-75991afd1771:cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773_instance-1" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%22cd1ce2e1-ed23-1ec6-28c9-fc6c99a08769%22%2C%22instanceId%22%3A%2223dbb8ba-448e-cd48-ce32-75991afd1771%22%7D%5D" href="/ja-jp/app-unavailable-in-region" class="locale_picker_dropdown-option">日本語 (Japan)</a></div><div role="listitem" class="locale_picker_dropdown-item w-locales-item"><a hreflang="de-DE" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:23dbb8ba-448e-cd48-ce32-75991afd1771:cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773_instance-2" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%22cd1ce2e1-ed23-1ec6-28c9-fc6c99a08769%22%2C%22instanceId%22%3A%2223dbb8ba-448e-cd48-ce32-75991afd1771%22%7D%5D" href="/de-de/app-unavailable-in-region" class="locale_picker_dropdown-option">Deutsch (Germany)</a></div><div role="listitem" class="locale_picker_dropdown-item w-locales-item"><a hreflang="fr-FR" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:23dbb8ba-448e-cd48-ce32-75991afd1771:cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773_instance-3" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%22cd1ce2e1-ed23-1ec6-28c9-fc6c99a08769%22%2C%22instanceId%22%3A%2223dbb8ba-448e-cd48-ce32-75991afd1771%22%7D%5D" href="/fr-fr/app-unavailable-in-region" class="locale_picker_dropdown-option">Français (France)</a></div><div role="listitem" class="locale_picker_dropdown-item w-locales-item"><a hreflang="ko-KR" data-wf-native-id-path="f92de04f-da71-04bd-5dff-76ab9d3b80b1:23dbb8ba-448e-cd48-ce32-75991afd1771:cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773_instance-4" data-wf-ao-click-engagement-tracking="true" data-wf-element-id="cd1ce2e1-ed23-1ec6-28c9-fc6c99a08773" data-wf-component-context="%5B%7B%22componentId%22%3A%22759f53cb-5b4b-89cf-d1a6-4d21b1b92b2e%22%2C%22instanceId%22%3A%22f92de04f-da71-04bd-5dff-76ab9d3b80b1%22%7D%2C%7B%22componentId%22%3A%22cd1ce2e1-ed23-1ec6-28c9-fc6c99a08769%22%2C%22instanceId%22%3A%2223dbb8ba-448e-cd48-ce32-75991afd1771%22%7D%5D" href="/ko-kr/app-unavailable-in-region" class="locale_picker_dropdown-option">한국어 (South Korea)</a></div></div></nav></div></div></div></div></div><div data-wf--spacer--section-space="small" class="u-section-spacer w-variant-d422cbd0-f212-c815-68df-63414354c21d u-ignore-trim"></div><div class="u-embed-js w-embed w-script"><!-- Update copyright year -->
+<script>
+  function initDynamicCurrentYear() {  
+    const currentYear = new Date().getFullYear();
+    const currentYearElements = document.querySelectorAll('[data-current-year]');
+    currentYearElements.forEach(currentYearElement => {
+      currentYearElement.textContent = currentYear;
+    });
+  }
+
+  // Initialize Dynamic Current Year
+  document.addEventListener('DOMContentLoaded', () => {
+    initDynamicCurrentYear();
+  });
+</script></div></section></div><script src="https://d3e54v103j8qbb.cloudfront.net/js/jquery-3.5.1.min.dc5e7f18c8.js?site=6889473510b50328dbb70ae6" type="text/javascript" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script><script src="https://cdn.prod.website-files.com/6889473510b50328dbb70ae6/js/claude-brand.aae4d081.bc55a12a1cb99aac.js" type="text/javascript" integrity="sha384-dAzIyKXfGuB7O9aq3itd4GBy4WyVh7+JK5NtNaFxWsR0Yf1otUoBlyNFlfhd7nev" crossorigin="anonymous"></script><script src="https://cdn.prod.website-files.com/gsap/3.14.2/gsap.min.js" type="text/javascript"></script><script src="https://cdn.prod.website-files.com/gsap/3.14.2/ScrollTrigger.min.js" type="text/javascript"></script><script src="https://cdn.prod.website-files.com/gsap/3.14.2/SplitText.min.js" type="text/javascript"></script><script src="https://cdn.prod.website-files.com/gsap/3.14.2/TextPlugin.min.js" type="text/javascript"></script><script src="https://cdn.prod.website-files.com/gsap/3.14.2/Flip.min.js" type="text/javascript"></script><script src="https://cdn.prod.website-files.com/gsap/3.14.2/Draggable.min.js" type="text/javascript"></script><script src="https://cdn.prod.website-files.com/gsap/3.14.2/InertiaPlugin.min.js" type="text/javascript"></script><script type="text/javascript">gsap.registerPlugin(ScrollTrigger,SplitText,TextPlugin,Flip,Draggable,InertiaPlugin);</script><!-- Swiper JS for Slider component -->
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<!-- Lottie libraries -->
+<script type="module" src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+
+<!-- Directly loaded external custom scripts -->
+<script src="https://cdn.amplitude.com/libs/session-replay-browser-1.29.8-min.js.gz"></script>
+<script src="https://www.anthropic.com/file/claude-animations"></script>
+<script src="https://www.anthropic.com/file/claude-privacy-banner"></script>
+<script src="https://www.anthropic.com/file/claude-custom-tracking"></script>
+
+
+<!-- Conditionally load external custom scripts
+<script>
+  (function() {
+    const productionDomains = ['claude.com', 'www.claude.com'];
+    const isProduction = productionDomains.includes(window.location.hostname);
+    const env = isProduction ? '' : '?env=staging';
+
+    if (isProduction) {
+      document.write('<script src="https://cdn.amplitude.com/libs/session-replay-browser-1.29.8-min.js.gz"><\/script>');
+    }
+
+    document.write('<script src="https://www.anthropic.com/file/claude-animations' + env + '"><\/script>');
+    document.write('<script src="https://www.anthropic.com/file/claude-privacy-banner' + env + '"><\/script>');
+    document.write('<script src="https://www.anthropic.com/file/claude-custom-tracking' + env + '"><\/script>');
+
+  })();
+</script> --></body></html>
