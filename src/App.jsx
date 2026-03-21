@@ -2155,7 +2155,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteIn
         )}
       </div>
 
-      <div style={{padding:"16px 16px 0"}}>
+      <div style={{padding:"8px 16px 0"}}>
         {/* 邀请好友 */}
         <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
           <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🎁 邀请好友</div>
