@@ -417,7 +417,7 @@ export default function App(){
       localStorage.setItem('pindou_warn_crit',String(wC));
     }catch{}
   },[wL,wC]);
-  const [history,setHistory]=useState([]); // [{stock,used}]
+  const [history,setHistory]=useState([]); // [{stock,used,tasks?}]
   const MAX_HISTORY=20;
   const [batch,setBatch]=useState(false);
   const [sel,setSel]=useState(new Set());
@@ -512,49 +512,27 @@ export default function App(){
       nu[id]=(nu[id]||0)+d;
       ns[id]=Math.max(0,(ns[id]||0)-count);
     });
-    pushHistory(stock,used);
-    setStock(ns);setUsed(nu);
 
     if(mode==="new"){
       const name=(newDoneName||"").trim()||getDefaultDoneName();
       const createdId=`done_${Date.now()}`;
-      setUndoInfo({
-        type:"quick_new_done",
-        deducted:true,
+      const newTask={
+        id:createdId,
+        name,
+        img:null,
+        status:"done",
+        doneDate:new Date().toISOString(),
+        elapsedMs:0,
+        startedAt:null,
         colorData,
-        createdTaskId:createdId,
-        expiresAt:Date.now()+10000
-      });
-      setTasks(prev=>[
-        {
-          id:createdId,
-          name,
-          img:null,
-          status:"done",
-          doneDate:new Date().toISOString(),
-          elapsedMs:0,
-          startedAt:null,
-          colorData,
-          sourceType:"quick_done"
-        },
-        ...prev
-      ]);
+        sourceType:"quick_done"
+      };
+      pushHistory(stock,used,tasks);
+      setStock(ns);setUsed(nu);
+      setTasks(prev=>[newTask,...prev]);
     }else if(mode==="link"&&linkedTaskId){
-      const prevTask=tasks.find(t=>t.id===linkedTaskId);
-      setUndoInfo({
-        type:"link_existing_done",
-        deducted:true,
-        colorData,
-        linkedTaskId,
-        prevTaskSnapshot:prevTask?{
-          status:prevTask.status,
-          doneDate:prevTask.doneDate||null,
-          elapsedMs:prevTask.elapsedMs||0,
-          startedAt:prevTask.startedAt||null,
-          colorData:prevTask.colorData||[]
-        }:null,
-        expiresAt:Date.now()+10000
-      });
+      pushHistory(stock,used,tasks);
+      setStock(ns);setUsed(nu);
       setTasks(prev=>prev.map(t=>t.id===linkedTaskId?{
         ...t,
         status:"done",
@@ -562,6 +540,10 @@ export default function App(){
         startedAt:null,
         colorData: colorData.length>0 ? colorData : (t.colorData||[])
       }:t));
+    }else{
+      // 纯扣豆不关联作品
+      pushHistory(stock,used);
+      setStock(ns);setUsed(nu);
     }
 
     setCmdTags([]);
@@ -666,7 +648,7 @@ export default function App(){
 
   const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
 
-  function pushHistory(s,u){setHistory(h=>[...h.slice(-MAX_HISTORY+1),{stock:{...s},used:{...u}}]);}
+  function pushHistory(s,u,t){setHistory(h=>[...h.slice(-MAX_HISTORY+1),{stock:{...s},used:{...u},...(t!==undefined&&{tasks:[...t]})}]);}
 
   const saveStock=useCallback((id,beads)=>{
     pushHistory(stock,used);
@@ -685,6 +667,7 @@ export default function App(){
       const prev=h[h.length-1];
       setStock(prev.stock);
       setUsed(prev.used);
+      if(prev.tasks!==undefined)setTasks(prev.tasks);
       return h.slice(0,-1);
     });
   }
@@ -987,7 +970,7 @@ export default function App(){
           </>}
 
           {/* 作品页 */}
-          {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded}/>}
+          {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
 
           {/* 我的页 */}
           {page==="mine"&&<MinePage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()}/>}
@@ -1444,7 +1427,7 @@ function MissingColorPage({T,stock,onBack}){
 // ══════════════════════════════════
 //  FocusMode（专注模式全屏）
 // ══════════════════════════════════
-function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded}){
+function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded,onPushHistory}){
   const [view,setView]=useState("home");
   const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
   const [showGoalEdit,setShowGoalEdit]=useState(false);
@@ -1458,7 +1441,6 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const [showDoneList,setShowDoneList]=useState(false);
   const [showToolbox,setShowToolbox]=useState(false);
   const [pendingFinishId,setPendingFinishId]=useState(null);
-  const [undoInfo,setUndoInfo]=useState(null);
   const [toolbox,setToolbox]=useState(()=>{try{const s=localStorage.getItem('pindou_toolbox');return s?JSON.parse(s):{
     boards:{"52×52":{qty:0,note:""},"78×78":{qty:0,note:""},"104×104":{qty:0,note:""}},
     needles:{"60针":{qty:0,note:""},"70针":{qty:0,note:""},"80针":{qty:0,note:""}},
@@ -1564,89 +1546,18 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     const add=task.startedAt?(Date.now()-new Date(task.startedAt).getTime()):0;
     const total=(task.elapsedMs||0)+Math.max(0,add);
 
+    // 存快照（含tasks），撤销时一键还原库存+作品
+    onPushHistory(tasks);
+
     if(deduct&&task.colorData&&task.colorData.length>0){
       task.colorData.forEach(c=>{
         if(c?.id&&c?.count>0)onDeductStock(c.id,c.count);
-      });
-      setUndoInfo({
-        taskId:id,
-        deducted:true,
-        colorData:task.colorData,
-        prevStatus:task.status,
-        prevElapsed:task.elapsedMs||0,
-        prevStartedAt:task.startedAt||null,
-        expiresAt:Date.now()+10000
-      });
-    }else{
-      setUndoInfo({
-        taskId:id,
-        deducted:false,
-        colorData:[],
-        prevStatus:task.status,
-        prevElapsed:task.elapsedMs||0,
-        prevStartedAt:task.startedAt||null,
-        expiresAt:Date.now()+10000
       });
     }
 
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString(),elapsedMs:total,startedAt:null}:t));
     setPendingFinishId(null);
   }
-
-  function undoFinish(){
-    if(!undoInfo)return;
-
-    if(undoInfo.type==="quick_new_done"){
-      if(undoInfo.deducted&&undoInfo.colorData?.length){
-        undoInfo.colorData.forEach(c=>{
-          if(c?.id&&c?.count>0)onDeductStock(c.id,-c.count);
-        });
-      }
-      setTasks(prev=>prev.filter(t=>t.id!==undoInfo.createdTaskId));
-      setUndoInfo(null);
-      return;
-    }
-
-    if(undoInfo.type==="link_existing_done"){
-      if(undoInfo.deducted&&undoInfo.colorData?.length){
-        undoInfo.colorData.forEach(c=>{
-          if(c?.id&&c?.count>0)onDeductStock(c.id,-c.count);
-        });
-      }
-      setTasks(prev=>prev.map(t=>t.id===undoInfo.linkedTaskId?{
-        ...t,
-        status:undoInfo.prevTaskSnapshot?.status||"paused",
-        doneDate:undoInfo.prevTaskSnapshot?.doneDate||null,
-        elapsedMs:undoInfo.prevTaskSnapshot?.elapsedMs||0,
-        startedAt:undoInfo.prevTaskSnapshot?.startedAt||null,
-        colorData:undoInfo.prevTaskSnapshot?.colorData||[]
-      }:t));
-      setUndoInfo(null);
-      return;
-    }
-
-    const task=tasks.find(t=>t.id===undoInfo.taskId);
-    if(!task){setUndoInfo(null);return;}
-    if(undoInfo.deducted&&undoInfo.colorData?.length){
-      undoInfo.colorData.forEach(c=>{
-        if(c?.id&&c?.count>0)onDeductStock(c.id,-c.count);
-      });
-    }
-    setTasks(prev=>prev.map(t=>t.id===undoInfo.taskId?{
-      ...t,
-      status:undoInfo.prevStatus||"paused",
-      doneDate:null,
-      elapsedMs:undoInfo.prevElapsed||0,
-      startedAt:undoInfo.prevStartedAt||null
-    }:t));
-    setUndoInfo(null);
-  }
-  useEffect(()=>{
-    if(!undoInfo)return;
-    const ms=Math.max(0,undoInfo.expiresAt-Date.now());
-    const t=setTimeout(()=>setUndoInfo(null),ms);
-    return()=>clearTimeout(t);
-  },[undoInfo]);
 
   function restoreTask(id){
     setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"paused",startedAt:null}:t));
@@ -1974,16 +1885,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
         )}
 
 
-        {undoInfo&&(
-          <div style={{position:"fixed",left:16,right:16,bottom:86,zIndex:1300}}>
-            <div style={{background:"rgba(34,34,34,0.92)",color:"#fff",borderRadius:18,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,boxShadow:"0 8px 24px rgba(0,0,0,0.22)"}}>
-              <div style={{fontSize:12,fontWeight:700,lineHeight:1.5}}>
-                {undoInfo?.type==="quick_new_done"?"已新建完成作品":undoInfo?.type==="link_existing_done"?"已关联到作品": "已标记完成"}{undoInfo.deducted?"，并已扣除库存":""}
-              </div>
-              <button onClick={undoFinish} style={{background:"none",border:"none",color:"#7ec8ff",fontSize:13,fontWeight:900,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>撤销</button>
-            </div>
-          </div>
-        )}
+
 
         {activeTasks.length===0&&(
           <div style={{textAlign:"center",padding:"32px 0",color:T.textLight,fontSize:13}}>还没有图纸～点右上角新建一个吧 (◕ᴗ◕✿)</div>
