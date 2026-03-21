@@ -1970,7 +1970,21 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                     inp.onchange=e=>{
                       const f=e.target.files[0];if(!f)return;
                       const r=new FileReader();
-                      r.onload=ev=>setTasks(prev=>prev.map(t=>t.id===task.id?{...t,img:ev.target.result}:t));
+                      r.onload=ev=>{
+                        const img=new Image();
+                        img.onload=()=>{
+                          const canvas=document.createElement('canvas');
+                          const max=300;
+                          let w=img.width,h=img.height;
+                          if(w>h){if(w>max){h=Math.round(h*max/w);w=max;}}
+                          else{if(h>max){w=Math.round(w*max/h);h=max;}}
+                          canvas.width=w;canvas.height=h;
+                          canvas.getContext('2d').drawImage(img,0,0,w,h);
+                          const compressed=canvas.toDataURL('image/jpeg',0.7);
+                          setTasks(prev=>prev.map(t=>t.id===task.id?{...t,img:compressed}:t));
+                        };
+                        img.src=ev.target.result;
+                      };
                       r.readAsDataURL(f);
                     };
                     inp.click();
