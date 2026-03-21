@@ -393,7 +393,7 @@ export default function App(){
   const [showUpgrade,setShowUpgrade]=useState(false);
   const [inviteInfo,setInviteInfo]=useState({code:"",count:0,bonus:0,trialExp:null});
   const FREE_AI_LIMIT=5;
-  const [freeAiUsed,setFreeAiUsed]=useState(()=>{try{const v=localStorage.getItem('pindou_free_ai_used');return v?Number(v):0}catch{return 0}});
+  const [freeAiUsed,setFreeAiUsed]=useState(0);
   const totalAiLimit = FREE_AI_LIMIT + (inviteInfo.bonus || 0);
 
   const [stock,setStock]=useState(INIT_STOCK);
@@ -402,7 +402,14 @@ export default function App(){
   const [syncStatus,setSyncStatus]=useState(""); // "ok" | "err" | ""
   const [cloudReady,setCloudReady]=useState(false);
   const [page,setPage]=useState("home");
-  useEffect(()=>{try{localStorage.setItem('pindou_free_ai_used',String(freeAiUsed));}catch{}},[freeAiUsed]);
+  // freeAiUsed变化时同步到云端（非Pro才需要）
+  useEffect(()=>{
+    if(!user||isPro)return;
+    const t=setTimeout(async()=>{
+      await supabase.from("profiles").update({free_ai_used:freeAiUsed}).eq("user_id",user.id);
+    },1000);
+    return()=>clearTimeout(t);
+  },[freeAiUsed,user,isPro]);
 
   // 专注模式
   const [focusMode,setFocusMode]=useState(false);
@@ -417,7 +424,7 @@ export default function App(){
       // 拉库存
       const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
       // 拉plan
-      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at, trial_expires_at, bonus_ai_count, invite_code, invite_count").eq("user_id",user.id).single();
+      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at, trial_expires_at, bonus_ai_count, invite_code, invite_count, free_ai_used").eq("user_id",user.id).single();
       const now=new Date();
       const isTesterPro=profile?.plan==="tester_pro" && profile?.pro_expires_at && new Date(profile.pro_expires_at)>now;
       const isPaidPro=profile?.plan==="pro";
@@ -436,6 +443,10 @@ export default function App(){
         bonus: profile?.bonus_ai_count || 0,
         trialExp: profile?.trial_expires_at || null,
       });
+      // 从云端加载已用识图次数（非Pro才需要）
+      if(!nextIsPro){
+        setFreeAiUsed(profile?.free_ai_used || 0);
+      }
       if(!nextIsPro)setSyncStatus("");
       if(error){
         setSyncStatus("err");
@@ -670,6 +681,8 @@ export default function App(){
       const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:finalB64})});
       const data=await resp.json();
       if(data.result&&data.result!=='无法识别'){
+        // Free用户才消耗次数，Pro期间不计入
+        if(!isPro) setFreeAiUsed(v=>v+1);
         // 解析成tags
         const tags=data.result.split(/[,，]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
           const m=s.match(/^([A-Za-z]+\d+|全部)\s*([+-])\s*(\d+)$/i);
@@ -824,14 +837,15 @@ export default function App(){
 
   async function handleLogout(){
     await supabase.auth.signOut();
-    // 清掉本地缓存，避免下个账号看到旧数据
     localStorage.removeItem('pindou_stock');
     localStorage.removeItem('pindou_used');
     localStorage.removeItem('pindou_tasks');
+    localStorage.removeItem('pindou_free_ai_used');
     setStock(INIT_STOCK);
     setUsed(INIT_USED);
     setTasks([]);
     setHistory([]);
+    setFreeAiUsed(0);
     setUser(null);
   }
 
@@ -1795,20 +1809,20 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
       {/* 工具入口 */}
       <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setView("missing");}}
-          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
-          <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔍</div>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>缺色替换</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
-            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>找库存替代色</div>
-          </div>
-        </div>
         <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setView("diary");}}
           style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
           <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#fff0f8,#ffd6ee)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>📖</div>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>拼豆日记</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
             <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>记录拼豆时光</div>
+          </div>
+        </div>
+        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
+          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
+          <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🧰</div>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>工具箱</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
+            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>豆板豆针豆铲</div>
           </div>
         </div>
       </div>
@@ -1819,7 +1833,6 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
           <div style={{fontSize:13,fontWeight:800,color:T.text}}>🍞 即将出炉</div>
           <div style={{display:"flex",gap:6,alignItems:"center",justifyContent:"flex-end",flexShrink:0}}>
             <button onClick={()=>{pickOne();setPickerOpen(true);}} style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>🎩 翻一翻</button>
-            <button onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}} style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>{isPro?"🧰 工具箱":"🧰 工具箱 · Pro"}</button>
             <button onClick={openAddModal} style={{padding:"5px 10px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>＋ 新建</button>
           </div>
         </div>
@@ -2151,7 +2164,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteIn
         {isPro?(
           <div style={{marginTop:10,padding:"6px 16px",borderRadius:50,background:"linear-gradient(90deg,#ffd166,#ffb347)",fontSize:11,fontWeight:900,color:"#7a4000"}}>✦ Pro 会员 · 全功能已解锁</div>
         ):(
-          <div className="cc" onClick={onUpgrade} style={{marginTop:10,padding:"7px 18px",borderRadius:50,background:"linear-gradient(135deg,#fff8ec,#ffe0a0)",border:"1.5px solid #ffd166",fontSize:12,fontWeight:900,color:"#b87c00",cursor:"pointer",boxShadow:"0 2px 8px rgba(255,209,102,0.25)"}}>🌟 升级 Pro · 解锁全功能</div>
+          <div className="cc" onClick={onUpgrade} style={{marginTop:10,padding:"7px 18px",borderRadius:50,background:"linear-gradient(135deg,#ffe066,#ffd166,#ffb347)",border:"1.5px solid #ffd166",fontSize:12,fontWeight:900,color:"#7a4000",cursor:"pointer",boxShadow:"0 2px 12px rgba(255,209,102,0.45)"}}>🌟 升级 Pro · 解锁全功能</div>
         )}
       </div>
 
