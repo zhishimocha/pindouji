@@ -1,7 +1,7 @@
 {
   "name": "拼豆记",
   "short_name": "拼豆记",
-  "description": "拼豆库存管家，AI识图扣豆，云端同步",
+  "description": "拼豆记，AI识图扣豆，云端同步",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f0f7ff",
