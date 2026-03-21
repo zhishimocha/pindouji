@@ -125,10 +125,26 @@ function JarLogo({ accent, size=110 }) {
   );
 }
 
+const MASTER_INVITE_CODE = "PINDOU"; // 总推广码
+const INVITE_LIMIT = 5;              // 每人最多邀请人数
+const INVITE_BONUS = 2;              // 每邀请1人得识图次数
+const TRIAL_DAYS = 3;                // 试用天数
+
+function genInviteCode(uid) {
+  // 用uid生成6位邀请码
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[parseInt(uid.replace(/-/g,"").slice(i*4, i*4+4), 16) % chars.length];
+  }
+  return code;
+}
+
 function AuthPage({ T, tn, onLogin }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteInput, setInviteInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -152,9 +168,43 @@ function AuthPage({ T, tn, onLogin }) {
     if (!email || !password) { setErr("请填写邮箱和密码～"); return; }
     setLoading(true);
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) setErr(error.message);
-      else setMsg("注册成功！直接登录就可以啦～");
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) { setErr(error.message); setLoading(false); return; }
+      const uid = data.user?.id;
+      if (uid) {
+        const myCode = genInviteCode(uid);
+        const code = inviteInput.trim().toUpperCase();
+        let profileUpdate = { invite_code: myCode, invite_count: 0, bonus_ai_count: 0 };
+
+        if (code) {
+          const isMaster = code === MASTER_INVITE_CODE;
+          if (isMaster) {
+            // 总推广码：直接给试用
+            const trialExp = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
+            profileUpdate.trial_expires_at = trialExp;
+            profileUpdate.invited_by = MASTER_INVITE_CODE;
+          } else {
+            // 普通邀请码：找邀请人
+            const { data: inviterRow } = await supabase.from("profiles")
+              .select("user_id, invite_count, bonus_ai_count")
+              .eq("invite_code", code)
+              .single();
+            if (inviterRow && inviterRow.invite_count < INVITE_LIMIT) {
+              // 给新用户试用
+              const trialExp = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
+              profileUpdate.trial_expires_at = trialExp;
+              profileUpdate.invited_by = code;
+              // 给邀请人加次数
+              await supabase.from("profiles").update({
+                invite_count: inviterRow.invite_count + 1,
+                bonus_ai_count: (inviterRow.bonus_ai_count || 0) + INVITE_BONUS
+              }).eq("user_id", inviterRow.user_id);
+            }
+          }
+        }
+        await supabase.from("profiles").upsert({ user_id: uid, ...profileUpdate });
+      }
+      setMsg("注册成功！直接登录就可以啦～");
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setErr("邮箱或密码错误，请重试～");
@@ -181,6 +231,9 @@ function AuthPage({ T, tn, onLogin }) {
             <input value={email} onChange={e => setEmail(e.target.value)} placeholder="邮箱地址" type="email" style={inp()} />
             <input value={password} onChange={e => setPassword(e.target.value)} placeholder="密码（至少6位）" type="password" style={inp()}
               onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+            {mode==="signup"&&(
+              <input value={inviteInput} onChange={e=>setInviteInput(e.target.value)} placeholder="邀请码（选填）" style={inp({borderStyle:"dashed"})}/>
+            )}
           </div>
           {err && <div style={{ marginTop: 10, fontSize: 12, color: T.danger, fontWeight: 600 }}>{err}</div>}
           {msg && <div style={{ marginTop: 10, fontSize: 12, color: "#4caf50", fontWeight: 600 }}>{msg}</div>}
@@ -338,8 +391,10 @@ export default function App(){
 
   const [isPro,setIsPro]=useState(false);
   const [showUpgrade,setShowUpgrade]=useState(false);
+  const [inviteInfo,setInviteInfo]=useState({code:"",count:0,bonus:0,trialExp:null});
   const FREE_AI_LIMIT=5;
   const [freeAiUsed,setFreeAiUsed]=useState(()=>{try{const v=localStorage.getItem('pindou_free_ai_used');return v?Number(v):0}catch{return 0}});
+  const totalAiLimit = FREE_AI_LIMIT + (inviteInfo.bonus || 0);
 
   const [stock,setStock]=useState(INIT_STOCK);
   const [used,setUsed]=useState(INIT_USED);
@@ -362,13 +417,25 @@ export default function App(){
       // 拉库存
       const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
       // 拉plan
-      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at").eq("user_id",user.id).single();
+      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at, trial_expires_at, bonus_ai_count, invite_code, invite_count").eq("user_id",user.id).single();
       const now=new Date();
       const isTesterPro=profile?.plan==="tester_pro" && profile?.pro_expires_at && new Date(profile.pro_expires_at)>now;
       const isPaidPro=profile?.plan==="pro";
       const isAdmin=profile?.role==="admin";
-      const nextIsPro=!!(isAdmin||isPaidPro||isTesterPro);
+      const isTrialPro=profile?.trial_expires_at && new Date(profile.trial_expires_at)>now;
+      const nextIsPro=!!(isAdmin||isPaidPro||isTesterPro||isTrialPro);
       setIsPro(nextIsPro);
+      // 邀请码不存在时自动生成
+      if(!profile?.invite_code){
+        const myCode=genInviteCode(user.id);
+        await supabase.from("profiles").update({invite_code:myCode}).eq("user_id",user.id);
+      }
+      setInviteInfo({
+        code: profile?.invite_code || genInviteCode(user.id),
+        count: profile?.invite_count || 0,
+        bonus: profile?.bonus_ai_count || 0,
+        trialExp: profile?.trial_expires_at || null,
+      });
       if(!nextIsPro)setSyncStatus("");
       if(error){
         setSyncStatus("err");
@@ -581,7 +648,7 @@ export default function App(){
 
   async function confirmCrop(){
     if(!cropImg)return;
-    if(!isPro&&freeAiUsed>=FREE_AI_LIMIT){setShowUpgrade(true);return;}
+    if(!isPro&&freeAiUsed>=totalAiLimit){setShowUpgrade(true);return;}
     setImgLoading(true);setImgErr("");
     try{
       let finalB64=cropImg;
@@ -973,7 +1040,7 @@ export default function App(){
           {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
 
           {/* 我的页 */}
-          {page==="mine"&&<MinePage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()}/>}
+          {page==="mine"&&<MinePage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} inviteInfo={inviteInfo}/>}
 
         </div>{/* end 主内容滚动区 */}
 
@@ -1030,14 +1097,14 @@ export default function App(){
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 手动输入：A15-200、全部+100</div>
-                <button className="btn" onClick={()=>{if(!isPro&&freeAiUsed>=FREE_AI_LIMIT){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
+                <button className="btn" onClick={()=>{if(!isPro&&freeAiUsed>=totalAiLimit){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
                   style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap",position:"relative"}}>
                   {imgLoading?"识别中…":"📷 识图"}
-                  {!isPro&&<span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>{Math.max(0,FREE_AI_LIMIT-freeAiUsed)}次</span>}
+                  {!isPro&&<span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>{Math.max(0,totalAiLimit-freeAiUsed)}次</span>}
                 </button>
                 <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
               </div>
-              {!isPro&&<div style={{fontSize:10,color:T.textLight,fontWeight:700,marginTop:-2}}>免费版剩余 AI 识图 {Math.max(0,FREE_AI_LIMIT-freeAiUsed)} 次，Pro 无限次</div>}
+              {!isPro&&<div style={{fontSize:10,color:T.textLight,fontWeight:700,marginTop:-2}}>免费版剩余 AI 识图 {Math.max(0,totalAiLimit-freeAiUsed)} 次，Pro 无限次</div>}
               <textarea value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
                 placeholder={"A15-200, B3+500, 全部-100"}
                 rows={2}
@@ -2021,7 +2088,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 // ══════════════════════════════════
 //  MinePage（我的页）
 // ══════════════════════════════════
-function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
+function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteInfo}){
   const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
   const [nickname,setNickname]=useState(()=>localStorage.getItem('pindou_nickname')||"");
   const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
@@ -2095,6 +2162,26 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport}){
             <div style={{fontSize:11,color:"#9a6a00",marginTop:3}}>全功能已解锁，享受拼豆乐趣～</div>
           </div>
         )}
+
+        {/* 邀请好友 */}
+        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
+          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🎁 邀请好友</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+            <div style={{flex:1,background:T.accentSoft,borderRadius:12,padding:"10px 14px",fontSize:16,fontWeight:900,color:T.accent,letterSpacing:2,textAlign:"center"}}>{inviteInfo.code||"加载中…"}</div>
+            <button onClick={()=>{navigator.clipboard.writeText(inviteInfo.code);}} style={{padding:"10px 14px",borderRadius:12,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>复制</button>
+          </div>
+          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7,marginBottom:8}}>
+            好友填你的邀请码注册 → 好友得 <b style={{color:T.accent}}>3天Pro试用</b><br/>
+            你每邀请1人 → 得 <b style={{color:T.accent}}>+2次AI识图</b>，最多邀请5人
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{flex:1,background:T.bg,borderRadius:10,height:6,overflow:"hidden"}}>
+              <div style={{width:`${Math.min((inviteInfo.count||0)/5*100,100)}%`,height:"100%",background:T.accent,borderRadius:10,transition:"width 0.4s"}}/>
+            </div>
+            <div style={{fontSize:11,color:T.textMid,fontWeight:700,whiteSpace:"nowrap"}}>{inviteInfo.count||0} / 5 人</div>
+          </div>
+          {(inviteInfo.bonus||0)>0&&<div style={{marginTop:8,fontSize:11,color:"#4caf50",fontWeight:700}}>🎉 已获得 {inviteInfo.bonus} 次额外识图</div>}
+        </div>
 
         {/* 数据管理 */}
         <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
