@@ -824,6 +824,14 @@ export default function App(){
 
   async function handleLogout(){
     await supabase.auth.signOut();
+    // 清掉本地缓存，避免下个账号看到旧数据
+    localStorage.removeItem('pindou_stock');
+    localStorage.removeItem('pindou_used');
+    localStorage.removeItem('pindou_tasks');
+    setStock(INIT_STOCK);
+    setUsed(INIT_USED);
+    setTasks([]);
+    setHistory([]);
     setUser(null);
   }
 
@@ -2113,7 +2121,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteIn
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",padding:"0 0 20px"}}>
       {/* 头部 */}
-      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 20px 16px",display:"flex",flexDirection:"column",alignItems:"center"}}>
+      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"16px 20px 14px",display:"flex",flexDirection:"column",alignItems:"center"}}>
         {/* 头像 */}
         <div onClick={()=>avatarRef.current?.click()} style={{position:"relative",marginBottom:12,cursor:"pointer"}}>
           <div style={{width:76,height:76,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,overflow:"hidden",boxShadow:`0 4px 16px ${T.accent}44`}}>
