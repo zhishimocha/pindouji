@@ -125,10 +125,10 @@ function JarLogo({ accent, size=110 }) {
   );
 }
 
-const MASTER_INVITE_CODE = "PINDOU"; // 总推广码
-const INVITE_LIMIT = 5;              // 每人最多邀请人数
-const INVITE_BONUS = 2;              // 每邀请1人得识图次数
-const TRIAL_DAYS = 3;                // 试用天数
+const MASTER_INVITE_CODE = "PINDOU";
+const INVITE_LIMIT = 5;
+const INVITE_BONUS = 2;
+const TRIAL_DAYS = 3;
 
 function genInviteCode(uid) {
   // 用uid生成6位邀请码
@@ -172,39 +172,21 @@ function AuthPage({ T, tn, onLogin }) {
       if (error) { setErr(error.message); setLoading(false); return; }
       const uid = data.user?.id;
       if (uid) {
-        const myCode = genInviteCode(uid);
-        const code = inviteInput.trim().toUpperCase();
-        let profileUpdate = { invite_code: myCode, invite_count: 0, bonus_ai_count: 0 };
-
-        if (code) {
-          const isMaster = code === MASTER_INVITE_CODE;
-          if (isMaster) {
-            // 总推广码：直接给试用
-            const trialExp = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
-            profileUpdate.trial_expires_at = trialExp;
-            profileUpdate.invited_by = MASTER_INVITE_CODE;
-          } else {
-            // 普通邀请码：找邀请人
-            const { data: inviterRow } = await supabase.from("profiles")
-              .select("user_id, invite_count, bonus_ai_count")
-              .eq("invite_code", code)
-              .single();
-            if (inviterRow && inviterRow.invite_count < INVITE_LIMIT) {
-              // 给新用户试用
-              const trialExp = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
-              profileUpdate.trial_expires_at = trialExp;
-              profileUpdate.invited_by = code;
-              // 给邀请人加次数
-              await supabase.from("profiles").update({
-                invite_count: inviterRow.invite_count + 1,
-                bonus_ai_count: (inviterRow.bonus_ai_count || 0) + INVITE_BONUS
-              }).eq("user_id", inviterRow.user_id);
-            }
-          }
+        // 调服务端API处理邀请码，用service_role key绕过RLS
+        const resp = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid, inviteCode: inviteInput.trim() }),
+        });
+        const result = await resp.json();
+        if (result.hasTrial) {
+          setMsg("注册成功！已获得3天Pro试用，直接登录吧～🎉");
+        } else {
+          setMsg("注册成功！直接登录就可以啦～");
         }
-        await supabase.from("profiles").upsert({ user_id: uid, ...profileUpdate });
+      } else {
+        setMsg("注册成功！直接登录就可以啦～");
       }
-      setMsg("注册成功！直接登录就可以啦～");
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setErr("邮箱或密码错误，请重试～");
@@ -425,9 +407,6 @@ export default function App(){
       const isTrialPro=profile?.trial_expires_at && new Date(profile.trial_expires_at)>now;
       const nextIsPro=!!(isAdmin||isPaidPro||isTesterPro||isTrialPro);
       setIsPro(nextIsPro);
-      // 临时调试
-      console.log("DEBUG profile:", JSON.stringify(profile));
-      console.log("DEBUG isAdmin:", isAdmin, "isPaidPro:", isPaidPro, "isTrialPro:", isTrialPro, "nextIsPro:", nextIsPro);
       // 邀请码不存在时自动生成
       if(!profile?.invite_code){
         const myCode=genInviteCode(user.id);
