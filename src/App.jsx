@@ -1498,20 +1498,10 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const [showDoneList,setShowDoneList]=useState(false);
   const [showToolbox,setShowToolbox]=useState(false);
   const [pendingFinishId,setPendingFinishId]=useState(null);
-  const [toolbox,setToolbox]=useState(()=>{try{const s=localStorage.getItem('pindou_toolbox');return s?JSON.parse(s):{
-    boards:{"52×52":{qty:0,note:""},"78×78":{qty:0,note:""},"104×104":{qty:0,note:""}},
-    needles:{"60针":{qty:0,note:""},"70针":{qty:0,note:""},"80针":{qty:0,note:""}},
-    shovels:{"6道":{qty:0,note:""},"7道":{qty:0,note:""},"10道":{qty:0,note:""},"12道":{qty:0,note:""},"15道":{qty:0,note:""}},
-    devices:{'熨斗':{owned:false,note:""},'烫画机':{owned:false,note:""},'打孔器':{owned:false,note:""}},
-    supplies:{'钥匙扣':{qty:0,note:""},'澡巾':{qty:0,note:""},'挂件':{qty:0,note:""},'烘焙布':{qty:0,note:""},'烫纸':{qty:0,note:""}}
-  }}catch{return {
-    boards:{"52×52":{qty:0,note:""},"78×78":{qty:0,note:""},"104×104":{qty:0,note:""}},
-    needles:{"60针":{qty:0,note:""},"70针":{qty:0,note:""},"80针":{qty:0,note:""}},
-    shovels:{"6道":{qty:0,note:""},"7道":{qty:0,note:""},"10道":{qty:0,note:""},"12道":{qty:0,note:""},"15道":{qty:0,note:""}},
-    devices:{'熨斗':{owned:false,note:""},'烫画机':{owned:false,note:""},'打孔器':{owned:false,note:""}},
-    supplies:{'钥匙扣':{qty:0,note:""},'澡巾':{qty:0,note:""},'挂件':{qty:0,note:""},'烘焙布':{qty:0,note:""},'烫纸':{qty:0,note:""}}
-  }}}); 
-  const [toolOpen,setToolOpen]=useState({boards:true,needles:false,shovels:false,devices:false,supplies:false});
+  const [toolbox,setToolbox]=useState(()=>{
+    try{const s=localStorage.getItem('pindou_toolbox');if(s){const p=JSON.parse(s);return Array.isArray(p)?p:migrateToolboxLegacy(p);}}catch{}
+    return DEFAULT_TOOLBOX_ARRAY;
+  });
   const newImgRef=useRef(null);
   const [longPressId,setLongPressId]=useState(null);
   const longPressTimer=useRef(null);
@@ -1529,25 +1519,6 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
   function openAddModal(){setNewName("");setNewImg(null);setShowAddModal(true);}
   function closeAddModal(){setShowAddModal(false);}
-
-  function updateToolQty(group,key,delta){
-    setToolbox(prev=>{
-      const cur=prev[group][key]||{qty:0,note:""};
-      return {...prev,[group]:{...prev[group],[key]:{...cur,qty:Math.max(0,(cur.qty||0)+delta)}}};
-    });
-  }
-  function updateToolNote(group,key,val){
-    setToolbox(prev=>{
-      const cur=prev[group][key]||{qty:0,note:""};
-      return {...prev,[group]:{...prev[group],[key]:{...cur,note:val}}};
-    });
-  }
-  function toggleToolOwned(key){
-    setToolbox(prev=>{
-      const cur=prev.devices[key]||{owned:false,note:""};
-      return {...prev,devices:{...prev.devices,[key]:{...cur,owned:!cur.owned}}};
-    });
-  }
 
   function saveNewTask(){
     if(!newName.trim())return;
@@ -1847,81 +1818,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
         )}
 
 
-        {showToolbox&&(
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
-            onClick={()=>setShowToolbox(false)}>
-            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,maxHeight:"85vh",background:T.card,borderRadius:"24px 24px 0 0",overflow:"hidden",display:"flex",flexDirection:"column"}}>
-              <div style={{padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${T.border}`}}>
-                <div style={{fontSize:15,fontWeight:900,color:T.text}}>🧰 工具箱</div>
-                <button onClick={()=>setShowToolbox(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
-              </div>
-              <div style={{padding:"14px 16px 24px",overflowY:"auto"}}>
-
-                {[
-                  ["boards","豆板",toolbox.boards],
-                  ["needles","豆针",toolbox.needles],
-                  ["shovels","豆铲",toolbox.shovels],
-                ].map(([group,title,items])=>(
-                  <div key={group} style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
-                    <div onClick={()=>setToolOpen(v=>({...v,[group]:!v[group]}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen[group]?10:0}}>
-                      <div style={{fontSize:13,fontWeight:900,color:T.text}}>{title}</div>
-                      <div style={{fontSize:14,color:T.textMid}}>{toolOpen[group]?"▾":"▸"}</div>
-                    </div>
-                    {toolOpen[group]&&Object.entries(items).map(([key,val])=>(
-                      <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
-                        <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                          <button onClick={()=>updateToolQty(group,key,-1)} style={{width:28,height:28,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
-                          <div style={{minWidth:34,textAlign:"center",fontSize:13,fontWeight:900,color:T.text}}>{val.qty||0}</div>
-                          <button onClick={()=>updateToolQty(group,key,1)} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
-                        </div>
-                        <input value={val.note||""} onChange={e=>updateToolNote(group,key,e.target.value)} placeholder="备注，比如：2块A店买的，2块B店买的"
-                          style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-
-                <div style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
-                  <div onClick={()=>setToolOpen(v=>({...v,devices:!v.devices}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen.devices?10:0}}>
-                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>固定设备</div>
-                    <div style={{fontSize:14,color:T.textMid}}>{toolOpen.devices?"▾":"▸"}</div>
-                  </div>
-                  {toolOpen.devices&&Object.entries(toolbox.devices).map(([key,val])=>(
-                    <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
-                      <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
-                      <button onClick={()=>toggleToolOwned(key)} style={{padding:"8px 14px",borderRadius:50,border:`1.5px solid ${val.owned?T.accent:T.border}`,background:val.owned?T.accentSoft:T.card,color:val.owned?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",marginBottom:8}}>
-                        {val.owned?"已拥有":"未拥有"}
-                      </button>
-                      <input value={val.note||""} onChange={e=>updateToolNote('devices',key,e.target.value)} placeholder="备注"
-                        style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 12px 8px",marginBottom:12}}>
-                  <div onClick={()=>setToolOpen(v=>({...v,supplies:!v.supplies}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",marginBottom:toolOpen.supplies?10:0}}>
-                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>配件 / 耗材</div>
-                    <div style={{fontSize:14,color:T.textMid}}>{toolOpen.supplies?"▾":"▸"}</div>
-                  </div>
-                  {toolOpen.supplies&&Object.entries(toolbox.supplies).map(([key,val])=>(
-                    <div key={key} style={{padding:"10px 0",borderTop:`1px dashed ${T.border}`}}>
-                      <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8}}>{key}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                        <button onClick={()=>updateToolQty('supplies',key,-1)} style={{width:28,height:28,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
-                        <div style={{minWidth:34,textAlign:"center",fontSize:13,fontWeight:900,color:T.text}}>{val.qty||0}</div>
-                        <button onClick={()=>updateToolQty('supplies',key,1)} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
-                      </div>
-                      <input value={val.note||""} onChange={e=>updateToolNote('supplies',key,e.target.value)} placeholder="备注"
-                        style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,padding:"9px 12px",fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:"none",boxSizing:"border-box"}}/>
-                    </div>
-                  ))}
-                </div>
-
-              </div>
-            </div>
-          </div>
-        )}
+        {showToolbox&&<ToolboxModal toolbox={toolbox} setToolbox={setToolbox} T={T} onClose={()=>setShowToolbox(false)}/>}
 
         {pendingFinishId&&(
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
@@ -2460,6 +2357,200 @@ function DiaryPage({T}){
             这天还没有记录哦 ·˖✦ <span onClick={()=>openEdit(rkey(curYear,curMonth,selDay))} style={{color:T.accent,fontWeight:700,cursor:"pointer"}}>新建记录</span>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════ 工具箱辅助 ══════════════
+function reorderArr(arr,from,to){
+  if(from===to||from<0||to<0||from>=arr.length||to>=arr.length)return arr;
+  const r=[...arr];const[item]=r.splice(from,1);r.splice(to,0,item);return r;
+}
+const DEFAULT_TOOLBOX_ARRAY=[
+  {id:'boards',name:'豆板',type:'qty',items:[
+    {id:'b1',name:'52×52',qty:0,note:''},{id:'b2',name:'78×78',qty:0,note:''},{id:'b3',name:'104×104',qty:0,note:''}
+  ]},
+  {id:'needles',name:'豆针',type:'qty',items:[
+    {id:'n1',name:'60针',qty:0,note:''},{id:'n2',name:'70针',qty:0,note:''},{id:'n3',name:'80针',qty:0,note:''}
+  ]},
+  {id:'shovels',name:'豆铲',type:'qty',items:[
+    {id:'s1',name:'6道',qty:0,note:''},{id:'s2',name:'7道',qty:0,note:''},{id:'s3',name:'10道',qty:0,note:''},{id:'s4',name:'12道',qty:0,note:''},{id:'s5',name:'15道',qty:0,note:''}
+  ]},
+  {id:'devices',name:'固定设备',type:'owned',items:[
+    {id:'d1',name:'熨斗',owned:false,note:''},{id:'d2',name:'烫画机',owned:false,note:''},{id:'d3',name:'打孔器',owned:false,note:''}
+  ]},
+  {id:'supplies',name:'配件/耗材',type:'qty',items:[
+    {id:'sp1',name:'钥匙扣',qty:0,note:''},{id:'sp2',name:'澡巾',qty:0,note:''},{id:'sp3',name:'挂件',qty:0,note:''},{id:'sp4',name:'烘焙布',qty:0,note:''},{id:'sp5',name:'烫纸',qty:0,note:''}
+  ]},
+];
+function migrateToolboxLegacy(old){
+  if(!old||typeof old!=='object')return DEFAULT_TOOLBOX_ARRAY;
+  const mkItems=(obj,type)=>Object.entries(obj||{}).map(([name,val],i)=>({
+    id:type[0]+i+'_'+Date.now(),name,
+    ...(type==='qty'?{qty:val.qty||0}:{owned:val.owned||false}),
+    note:val.note||''
+  }));
+  return[
+    {id:'boards',name:'豆板',type:'qty',items:mkItems(old.boards,'qty')},
+    {id:'needles',name:'豆针',type:'qty',items:mkItems(old.needles,'qty')},
+    {id:'shovels',name:'豆铲',type:'qty',items:mkItems(old.shovels,'qty')},
+    {id:'devices',name:'固定设备',type:'owned',items:mkItems(old.devices,'owned')},
+    {id:'supplies',name:'配件/耗材',type:'qty',items:mkItems(old.supplies,'qty')},
+  ];
+}
+
+// ══════════════ 工具箱弹窗 ══════════════
+function ToolboxModal({toolbox,setToolbox,T,onClose}){
+  const [openCats,setOpenCats]=useState(()=>Object.fromEntries(toolbox.map((c,i)=>[c.id,i===0])));
+  const [editing,setEditing]=useState(null);
+  const [catDrag,setCatDrag]=useState(null);
+  const [itemDrags,setItemDrags]=useState({});
+
+  const catDisplay=useMemo(()=>{
+    if(!catDrag||catDrag.from===catDrag.to)return toolbox;
+    return reorderArr(toolbox,catDrag.from,catDrag.to);
+  },[toolbox,catDrag]);
+
+  const getItemDisplay=useCallback((cat)=>{
+    const d=itemDrags[cat.id];
+    if(!d||d.from===d.to)return cat.items;
+    return reorderArr(cat.items,d.from,d.to);
+  },[itemDrags]);
+
+  const tb=(catId,fn)=>setToolbox(prev=>prev.map(c=>c.id!==catId?c:fn(c)));
+  function updateQty(catId,itemId,delta){tb(catId,c=>({...c,items:c.items.map(it=>it.id!==itemId?it:{...it,qty:Math.max(0,(it.qty||0)+delta)})}));}
+  function updateNote(catId,itemId,val){tb(catId,c=>({...c,items:c.items.map(it=>it.id!==itemId?it:{...it,note:val})}));}
+  function toggleOwned(catId,itemId){tb(catId,c=>({...c,items:c.items.map(it=>it.id!==itemId?it:{...it,owned:!it.owned})}));}
+  function addItem(catId){
+    const nid='i'+Date.now();
+    const cat=toolbox.find(c=>c.id===catId);
+    const ni=cat.type==='qty'?{id:nid,name:'新规格',qty:0,note:''}:{id:nid,name:'新条目',owned:false,note:''};
+    tb(catId,c=>({...c,items:[...c.items,ni]}));
+    setOpenCats(v=>({...v,[catId]:true}));
+    setTimeout(()=>setEditing({scope:'item',catId,itemId:nid,value:ni.name}),30);
+  }
+  function deleteItem(catId,itemId){tb(catId,c=>({...c,items:c.items.filter(it=>it.id!==itemId)}));}
+  function addCat(type){
+    const nid='c'+Date.now();
+    setToolbox(prev=>[...prev,{id:nid,name:'新类目',type,items:[]}]);
+    setOpenCats(v=>({...v,[nid]:true}));
+    setTimeout(()=>setEditing({scope:'cat',catId:nid,value:'新类目'}),30);
+  }
+  function deleteCat(catId){setToolbox(prev=>prev.filter(c=>c.id!==catId));}
+  function saveEdit(){
+    if(!editing)return;
+    const val=editing.value.trim();
+    if(!val){setEditing(null);return;}
+    if(editing.scope==='cat'){setToolbox(prev=>prev.map(c=>c.id!==editing.catId?c:{...c,name:val}));}
+    else{tb(editing.catId,c=>({...c,items:c.items.map(it=>it.id!==editing.itemId?it:{...it,name:val})}));}
+    setEditing(null);
+  }
+
+  const CAT_H=54,ITEM_H=110;
+  function onCatStart(origIdx,e){e.stopPropagation();setCatDrag({from:origIdx,to:origIdx,startY:e.touches[0].clientY});}
+  function onCatMove(e){
+    if(!catDrag)return;
+    const dy=e.touches[0].clientY-catDrag.startY;
+    const to=Math.max(0,Math.min(toolbox.length-1,Math.round(catDrag.from+dy/CAT_H)));
+    if(to!==catDrag.to)setCatDrag(d=>({...d,to}));
+  }
+  function onCatEnd(){
+    if(catDrag){if(catDrag.from!==catDrag.to)setToolbox(prev=>reorderArr(prev,catDrag.from,catDrag.to));setCatDrag(null);}
+  }
+  function onItemStart(catId,origIdx,e){e.stopPropagation();setItemDrags(v=>({...v,[catId]:{from:origIdx,to:origIdx,startY:e.touches[0].clientY}}));}
+  function onItemMove(catId,e){
+    const d=itemDrags[catId];if(!d)return;
+    const cat=toolbox.find(c=>c.id===catId);
+    const dy=e.touches[0].clientY-d.startY;
+    const to=Math.max(0,Math.min((cat?.items.length||1)-1,Math.round(d.from+dy/ITEM_H)));
+    if(to!==d.to)setItemDrags(v=>({...v,[catId]:{...d,to}}));
+  }
+  function onItemEnd(catId){
+    const d=itemDrags[catId];
+    if(d){if(d.from!==d.to)tb(catId,c=>({...c,items:reorderArr(c.items,d.from,d.to)}));setItemDrags(v=>{const nv={...v};delete nv[catId];return nv;});}
+  }
+
+  const bs={background:'none',border:'none',cursor:'pointer',padding:'2px 5px',display:'flex',alignItems:'center'};
+  const nameInp={border:'1.5px solid',borderRadius:10,padding:'4px 8px',fontFamily:"'Nunito',sans-serif",outline:'none'};
+
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:1200,display:'flex',alignItems:'flex-end',justifyContent:'center'}}
+      onClick={onClose} onTouchMove={onCatMove} onTouchEnd={onCatEnd} onTouchCancel={()=>setCatDrag(null)}>
+      <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,maxHeight:'85vh',background:T.card,borderRadius:'24px 24px 0 0',overflow:'hidden',display:'flex',flexDirection:'column'}}>
+        <div style={{padding:'16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+          <div style={{fontSize:15,fontWeight:900,color:T.text}}>🧰 工具箱</div>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:18,color:T.textMid,cursor:'pointer'}}>✕</button>
+        </div>
+        <div style={{padding:'14px 16px 24px',overflowY:'auto',flex:1}}>
+
+          {catDisplay.map((cat)=>{
+            const origIdx=toolbox.findIndex(c=>c.id===cat.id);
+            const isDragging=catDrag&&origIdx===catDrag.from;
+            const itemDisplay=getItemDisplay(cat);
+            const itemD=itemDrags[cat.id];
+            return(
+              <div key={cat.id} style={{background:T.bg,border:`1.5px solid ${isDragging?T.accent:T.border}`,borderRadius:18,padding:'12px 12px 8px',marginBottom:12,opacity:isDragging?0.65:1,transition:'opacity 0.12s,border-color 0.12s'}}>
+                {/* 大类 header */}
+                <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:openCats[cat.id]?10:0}}>
+                  <div onTouchStart={(e)=>onCatStart(origIdx,e)} style={{cursor:'grab',color:T.textLight,flexShrink:0,padding:'4px 6px',touchAction:'none',userSelect:'none',fontSize:16}}>⠿</div>
+                  {editing?.scope==='cat'&&editing.catId===cat.id?(
+                    <input autoFocus value={editing.value} onChange={e=>setEditing(v=>({...v,value:e.target.value}))} onBlur={saveEdit} onKeyDown={e=>e.key==='Enter'&&saveEdit()}
+                      style={{...nameInp,flex:1,fontWeight:900,fontSize:13,borderColor:T.accent,background:T.card,color:T.text}}/>
+                  ):(
+                    <div onClick={()=>setOpenCats(v=>({...v,[cat.id]:!v[cat.id]}))} style={{flex:1,fontSize:13,fontWeight:900,color:T.text,cursor:'pointer'}}>{cat.name}</div>
+                  )}
+                  <button onClick={()=>setEditing({scope:'cat',catId:cat.id,value:cat.name})} style={{...bs,color:T.textLight,fontSize:12}}>✏️</button>
+                  <button onClick={()=>addItem(cat.id)} style={{...bs,color:T.accent,fontSize:17,fontWeight:900}}>＋</button>
+                  <button onClick={()=>deleteCat(cat.id)} style={{...bs,color:T.textLight,fontSize:12}}>🗑️</button>
+                  <div onClick={()=>setOpenCats(v=>({...v,[cat.id]:!v[cat.id]}))} style={{color:T.textMid,fontSize:14,cursor:'pointer',padding:'4px'}}>{openCats[cat.id]?'▾':'▸'}</div>
+                </div>
+
+                {openCats[cat.id]&&(
+                  <div onTouchMove={(e)=>onItemMove(cat.id,e)} onTouchEnd={()=>onItemEnd(cat.id)} onTouchCancel={()=>setItemDrags(v=>{const nv={...v};delete nv[cat.id];return nv;})}>
+                    {itemDisplay.map((item)=>{
+                      const origItemIdx=cat.items.findIndex(it=>it.id===item.id);
+                      const isItemDragging=itemD&&origItemIdx===itemD.from;
+                      return(
+                        <div key={item.id} style={{padding:'10px 0',borderTop:`1px dashed ${T.border}`,opacity:isItemDragging?0.5:1,transition:'opacity 0.12s'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:8}}>
+                            <div onTouchStart={(e)=>onItemStart(cat.id,origItemIdx,e)} style={{cursor:'grab',color:T.textLight,flexShrink:0,touchAction:'none',userSelect:'none',fontSize:13,padding:'2px 5px'}}>⠿</div>
+                            {editing?.scope==='item'&&editing.catId===cat.id&&editing.itemId===item.id?(
+                              <input autoFocus value={editing.value} onChange={e=>setEditing(v=>({...v,value:e.target.value}))} onBlur={saveEdit} onKeyDown={e=>e.key==='Enter'&&saveEdit()}
+                                style={{...nameInp,flex:1,fontWeight:800,fontSize:12,borderColor:T.accent,background:T.card,color:T.text}}/>
+                            ):(
+                              <div style={{flex:1,fontSize:12,fontWeight:800,color:T.text}}>{item.name}</div>
+                            )}
+                            <button onClick={()=>setEditing({scope:'item',catId:cat.id,itemId:item.id,value:item.name})} style={{...bs,color:T.textLight,fontSize:11}}>✏️</button>
+                            <button onClick={()=>deleteItem(cat.id,item.id)} style={{...bs,color:T.textLight,fontSize:11}}>🗑️</button>
+                          </div>
+                          {cat.type==='qty'?(
+                            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                              <button onClick={()=>updateQty(cat.id,item.id,-1)} style={{width:28,height:28,borderRadius:'50%',border:`1.5px solid ${T.border}`,background:T.card,cursor:'pointer'}}>－</button>
+                              <div style={{minWidth:34,textAlign:'center',fontSize:13,fontWeight:900,color:T.text}}>{item.qty||0}</div>
+                              <button onClick={()=>updateQty(cat.id,item.id,1)} style={{width:28,height:28,borderRadius:'50%',border:'none',background:T.accent,color:'#fff',cursor:'pointer'}}>＋</button>
+                            </div>
+                          ):(
+                            <button onClick={()=>toggleOwned(cat.id,item.id)} style={{padding:'8px 14px',borderRadius:50,border:`1.5px solid ${item.owned?T.accent:T.border}`,background:item.owned?T.accentSoft:T.card,color:item.owned?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:'pointer',marginBottom:8}}>
+                              {item.owned?'已拥有':'未拥有'}
+                            </button>
+                          )}
+                          <input value={item.note||''} onChange={e=>updateNote(cat.id,item.id,e.target.value)} placeholder="备注"
+                            style={{width:'100%',border:`1.5px solid ${T.border}`,borderRadius:12,padding:'9px 12px',fontSize:12,fontFamily:"'Nunito',sans-serif",background:T.card,color:T.text,outline:'none',boxSizing:'border-box'}}/>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div style={{display:'flex',gap:8,marginTop:4}}>
+            <button onClick={()=>addCat('qty')} style={{flex:1,padding:'10px 0',borderRadius:50,border:`1.5px dashed ${T.border}`,background:'transparent',color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:'pointer'}}>＋ 数量类目</button>
+            <button onClick={()=>addCat('owned')} style={{flex:1,padding:'10px 0',borderRadius:50,border:`1.5px dashed ${T.border}`,background:'transparent',color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:'pointer'}}>＋ 拥有类目</button>
+          </div>
+        </div>
       </div>
     </div>
   );
