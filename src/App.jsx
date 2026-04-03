@@ -946,11 +946,16 @@ export default function App(){
                 <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                     <div style={{fontSize:12,color:T.textLight,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
-                    <button className="btn" onClick={()=>setShowRestock(true)} style={{padding:"4px 12px",borderRadius:50,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.accentSoft,color:T.accent}}>
-                      📋 补货清单
-                    </button>
+                    <div style={{display:"flex",gap:6}}>
+                      <button className="btn" onClick={resetData} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
+                        {resetConfirm?"⚠️ 确认清空":"🗑️ 重置"}
+                      </button>
+                      <button className="btn" onClick={()=>setShowRestock(true)} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.accentSoft,color:T.accent}}>
+                        📋 补货清单
+                      </button>
+                    </div>
                   </div>
-                  <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  <div style={{display:"flex",gap:10}}>
                     {[["🟡 即将不足",wL,setWL,T.warn,T.warnBg,T.warnBorder],[" 🔴 不足",wC,setWC,T.danger,T.dangerBg,T.dangerBorder]].map(([lbl,val,set,col,bg,bd])=>(
                       <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:1,background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
                         {lbl}
@@ -958,9 +963,6 @@ export default function App(){
                         <span style={{fontSize:11}}>粒</span>
                       </label>
                     ))}
-                    <button className="btn" onClick={resetData} style={{padding:"4px 8px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:"transparent",color:resetConfirm?T.danger:T.textLight,flexShrink:0}}>
-                      {resetConfirm?"⚠️":"🗑️"}
-                    </button>
                   </div>
                 </div>
                 {[["🟡 即将不足",lowC,T.warnBg,T.warnBorder,T.warn],["🔴 不足",critC,T.dangerBg,T.dangerBorder,T.danger]].map(([title,colors,bg,bd])=>(
@@ -1823,49 +1825,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
 
         {showToolbox&&<ToolboxModal toolbox={toolbox} setToolbox={setToolbox} T={T} onClose={()=>setShowToolbox(false)}/>}
-
-        {showRestock&&(()=>{
-          const restockColors=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wL);
-          const bySeries=SERIES.map(s=>({s,items:restockColors.filter(c=>c.id.startsWith(s))})).filter(x=>x.items.length>0);
-          function copyList(){
-            const txt=bySeries.map(({s,items})=>`【${s}系列】\n${items.map(c=>c.id).join('  ')}`).join('\n\n');
-            navigator.clipboard.writeText(txt).then(()=>{
-              const el=document.getElementById('restock-copy-btn');
-              if(el){el.textContent='✅ 已复制';setTimeout(()=>{el.textContent='📋 复制清单';},1800);}
-            });
-          }
-          return(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
-              onClick={()=>setShowRestock(false)}>
-              <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,maxHeight:"80vh",background:T.card,borderRadius:"24px 24px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-                <div style={{padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
-                  <div style={{fontSize:15,fontWeight:900,color:T.text}}>📋 补货清单</div>
-                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    <button id="restock-copy-btn" onClick={copyList} style={{padding:"5px 14px",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.accentSoft,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>📋 复制清单</button>
-                    <button onClick={()=>setShowRestock(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
-                  </div>
-                </div>
-                <div style={{overflowY:"auto",padding:"14px 16px 24px",flex:1}}>
-                  {restockColors.length===0?(
-                    <div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"24px 0"}}>库存充足，暂无需补货 ✨</div>
-                  ):bySeries.map(({s,items})=>(
-                    <div key={s} style={{marginBottom:16}}>
-                      <div style={{fontSize:12,fontWeight:900,color:T.textMid,marginBottom:8,letterSpacing:0.5}}>{s} 系列</div>
-                      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                        {items.map(c=>(
-                          <div key={c.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                            <div style={{width:36,height:36,borderRadius:10,background:c.hex,border:`1.5px solid ${T.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.1)"}}/>
-                            <div style={{fontSize:10,fontWeight:800,color:T.text}}>{c.id}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {showRestock&&<RestockModal T={T} stock={stock} wL={wL} onClose={()=>setShowRestock(false)}/>}
 
         {pendingFinishId&&(
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
@@ -2409,7 +2369,51 @@ function DiaryPage({T}){
   );
 }
 
-// ══════════════ 工具箱辅助 ══════════════
+// ══════════════ 补货清单弹窗 ══════════════
+function RestockModal({T,stock,wL,onClose}){
+  const restockColors=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wL);
+  const bySeries=SERIES.map(s=>({s,items:restockColors.filter(c=>c.id.startsWith(s))})).filter(x=>x.items.length>0);
+  const [copied,setCopied]=React.useState(false);
+  function copyList(){
+    const txt=bySeries.map(({s,items})=>`【${s}系列】\n${items.map(c=>c.id).join('  ')}`).join('\n\n');
+    navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1800);});
+  }
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+      onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,maxHeight:"80vh",background:T.card,borderRadius:"24px 24px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
+          <div style={{fontSize:15,fontWeight:900,color:T.text}}>📋 补货清单</div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button onClick={copyList} style={{padding:"5px 14px",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.accentSoft,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
+              {copied?"✅ 已复制":"📋 复制清单"}
+            </button>
+            <button onClick={onClose} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
+          </div>
+        </div>
+        <div style={{overflowY:"auto",padding:"14px 16px 24px",flex:1}}>
+          {restockColors.length===0?(
+            <div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"24px 0"}}>库存充足，暂无需补货 ✨</div>
+          ):bySeries.map(({s,items})=>(
+            <div key={s} style={{marginBottom:16}}>
+              <div style={{fontSize:12,fontWeight:900,color:T.textMid,marginBottom:8,letterSpacing:0.5}}>{s} 系列</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {items.map(c=>(
+                  <div key={c.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                    <div style={{width:36,height:36,borderRadius:10,background:c.hex,border:`1.5px solid rgba(0,0,0,0.08)`,boxShadow:"0 1px 4px rgba(0,0,0,0.1)"}}/>
+                    <div style={{fontSize:10,fontWeight:800,color:T.text}}>{c.id}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function reorderArr(arr,from,to){
   if(from===to||from<0||to<0||from>=arr.length||to>=arr.length)return arr;
   const r=[...arr];const[item]=r.splice(from,1);r.splice(to,0,item);return r;
