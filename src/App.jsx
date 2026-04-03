@@ -1173,6 +1173,8 @@ export default function App(){
           </div>
         )}
 
+        {showRestock&&<RestockModal T={T} stock={stock} wL={wL} onClose={()=>setShowRestock(false)}/>}
+
         {/* 专注模式浮动导航条 */}
         {focusMode&&page==="stock"&&!batch&&(
           <div style={{position:"fixed",bottom:70,left:0,right:0,zIndex:250,display:"flex",justifyContent:"center",padding:"0 14px",pointerEvents:"none"}}>
@@ -1825,7 +1827,6 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
 
         {showToolbox&&<ToolboxModal toolbox={toolbox} setToolbox={setToolbox} T={T} onClose={()=>setShowToolbox(false)}/>}
-        {showRestock&&<RestockModal T={T} stock={stock} wL={wL} onClose={()=>setShowRestock(false)}/>}
 
         {pendingFinishId&&(
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
