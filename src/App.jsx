@@ -1525,9 +1525,11 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const [newImg,setNewImg]=useState(null);
   const [newTaskTags,setNewTaskTags]=useState([]); // 新建图纸时选的标签
   const [doneTagFilter,setDoneTagFilter]=useState("全部"); // 已完成筛选标签
-  const [batchTagMode,setBatchTagMode]=useState(false); // 批量贴标签模式
+  const [batchTagMode,setBatchTagMode]=useState(false); // 批量操作选择模式
+  const [batchModeType,setBatchModeType]=useState(null); // tag | move
   const [batchTagSel,setBatchTagSel]=useState(new Set()); // 批量选中的作品id
   const [showBatchTagPicker,setShowBatchTagPicker]=useState(false); // 标签选择弹窗
+  const [showBatchMovePicker,setShowBatchMovePicker]=useState(false); // 移动分类弹窗
   const [pickerOpen,setPickerOpen]=useState(false);
   const [pickedId,setPickedId]=useState(null);
   const [flipAnimating,setFlipAnimating]=useState(false);
@@ -1974,9 +1976,34 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                 <div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                     <div style={{fontSize:12,fontWeight:800,color:T.textMid}}>✅ 已完成</div>
-                    <button onClick={()=>{setBatchTagMode(v=>!v);setBatchTagSel(new Set());}} style={{padding:"3px 10px",borderRadius:50,border:`1.5px solid ${batchTagMode?T.accent:T.border}`,background:batchTagMode?T.accentSoft:"transparent",color:batchTagMode?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>
-                      {batchTagMode?"退出批量":"批量贴标签"}
-                    </button>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <button
+                        onClick={()=>{
+                          if(batchTagMode&&batchModeType==="tag"){
+                            setBatchTagMode(false);setBatchModeType(null);setBatchTagSel(new Set());
+                          }else{
+                            setBatchTagMode(true);setBatchModeType("tag");setBatchTagSel(new Set());
+                          }
+                        }}
+                        title={batchTagMode&&batchModeType==="tag"?"退出批量贴标签":"批量贴标签"}
+                        style={{width:38,height:38,borderRadius:14,border:`1.5px solid ${batchTagMode&&batchModeType==="tag"?T.accent:T.border}`,background:batchTagMode&&batchModeType==="tag"?T.accentSoft:T.card,color:batchTagMode&&batchModeType==="tag"?T.accent:T.textMid,fontSize:18,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.cardShadow,flexShrink:0}}
+                      >
+                        🏷️
+                      </button>
+                      <button
+                        onClick={()=>{
+                          if(batchTagMode&&batchModeType==="move"){
+                            setBatchTagMode(false);setBatchModeType(null);setBatchTagSel(new Set());
+                          }else{
+                            setBatchTagMode(true);setBatchModeType("move");setBatchTagSel(new Set());
+                          }
+                        }}
+                        title={batchTagMode&&batchModeType==="move"?"退出批量移动":"移动到正确分类"}
+                        style={{width:38,height:38,borderRadius:14,border:`1.5px solid ${batchTagMode&&batchModeType==="move"?T.accent:T.border}`,background:batchTagMode&&batchModeType==="move"?T.accentSoft:T.card,color:batchTagMode&&batchModeType==="move"?T.accent:T.textMid,fontSize:18,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.cardShadow,flexShrink:0}}
+                      >
+                        📂
+                      </button>
+                    </div>
                   </div>
                   <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8,marginBottom:10}}>
                     {allT.map(tag=>(
@@ -1992,9 +2019,14 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
             {/* 批量选中操作栏 */}
             {batchTagMode&&batchTagSel.size>0&&(
-              <div style={{marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+              <div style={{marginBottom:10,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <div style={{fontSize:12,color:T.accent,fontWeight:800}}>已选 {batchTagSel.size} 件</div>
-                <button onClick={()=>setShowBatchTagPicker(true)} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>贴标签</button>
+                <button
+                  onClick={()=>batchModeType==="move"?setShowBatchMovePicker(true):setShowBatchTagPicker(true)}
+                  style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}
+                >
+                  {batchModeType==="move"?"移动分类":"贴标签"}
+                </button>
                 <button onClick={()=>setBatchTagSel(new Set())} style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>清空</button>
               </div>
             )}
@@ -2004,9 +2036,19 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
               <BatchTagPicker T={T} tasks={tasks} batchTagSel={batchTagSel}
                 onConfirm={(localSel)=>{
                   setTasks(prev=>prev.map(t=>batchTagSel.has(t.id)?{...t,tags:[...new Set([...(t.tags||[]),...localSel])]}:t));
-                  setShowBatchTagPicker(false);setBatchTagSel(new Set());setBatchTagMode(false);
+                  setShowBatchTagPicker(false);setBatchTagSel(new Set());setBatchTagMode(false);setBatchModeType(null);
                 }}
                 onClose={()=>setShowBatchTagPicker(false)}
+              />
+            )}
+
+            {showBatchMovePicker&&(
+              <BatchMovePicker T={T} tasks={tasks}
+                onConfirm={(targetTag)=>{
+                  setTasks(prev=>prev.map(t=>batchTagSel.has(t.id)?{...t,tags:[targetTag]}:t));
+                  setShowBatchMovePicker(false);setBatchTagSel(new Set());setBatchTagMode(false);setBatchModeType(null);setDoneTagFilter(targetTag);
+                }}
+                onClose={()=>setShowBatchMovePicker(false)}
               />
             )}
 
@@ -2498,6 +2540,35 @@ function BatchTagPicker({T,tasks,batchTagSel,onConfirm,onClose}){
         <button onClick={()=>{if(localSel.length===0)return;onConfirm(localSel);}}
           style={{width:"100%",padding:"12px 0",borderRadius:50,border:"none",background:localSel.length>0?T.accent:"#cfd8e3",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:localSel.length>0?"pointer":"not-allowed"}}>
           确认贴标签
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+function BatchMovePicker({T,tasks,onConfirm,onClose}){
+  const allT=[...new Set(tasks.filter(t=>t.tags&&t.tags.length>0).flatMap(t=>t.tags))];
+  const [targetTag,setTargetTag]=useState("");
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1300,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+      onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:T.card,borderRadius:"24px 24px 0 0",padding:"20px 18px 32px"}}>
+        <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:6}}>移动到正确分类</div>
+        <div style={{fontSize:11,color:T.textLight,marginBottom:14}}>会把选中的作品直接移动到一个标签里，原来的标签会被替换。</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+          {allT.map(tag=>(
+            <div key={tag} onClick={()=>setTargetTag(tag)}
+              style={{padding:"6px 14px",borderRadius:50,border:`1.5px solid ${targetTag===tag?T.accent:T.border}`,background:targetTag===tag?T.accentSoft:T.bg,color:targetTag===tag?T.accent:T.textMid,fontSize:12,fontWeight:800,cursor:"pointer"}}>
+              {tag}
+            </div>
+          ))}
+          <div onClick={()=>{const t=prompt("新建分类");if(t?.trim())setTargetTag(t.trim());}}
+            style={{padding:"6px 14px",borderRadius:50,border:`1.5px dashed ${T.border}`,background:"transparent",color:T.textLight,fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</div>
+        </div>
+        <button onClick={()=>{if(!targetTag)return;onConfirm(targetTag);}}
+          style={{width:"100%",padding:"12px 0",borderRadius:50,border:"none",background:targetTag?T.accent:"#cfd8e3",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:targetTag?"pointer":"not-allowed"}}>
+          确认移动
         </button>
       </div>
     </div>
