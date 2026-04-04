@@ -2074,7 +2074,9 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                   </div>}
                 </div>
               </div>
-            )})}
+            );
+          });
+            })()}
           </div>
         )}
       </div>
