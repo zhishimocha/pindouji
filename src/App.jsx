@@ -1988,7 +1988,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                         title={batchTagMode&&batchModeType==="tag"?"退出批量贴标签":"批量贴标签"}
                         style={{width:38,height:38,borderRadius:14,border:`1.5px solid ${batchTagMode&&batchModeType==="tag"?T.accent:T.border}`,background:batchTagMode&&batchModeType==="tag"?T.accentSoft:T.card,color:batchTagMode&&batchModeType==="tag"?T.accent:T.textMid,fontSize:18,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.cardShadow,flexShrink:0}}
                       >
-                        🏷️
+                        🗂️
                       </button>
                       <button
                         onClick={()=>{
@@ -2001,7 +2001,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                         title={batchTagMode&&batchModeType==="move"?"退出批量移动":"移动到正确分类"}
                         style={{width:38,height:38,borderRadius:14,border:`1.5px solid ${batchTagMode&&batchModeType==="move"?T.accent:T.border}`,background:batchTagMode&&batchModeType==="move"?T.accentSoft:T.card,color:batchTagMode&&batchModeType==="move"?T.accent:T.textMid,fontSize:18,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.cardShadow,flexShrink:0}}
                       >
-                        📂
+                        ↪️
                       </button>
                     </div>
                   </div>
