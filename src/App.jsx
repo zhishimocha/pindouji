@@ -2001,37 +2001,13 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
             {/* 批量贴标签弹窗 */}
             {showBatchTagPicker&&(
-              <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1300,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
-                onClick={()=>setShowBatchTagPicker(false)}>
-                <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:T.card,borderRadius:"24px 24px 0 0",padding:"20px 18px 32px"}}>
-                  <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:14}}>选择要贴的标签</div>
-                  {(()=>{
-                    const allT=[...new Set(tasks.filter(t=>t.tags&&t.tags.length>0).flatMap(t=>t.tags))];
-                    const [localSel,setLocalSel]=React.useState([]);
-                    return(
-                      <>
-                        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
-                          {allT.map(tag=>(
-                            <div key={tag} onClick={()=>setLocalSel(prev=>prev.includes(tag)?prev.filter(t=>t!==tag):[...prev,tag])}
-                              style={{padding:"6px 14px",borderRadius:50,border:`1.5px solid ${localSel.includes(tag)?T.accent:T.border}`,background:localSel.includes(tag)?T.accentSoft:T.bg,color:localSel.includes(tag)?T.accent:T.textMid,fontSize:12,fontWeight:800,cursor:"pointer"}}>
-                              {tag}
-                            </div>
-                          ))}
-                          <div onClick={()=>{const t=prompt("新建标签");if(t?.trim())setLocalSel(prev=>[...prev,t.trim()]);}}
-                            style={{padding:"6px 14px",borderRadius:50,border:`1.5px dashed ${T.border}`,background:"transparent",color:T.textLight,fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</div>
-                        </div>
-                        <button onClick={()=>{
-                          if(localSel.length===0)return;
-                          setTasks(prev=>prev.map(t=>batchTagSel.has(t.id)?{...t,tags:[...new Set([...(t.tags||[]),...localSel])]}:t));
-                          setShowBatchTagPicker(false);setBatchTagSel(new Set());setBatchTagMode(false);
-                        }} style={{width:"100%",padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>
-                          确认贴标签
-                        </button>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
+              <BatchTagPicker T={T} tasks={tasks} batchTagSel={batchTagSel}
+                onConfirm={(localSel)=>{
+                  setTasks(prev=>prev.map(t=>batchTagSel.has(t.id)?{...t,tags:[...new Set([...(t.tags||[]),...localSel])]}:t));
+                  setShowBatchTagPicker(false);setBatchTagSel(new Set());setBatchTagMode(false);
+                }}
+                onClose={()=>setShowBatchTagPicker(false)}
+              />
             )}
 
             {/* 已完成作品列表 */}
@@ -2493,6 +2469,34 @@ function DiaryPage({T}){
             这天还没有记录哦 ·˖✦ <span onClick={()=>openEdit(rkey(curYear,curMonth,selDay))} style={{color:T.accent,fontWeight:700,cursor:"pointer"}}>新建记录</span>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════ 批量贴标签弹窗 ══════════════
+function BatchTagPicker({T,tasks,batchTagSel,onConfirm,onClose}){
+  const allT=[...new Set(tasks.filter(t=>t.tags&&t.tags.length>0).flatMap(t=>t.tags))];
+  const [localSel,setLocalSel]=useState([]);
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1300,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+      onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:T.card,borderRadius:"24px 24px 0 0",padding:"20px 18px 32px"}}>
+        <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:14}}>选择要贴的标签</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+          {allT.map(tag=>(
+            <div key={tag} onClick={()=>setLocalSel(prev=>prev.includes(tag)?prev.filter(t=>t!==tag):[...prev,tag])}
+              style={{padding:"6px 14px",borderRadius:50,border:`1.5px solid ${localSel.includes(tag)?T.accent:T.border}`,background:localSel.includes(tag)?T.accentSoft:T.bg,color:localSel.includes(tag)?T.accent:T.textMid,fontSize:12,fontWeight:800,cursor:"pointer"}}>
+              {tag}
+            </div>
+          ))}
+          <div onClick={()=>{const t=prompt("新建标签");if(t?.trim()&&!localSel.includes(t.trim()))setLocalSel(prev=>[...prev,t.trim()]);}}
+            style={{padding:"6px 14px",borderRadius:50,border:`1.5px dashed ${T.border}`,background:"transparent",color:T.textLight,fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</div>
+        </div>
+        <button onClick={()=>{if(localSel.length===0)return;onConfirm(localSel);}}
+          style={{width:"100%",padding:"12px 0",borderRadius:50,border:"none",background:localSel.length>0?T.accent:"#cfd8e3",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:localSel.length>0?"pointer":"not-allowed"}}>
+          确认贴标签
+        </button>
       </div>
     </div>
   );
