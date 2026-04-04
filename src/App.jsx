@@ -479,6 +479,7 @@ export default function App(){
   const [tagLinkMode,setTagLinkMode]=useState(null); // "new" | "link" | null
   const [newDoneName,setNewDoneName]=useState("");
   const [linkedTaskId,setLinkedTaskId]=useState(null);
+  const [quickDoneTags,setQuickDoneTags]=useState([]); // 扣豆完成新建作品时选的标签
   const [imgLoading,setImgLoading]=useState(false);
   const [imgErr,setImgErr]=useState("");
   const imgRef=useRef(null);
@@ -574,6 +575,7 @@ export default function App(){
         elapsedMs:0,
         startedAt:null,
         colorData,
+        tags:quickDoneTags,
         sourceType:"quick_done"
       };
       pushHistory(stock,used,tasks);
@@ -601,6 +603,7 @@ export default function App(){
     setShowTagLink(false);
     setTagLinkMode(null);
     setLinkedTaskId(null);
+    setQuickDoneTags([]);
   }
 
   const [cropImg,setCropImg]=useState(null); // 裁剪用的原图base64
@@ -1138,7 +1141,27 @@ export default function App(){
               {tagLinkMode==="new"&&(
                 <div>
                   <input value={newDoneName} onChange={e=>setNewDoneName(e.target.value)} placeholder="完成作品 03/20"
-                    style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"10px 12px",fontSize:13,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
+                    style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"10px 12px",fontSize:13,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:10}}/>
+                  {/* 标签选择 */}
+                  {(()=>{
+                    const allT=[...new Set(tasks.filter(t=>t.tags&&t.tags.length>0).flatMap(t=>t.tags))];
+                    return(
+                      <div style={{marginBottom:12}}>
+                        <div style={{fontSize:11,color:T.textMid,fontWeight:700,marginBottom:6}}>选择标签（可多选）</div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+                          {allT.map(tag=>(
+                            <div key={tag} onClick={()=>setQuickDoneTags(prev=>prev.includes(tag)?prev.filter(t=>t!==tag):[...prev,tag])}
+                              style={{padding:"4px 12px",borderRadius:50,border:`1.5px solid ${quickDoneTags.includes(tag)?T.accent:T.border}`,background:quickDoneTags.includes(tag)?T.accentSoft:T.card,color:quickDoneTags.includes(tag)?T.accent:T.textMid,fontSize:11,fontWeight:800,cursor:"pointer"}}>
+                              {tag}
+                            </div>
+                          ))}
+                          <div onClick={()=>{const t=prompt("新建标签");if(t?.trim()&&!quickDoneTags.includes(t.trim()))setQuickDoneTags(prev=>[...prev,t.trim()]);}}
+                            style={{padding:"4px 12px",borderRadius:50,border:`1.5px dashed ${T.border}`,background:"transparent",color:T.textLight,fontSize:11,fontWeight:800,cursor:"pointer"}}>＋ 新建</div>
+                        </div>
+                        {quickDoneTags.length>0&&<div style={{fontSize:10,color:T.textMid}}>已选：{quickDoneTags.join("、")}</div>}
+                      </div>
+                    );
+                  })()}
                   <div style={{display:"flex",gap:8}}>
                     <button onClick={()=>setTagLinkMode(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>上一步</button>
                     <button onClick={()=>finishTagDeduction("new")} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>确认扣豆</button>
@@ -1500,6 +1523,11 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const [showAddModal,setShowAddModal]=useState(false);
   const [newName,setNewName]=useState("");
   const [newImg,setNewImg]=useState(null);
+  const [newTaskTags,setNewTaskTags]=useState([]); // 新建图纸时选的标签
+  const [doneTagFilter,setDoneTagFilter]=useState("全部"); // 已完成筛选标签
+  const [batchTagMode,setBatchTagMode]=useState(false); // 批量贴标签模式
+  const [batchTagSel,setBatchTagSel]=useState(new Set()); // 批量选中的作品id
+  const [showBatchTagPicker,setShowBatchTagPicker]=useState(false); // 标签选择弹窗
   const [pickerOpen,setPickerOpen]=useState(false);
   const [pickedId,setPickedId]=useState(null);
   const [flipAnimating,setFlipAnimating]=useState(false);
@@ -1525,12 +1553,12 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const [,setTimerTick]=useState(0);
   useEffect(()=>{const id=setInterval(()=>setTimerTick(v=>v+1),1000);return()=>clearInterval(id);},[]);
 
-  function openAddModal(){setNewName("");setNewImg(null);setShowAddModal(true);}
+  function openAddModal(){setNewName("");setNewImg(null);setNewTaskTags([]);setShowAddModal(true);}
   function closeAddModal(){setShowAddModal(false);}
 
   function saveNewTask(){
     if(!newName.trim())return;
-    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:[],status:"todo",createdAt:new Date().toISOString(),doneDate:null,elapsedMs:0,startedAt:null};
+    const t={id:Date.now(),name:newName.trim(),img:newImg,colorData:[],tags:newTaskTags,status:"todo",createdAt:new Date().toISOString(),doneDate:null,elapsedMs:0,startedAt:null};
     setTasks(prev=>[t,...prev]);
     closeAddModal();
   }
@@ -1666,7 +1694,27 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
               <div style={{padding:"20px 20px 0",flexShrink:0}}>
                 <div style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:16}}>🖼️ 新建图纸</div>
                 <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="图纸名称，比如：草莓蛋糕" autoFocus
-                  style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:14}}/>
+                  style={{width:"100%",border:`1.5px solid ${T.border}`,borderRadius:14,padding:"12px 16px",fontSize:14,fontFamily:"'Nunito',sans-serif",background:T.bg,color:T.text,outline:"none",boxSizing:"border-box",marginBottom:12}}/>
+                {/* 标签选择 */}
+                {(()=>{
+                  const allT=[...new Set(tasks.filter(t=>t.tags&&t.tags.length>0).flatMap(t=>t.tags))];
+                  return(
+                    <div style={{marginBottom:4}}>
+                      <div style={{fontSize:11,color:T.textMid,fontWeight:700,marginBottom:6}}>标签（选填）</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                        {allT.map(tag=>(
+                          <div key={tag} onClick={()=>setNewTaskTags(prev=>prev.includes(tag)?prev.filter(t=>t!==tag):[...prev,tag])}
+                            style={{padding:"4px 12px",borderRadius:50,border:`1.5px solid ${newTaskTags.includes(tag)?T.accent:T.border}`,background:newTaskTags.includes(tag)?T.accentSoft:T.card,color:newTaskTags.includes(tag)?T.accent:T.textMid,fontSize:11,fontWeight:800,cursor:"pointer"}}>
+                            {tag}
+                          </div>
+                        ))}
+                        <div onClick={()=>{const t=prompt("新建标签");if(t?.trim()&&!newTaskTags.includes(t.trim()))setNewTaskTags(prev=>[...prev,t.trim()]);}}
+                          style={{padding:"4px 12px",borderRadius:50,border:`1.5px dashed ${T.border}`,background:"transparent",color:T.textLight,fontSize:11,fontWeight:800,cursor:"pointer"}}>＋ 新建</div>
+                      </div>
+                      {newTaskTags.length>0&&<div style={{fontSize:10,color:T.textMid,marginTop:4}}>已选：{newTaskTags.join("、")}</div>}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
@@ -1919,13 +1967,88 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
         {showDoneList&&doneTasks.length>0&&(
           <div style={{paddingTop:4}}>
-            <div style={{fontSize:12,fontWeight:800,color:T.textMid,marginBottom:10}}>✅ 已完成</div>
-            {doneTasks.map(task=>{
+            {/* 标签筛选栏 */}
+            {(()=>{
+              const allT=["全部",...new Set(doneTasks.filter(t=>t.tags&&t.tags.length>0).flatMap(t=>t.tags))];
+              return(
+                <div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                    <div style={{fontSize:12,fontWeight:800,color:T.textMid}}>✅ 已完成</div>
+                    <button onClick={()=>{setBatchTagMode(v=>!v);setBatchTagSel(new Set());}} style={{padding:"3px 10px",borderRadius:50,border:`1.5px solid ${batchTagMode?T.accent:T.border}`,background:batchTagMode?T.accentSoft:"transparent",color:batchTagMode?T.accent:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>
+                      {batchTagMode?"退出批量":"批量贴标签"}
+                    </button>
+                  </div>
+                  <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8,marginBottom:10}}>
+                    {allT.map(tag=>(
+                      <div key={tag} onClick={()=>setDoneTagFilter(tag)}
+                        style={{padding:"4px 14px",borderRadius:50,border:`1.5px solid ${doneTagFilter===tag?T.accent:T.border}`,background:doneTagFilter===tag?T.accentSoft:T.card,color:doneTagFilter===tag?T.accent:T.textMid,fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+                        {tag}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 批量选中操作栏 */}
+            {batchTagMode&&batchTagSel.size>0&&(
+              <div style={{marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:12,color:T.accent,fontWeight:800}}>已选 {batchTagSel.size} 件</div>
+                <button onClick={()=>setShowBatchTagPicker(true)} style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,cursor:"pointer"}}>贴标签</button>
+                <button onClick={()=>setBatchTagSel(new Set())} style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:700,cursor:"pointer"}}>清空</button>
+              </div>
+            )}
+
+            {/* 批量贴标签弹窗 */}
+            {showBatchTagPicker&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1300,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+                onClick={()=>setShowBatchTagPicker(false)}>
+                <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:T.card,borderRadius:"24px 24px 0 0",padding:"20px 18px 32px"}}>
+                  <div style={{fontSize:14,fontWeight:900,color:T.text,marginBottom:14}}>选择要贴的标签</div>
+                  {(()=>{
+                    const allT=[...new Set(tasks.filter(t=>t.tags&&t.tags.length>0).flatMap(t=>t.tags))];
+                    const [localSel,setLocalSel]=React.useState([]);
+                    return(
+                      <>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+                          {allT.map(tag=>(
+                            <div key={tag} onClick={()=>setLocalSel(prev=>prev.includes(tag)?prev.filter(t=>t!==tag):[...prev,tag])}
+                              style={{padding:"6px 14px",borderRadius:50,border:`1.5px solid ${localSel.includes(tag)?T.accent:T.border}`,background:localSel.includes(tag)?T.accentSoft:T.bg,color:localSel.includes(tag)?T.accent:T.textMid,fontSize:12,fontWeight:800,cursor:"pointer"}}>
+                              {tag}
+                            </div>
+                          ))}
+                          <div onClick={()=>{const t=prompt("新建标签");if(t?.trim())setLocalSel(prev=>[...prev,t.trim()]);}}
+                            style={{padding:"6px 14px",borderRadius:50,border:`1.5px dashed ${T.border}`,background:"transparent",color:T.textLight,fontSize:12,fontWeight:800,cursor:"pointer"}}>＋ 新建</div>
+                        </div>
+                        <button onClick={()=>{
+                          if(localSel.length===0)return;
+                          setTasks(prev=>prev.map(t=>batchTagSel.has(t.id)?{...t,tags:[...new Set([...(t.tags||[]),...localSel])]}:t));
+                          setShowBatchTagPicker(false);setBatchTagSel(new Set());setBatchTagMode(false);
+                        }} style={{width:"100%",padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>
+                          确认贴标签
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* 已完成作品列表 */}
+            {(()=>{
+              const filtered=doneTagFilter==="全部"?doneTasks:doneTasks.filter(t=>t.tags&&t.tags.includes(doneTagFilter));
+              return filtered.map(task=>{
               const elapsed=formatElapsed(task.elapsedMs||0);
               return(
-              <div key={`done-${task.id}`} style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:22,padding:"12px",marginBottom:12,boxShadow:T.cardShadow,display:"flex",gap:12,alignItems:"stretch",opacity:0.96}}>
+              <div key={`done-${task.id}`} onClick={batchTagMode?()=>setBatchTagSel(prev=>{const n=new Set(prev);n.has(task.id)?n.delete(task.id):n.add(task.id);return n;}):undefined}
+                style={{background:T.card,border:`1.5px solid ${batchTagMode&&batchTagSel.has(task.id)?T.accent:T.border}`,borderRadius:22,padding:"12px",marginBottom:12,boxShadow:T.cardShadow,display:"flex",gap:12,alignItems:"stretch",opacity:0.96,cursor:batchTagMode?"pointer":"default",position:"relative"}}>
+                {batchTagMode&&(
+                  <div style={{position:"absolute",top:10,right:10,width:20,height:20,borderRadius:"50%",border:`2px solid ${batchTagSel.has(task.id)?T.accent:T.border}`,background:batchTagSel.has(task.id)?T.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:900,zIndex:2}}>
+                    {batchTagSel.has(task.id)?"✓":""}
+                  </div>
+                )}
                 <div
-                  onClick={()=>{
+                  onClick={batchTagMode?undefined:()=>{
                     const inp=document.createElement('input');
                     inp.type='file';inp.accept='image/*';
                     inp.onchange=e=>{
@@ -1950,24 +2073,29 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                     };
                     inp.click();
                   }}
-                  style={{width:80,height:80,borderRadius:16,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:"pointer",position:"relative"}}>
+                  style={{width:80,height:80,borderRadius:16,background:T.accentSoft,overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:batchTagMode?"default":"pointer",position:"relative"}}>
                   {task.img?<img src={task.img} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:"🖼️"}
-                  <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.0)",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:4,opacity:1}}>
+                  {!batchTagMode&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.0)",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:4,opacity:1}}>
                     <div style={{fontSize:9,color:"rgba(255,255,255,0.85)",background:"rgba(0,0,0,0.32)",borderRadius:6,padding:"1px 6px",fontWeight:700,fontFamily:"'Nunito',sans-serif"}}>换封面</div>
-                  </div>
+                  </div>}
                 </div>
                 <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
                   <div>
-                    <div style={{fontSize:14,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:8}}>{task.name}</div>
+                    <div style={{fontSize:14,fontWeight:800,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginBottom:6}}>{task.name}</div>
+                    {task.tags&&task.tags.length>0&&(
+                      <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:6}}>
+                        {task.tags.map(tag=><span key={tag} style={{padding:"2px 8px",borderRadius:50,background:T.accentSoft,color:T.accent,fontSize:10,fontWeight:800}}>{tag}</span>)}
+                      </div>
+                    )}
                     <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                       <div style={{padding:"4px 10px",borderRadius:12,background:"#f0fff4",border:"1.5px solid #bfe9c6",fontSize:10,fontWeight:800,color:"#4caf50"}}>已完成</div>
                       <div style={{fontSize:11,color:T.textMid,fontWeight:800}}>用时 {elapsed}</div>
                     </div>
                   </div>
-                  <div style={{display:"flex",gap:8,marginTop:10}}>
+                  {!batchTagMode&&<div style={{display:"flex",gap:8,marginTop:10}}>
                     <button onClick={()=>restoreTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>↩ 恢复</button>
                     <button onClick={()=>deleteTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:"none",background:T.dangerBg,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>删除</button>
-                  </div>
+                  </div>}
                 </div>
               </div>
             )})}
