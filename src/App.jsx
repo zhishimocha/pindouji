@@ -2589,7 +2589,7 @@ function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,resetData,resetConfi
     return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,5);
   },[tasks]);
 
-  // 常用色号top5：从colorData聚合
+  // 常用色号top10：从colorData聚合
   const topColors=React.useMemo(()=>{
     const map={};
     tasks.filter(t=>t.colorData&&t.colorData.length>0).forEach(t=>{
@@ -2597,7 +2597,7 @@ function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,resetData,resetConfi
         map[id]=(map[id]||0)+(count||0);
       });
     });
-    return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
   },[tasks]);
 
   const ALL_COLORS_MAP=React.useMemo(()=>{
@@ -2637,12 +2637,10 @@ function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,resetData,resetConfi
                 border:isToday?`1.5px solid ${T.accent}`:"1.5px solid transparent",
                 position:"relative"}}>
                 <span style={{fontSize:9,fontWeight:isToday?900:600,color:count>3?"rgba(255,255,255,0.9)":T.textMid}}>{day}</span>
-                {count>0&&<span style={{position:"absolute",bottom:1,right:2,fontSize:7,color:count>3?"rgba(255,255,255,0.7)":T.accent,fontWeight:800}}>{count}</span>}
               </div>
             );
           })}
         </div>
-        <div style={{fontSize:10,color:T.textLight,marginTop:8,textAlign:"right"}}>每格数字=当天完成件数</div>
       </div>
 
       {/* 常用色系 + 常用色号 两个入口 */}
@@ -2667,7 +2665,7 @@ function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,resetData,resetConfi
             <div style={{fontSize:11,color:T.textLight}}>扣豆后自动统计</div>
           ):(
             <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-              {topColors.slice(0,5).map(([id])=>{
+              {topColors.slice(0,10).map(([id])=>{
                 const c=ALL_COLORS_MAP[id];
                 return c?(
                   <div key={id} style={{width:22,height:22,borderRadius:6,background:c.hex,border:"1.5px solid rgba(0,0,0,0.08)",boxShadow:"0 1px 3px rgba(0,0,0,0.1)"}}/>
