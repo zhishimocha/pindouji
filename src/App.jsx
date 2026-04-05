@@ -1197,13 +1197,12 @@ export default function App(){
         )}
 
         {showRestock&&<RestockModal T={T} stock={stock} wL={wL} onClose={()=>setShowRestock(false)}
-          onRestockConfirm={(ids)=>{
+          onRestockConfirm={(qtyMap)=>{
             pushHistory(stock,used);
             setStock(prev=>{
               const ns={...prev};
-              ids.forEach(id=>{
-                const shortage=wL-Math.round(ns[id]||0);
-                if(shortage>0) ns[id]=(ns[id]||0)+shortage;
+              Object.entries(qtyMap).forEach(([id,qty])=>{
+                if(qty>0) ns[id]=(ns[id]||0)+qty;
               });
               return ns;
             });
@@ -2594,6 +2593,7 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
   const [copied,setCopied]=React.useState(false);
   const [batchMode,setBatchMode]=React.useState(false);
   const [selected,setSelected]=React.useState({});
+  const [qtyMap,setQtyMap]=React.useState({});
 
   const activeIds=initialRestock.filter(id=>!outOfStockIds.includes(id));
   const activeColors=ALL_COLORS.filter(c=>activeIds.includes(c.id));
@@ -2607,23 +2607,38 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
   }
 
   function toggleSelect(id){
-    setSelected(prev=>({...prev,[id]:!prev[id]}));
+    setSelected(prev=>{
+      const next={...prev,[id]:!prev[id]};
+      if(!next[id]) setQtyMap(q=>{const nq={...q};delete nq[id];return nq;});
+      return next;
+    });
   }
 
   function selectAll(){
     const all={};activeColors.forEach(c=>{all[c.id]=true;});setSelected(all);
   }
 
+  function setQty(id,val){
+    const n=parseInt(val)||0;
+    setQtyMap(prev=>({...prev,[id]:Math.max(0,n)}));
+  }
+
   function confirmRestock(){
     const boughtIds=Object.keys(selected).filter(id=>selected[id]);
     const notBoughtIds=activeIds.filter(id=>!boughtIds.includes(id));
-    if(boughtIds.length>0) onRestockConfirm(boughtIds);
+    if(boughtIds.length>0){
+      const finalMap={};
+      boughtIds.forEach(id=>{ finalMap[id]=qtyMap[id]||0; });
+      onRestockConfirm(finalMap);
+    }
     setOutOfStockIds(prev=>[...prev,...notBoughtIds]);
     setSelected({});
+    setQtyMap({});
     setBatchMode(false);
   }
 
   const selectedCount=Object.values(selected).filter(Boolean).length;
+  const inpStyle={width:52,padding:"3px 6px",borderRadius:8,border:`1.5px solid ${T.accent}`,background:T.card,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,textAlign:"center",outline:"none"};
 
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
@@ -2651,7 +2666,7 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
                   style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
                   全选
                 </button>
-                <button onClick={()=>{setBatchMode(false);setSelected({});}}
+                <button onClick={()=>{setBatchMode(false);setSelected({});setQtyMap({});}}
                   style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
                   取消
                 </button>
@@ -2670,10 +2685,9 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
             <div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"24px 0"}}>库存充足，暂无需补货 ✨</div>
           ):(
             <>
-              {/* 批量模式提示 */}
               {batchMode&&activeColors.length>0&&(
                 <div style={{fontSize:11,color:T.textMid,marginBottom:12,padding:"8px 12px",background:T.accentSoft,borderRadius:10}}>
-                  点击色号勾选已买到的，未勾选的会标记为缺货 📦
+                  点击色号勾选已买到的，填入补了多少粒，未勾选的会标为缺货 📦
                 </div>
               )}
 
@@ -2681,19 +2695,29 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
               {bySeries.map(({s,items})=>(
                 <div key={s} style={{marginBottom:16}}>
                   <div style={{fontSize:12,fontWeight:900,color:T.textMid,marginBottom:8,letterSpacing:0.5}}>{s} 系列</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
                     {items.map(c=>{
                       const isSel=!!selected[c.id];
                       return(
-                        <div key={c.id} onClick={()=>batchMode&&toggleSelect(c.id)}
-                          style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:batchMode?"pointer":"default",transition:"opacity 0.15s",opacity:batchMode&&!isSel?0.45:1}}>
-                          <div style={{width:36,height:36,borderRadius:10,background:c.hex,
-                            border:isSel?`2.5px solid ${T.accent}`:`1.5px solid rgba(0,0,0,0.08)`,
-                            boxShadow:isSel?`0 0 0 3px ${T.accentSoft}`:"0 1px 4px rgba(0,0,0,0.1)",
-                            transition:"all 0.15s",position:"relative"}}>
+                        <div key={c.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,
+                          opacity:batchMode&&!isSel?0.4:1,transition:"opacity 0.15s"}}>
+                          <div onClick={()=>batchMode&&toggleSelect(c.id)}
+                            style={{width:36,height:36,borderRadius:10,background:c.hex,
+                              border:isSel?`2.5px solid ${T.accent}`:`1.5px solid rgba(0,0,0,0.08)`,
+                              boxShadow:isSel?`0 0 0 3px ${T.accentSoft}`:"0 1px 4px rgba(0,0,0,0.1)",
+                              transition:"all 0.15s",position:"relative",cursor:batchMode?"pointer":"default"}}>
                             {isSel&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,background:"rgba(255,255,255,0.25)",borderRadius:8}}>✓</div>}
                           </div>
                           <div style={{fontSize:10,fontWeight:800,color:isSel?T.accent:T.text}}>{c.id}</div>
+                          {batchMode&&isSel&&(
+                            <input
+                              type="number" min="0" placeholder="粒数"
+                              value={qtyMap[c.id]||""}
+                              onChange={e=>setQty(c.id,e.target.value)}
+                              onClick={e=>e.stopPropagation()}
+                              style={inpStyle}
+                            />
+                          )}
                         </div>
                       );
                     })}
