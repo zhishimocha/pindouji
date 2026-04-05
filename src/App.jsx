@@ -946,57 +946,7 @@ export default function App(){
             <div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0",width:"100%",boxSizing:"border-box"}}>
 
               {page==="home"&&<div className="fade">
-                <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                    <div style={{fontSize:12,color:T.textLight,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
-                    <div style={{display:"flex",gap:6}}>
-                      <button className="btn" onClick={resetData} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
-                        {resetConfirm?"⚠️ 确认清空":"🗑️ 重置"}
-                      </button>
-                      <button className="btn" onClick={()=>setShowRestock(true)} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.accentSoft,color:T.accent}}>
-                        📋 补货清单
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",gap:10}}>
-                    {[["🟡 即将不足",wL,setWL,T.warn,T.warnBg,T.warnBorder],[" 🔴 不足",wC,setWC,T.danger,T.dangerBg,T.dangerBorder]].map(([lbl,val,set,col,bg,bd])=>(
-                      <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:1,background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
-                        {lbl}
-                        <input type="number" value={val} onChange={e=>set(Number(e.target.value))} style={{...inp({width:48,padding:"3px 5px",fontSize:12,textAlign:"center",borderRadius:8}),marginLeft:"auto"}}/>
-                        <span style={{fontSize:11}}>粒</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                {[["🟡 即将不足",lowC,T.warnBg,T.warnBorder,T.warn],["🔴 不足",critC,T.dangerBg,T.dangerBorder,T.danger]].map(([title,colors,bg,bd])=>(
-                  <div key={title} className="tt" style={{background:bg,border:`1.5px solid ${bd}`,borderRadius:24,padding:"16px",marginBottom:14}}>
-                    <div style={{fontSize:13,fontWeight:800,marginBottom:10,display:"flex",alignItems:"center",gap:8,color:T.text}}>
-                      {title}<span style={{background:tn==="night"?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.85)",borderRadius:50,padding:"2px 12px",fontSize:11,color:T.textMid,fontWeight:600}}>{colors.length} 个</span>
-                    </div>
-                    {colors.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"10px 0"}}>暂无 ✨</div>
-                      :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                        {colors.map(c=><StockCard key={c.id} c={c} compact={true} isSel={sel.has(c.id)} {...cardProps}/>)}
-                      </div>
-                    }
-                  </div>
-                ))}
-                <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"18px",marginBottom:14,boxShadow:T.cardShadow}}>
-                  <div style={{fontSize:14,fontWeight:800,marginBottom:14,color:T.text}}>📊 色系消耗 Top5</div>
-                  {top5.length===0?<div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"16px 0"}}>✨ 更新库存后自动统计</div>
-                    :top5.map(({s,total},i)=>(
-                      <div key={s} onClick={()=>goS(s)} style={{marginBottom:12,cursor:"pointer"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5,fontWeight:700}}>
-                          <span style={{color:T.accent}}>{s} 系列</span>
-                          <span style={{color:T.textMid,fontWeight:400}}>{Math.round(total)} 粒</span>
-                        </div>
-                        <div style={{background:T.barBg,borderRadius:20,height:10,overflow:"hidden"}}>
-                          <div style={{width:`${(total/maxU)*100}%`,height:"100%",borderRadius:20,background:T.bars[i],transition:"width 0.5s"}}/>
-                        </div>
-                      </div>
-                    ))
-                  }
-                  {top5.length>0&&<div style={{fontSize:11,color:T.textLight,textAlign:"right",marginTop:6}}>点击查看系列详情 →</div>}
-                </div>
+                <HomeStats T={T} tn={tn} tasks={tasks} used={used} stock={stock} wL={wL} wC={wC} setWL={setWL} setWC={setWC} resetData={resetData} resetConfirm={resetConfirm} setShowRestock={setShowRestock} inp={inp} goS={goS}/>
               </div>}
 
               {page==="stock"&&<div className="fade">
@@ -2582,6 +2532,235 @@ function BatchMovePicker({T,tasks,onConfirm,onClose}){
           确认移动
         </button>
       </div>
+    </div>
+  );
+}
+
+// ══════════════ 首页统计组件 ══════════════
+function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,resetData,resetConfirm,setShowRestock,inp,goS}){
+  const now=new Date();
+  const [calYear,setCalYear]=React.useState(now.getFullYear());
+  const [calMonth,setCalMonth]=React.useState(now.getMonth());
+  const [showSeriesModal,setShowSeriesModal]=React.useState(false);
+  const [showColorModal,setShowColorModal]=React.useState(false);
+
+  // 月份限制：前后3个月
+  const minDate=new Date(now.getFullYear(),now.getMonth()-3,1);
+  const maxDate=new Date(now.getFullYear(),now.getMonth()+3,1);
+  function prevMonth(){const d=new Date(calYear,calMonth-1,1);if(d>=minDate){setCalYear(d.getFullYear());setCalMonth(d.getMonth());}}
+  function nextMonth(){const d=new Date(calYear,calMonth+1,1);if(d<maxDate){setCalYear(d.getFullYear());setCalMonth(d.getMonth());}}
+
+  // 热力图数据：按日期聚合done件数
+  const heatMap=React.useMemo(()=>{
+    const map={};
+    tasks.filter(t=>t.status==="done"&&t.doneDate).forEach(t=>{
+      const d=t.doneDate.slice(0,10);
+      map[d]=(map[d]||0)+1;
+    });
+    return map;
+  },[tasks]);
+
+  function heatColor(count){
+    if(!count||count===0) return tn==="night"?"rgba(255,255,255,0.06)":"rgba(74,158,255,0.08)";
+    if(count===1) return "rgba(74,158,255,0.25)";
+    if(count<=3) return "rgba(74,158,255,0.45)";
+    if(count<=5) return "rgba(74,158,255,0.65)";
+    if(count<=7) return "rgba(74,158,255,0.82)";
+    return "#4a9eff";
+  }
+
+  // 日历渲染
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const firstDay=new Date(calYear,calMonth,1).getDay(); // 0=周日
+  const weekLabels=["日","一","二","三","四","五","六"];
+  const monthLabel=`${calYear}年${calMonth+1}月`;
+  const canPrev=new Date(calYear,calMonth-1,1)>=minDate;
+  const canNext=new Date(calYear,calMonth+1,1)<maxDate;
+
+  // 常用色系top5：从colorData聚合
+  const topSeries=React.useMemo(()=>{
+    const map={};
+    tasks.filter(t=>t.colorData&&t.colorData.length>0).forEach(t=>{
+      t.colorData.forEach(({id,count})=>{
+        const s=id.match(/^[A-Z]+/)?.[0]||"?";
+        map[s]=(map[s]||0)+(count||0);
+      });
+    });
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  },[tasks]);
+
+  // 常用色号top5：从colorData聚合
+  const topColors=React.useMemo(()=>{
+    const map={};
+    tasks.filter(t=>t.colorData&&t.colorData.length>0).forEach(t=>{
+      t.colorData.forEach(({id,count})=>{
+        map[id]=(map[id]||0)+(count||0);
+      });
+    });
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  },[tasks]);
+
+  const ALL_COLORS_MAP=React.useMemo(()=>{
+    const m={};
+    ALL_COLORS.forEach(c=>{m[c.id]=c;});
+    return m;
+  },[]);
+
+  return(
+    <div>
+      {/* 热力日历 */}
+      <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+          <button onClick={prevMonth} style={{background:"none",border:"none",fontSize:18,color:canPrev?T.accent:T.border,cursor:canPrev?"pointer":"default",padding:"0 4px"}}>‹</button>
+          <div style={{fontSize:13,fontWeight:900,color:T.text}}>{monthLabel}</div>
+          <button onClick={nextMonth} style={{background:"none",border:"none",fontSize:18,color:canNext?T.accent:T.border,cursor:canNext?"pointer":"default",padding:"0 4px"}}>›</button>
+        </div>
+        {/* 星期标题 */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:3}}>
+          {weekLabels.map(w=>(
+            <div key={w} style={{textAlign:"center",fontSize:10,color:T.textLight,fontWeight:700,padding:"2px 0"}}>{w}</div>
+          ))}
+        </div>
+        {/* 日历格子 */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
+          {Array.from({length:firstDay}).map((_,i)=>(
+            <div key={"empty"+i}/>
+          ))}
+          {Array.from({length:daysInMonth}).map((_,i)=>{
+            const day=i+1;
+            const dateStr=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+            const count=heatMap[dateStr]||0;
+            const isToday=dateStr===now.toISOString().slice(0,10);
+            return(
+              <div key={day} style={{aspectRatio:"1",borderRadius:6,background:heatColor(count),
+                display:"flex",alignItems:"center",justifyContent:"center",
+                border:isToday?`1.5px solid ${T.accent}`:"1.5px solid transparent",
+                position:"relative"}}>
+                <span style={{fontSize:9,fontWeight:isToday?900:600,color:count>3?"rgba(255,255,255,0.9)":T.textMid}}>{day}</span>
+                {count>0&&<span style={{position:"absolute",bottom:1,right:2,fontSize:7,color:count>3?"rgba(255,255,255,0.7)":T.accent,fontWeight:800}}>{count}</span>}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{fontSize:10,color:T.textLight,marginTop:8,textAlign:"right"}}>每格数字=当天完成件数</div>
+      </div>
+
+      {/* 常用色系 + 常用色号 两个入口 */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+        <div className="tt" onClick={()=>setShowSeriesModal(true)}
+          style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"14px",boxShadow:T.cardShadow,cursor:"pointer"}}>
+          <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:8}}>🎨 常用色系</div>
+          {topSeries.length===0?(
+            <div style={{fontSize:11,color:T.textLight}}>扣豆后自动统计</div>
+          ):topSeries.slice(0,3).map(([s,total])=>(
+            <div key={s} style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4}}>
+              <span style={{color:T.accent,fontWeight:800}}>{s} 系</span>
+              <span style={{color:T.textMid}}>{total}粒</span>
+            </div>
+          ))}
+          {topSeries.length>0&&<div style={{fontSize:10,color:T.textLight,marginTop:4}}>查看全部 →</div>}
+        </div>
+        <div className="tt" onClick={()=>setShowColorModal(true)}
+          style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"14px",boxShadow:T.cardShadow,cursor:"pointer"}}>
+          <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:8}}>🫘 常用色号</div>
+          {topColors.length===0?(
+            <div style={{fontSize:11,color:T.textLight}}>扣豆后自动统计</div>
+          ):(
+            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+              {topColors.slice(0,5).map(([id])=>{
+                const c=ALL_COLORS_MAP[id];
+                return c?(
+                  <div key={id} style={{width:22,height:22,borderRadius:6,background:c.hex,border:"1.5px solid rgba(0,0,0,0.08)",boxShadow:"0 1px 3px rgba(0,0,0,0.1)"}}/>
+                ):null;
+              })}
+            </div>
+          )}
+          {topColors.length>0&&<div style={{fontSize:10,color:T.textLight,marginTop:6}}>查看详情 →</div>}
+        </div>
+      </div>
+
+      {/* 阈值设定 + 补货清单 */}
+      <div className="tt" style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"16px",marginBottom:14,boxShadow:T.cardShadow}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+          <div style={{fontSize:12,color:T.textLight,fontWeight:700,letterSpacing:0.5}}>⚙️ 补货阈值设定</div>
+          <div style={{display:"flex",gap:6}}>
+            <button className="btn" onClick={resetData} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${resetConfirm?T.danger:T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:resetConfirm?T.dangerBg:T.card,color:resetConfirm?T.danger:T.textLight}}>
+              {resetConfirm?"⚠️ 确认清空":"🗑️ 重置"}
+            </button>
+            <button className="btn" onClick={()=>setShowRestock(true)} style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${T.accent}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,background:T.accentSoft,color:T.accent}}>
+              📋 补货清单
+            </button>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          {[["🟡 即将不足",wL,setWL,T.warn,T.warnBg,T.warnBorder],[" 🔴 不足",wC,setWC,T.danger,T.dangerBg,T.dangerBorder]].map(([lbl,val,set,col,bg,bd])=>(
+            <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:1,background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
+              {lbl}
+              <input type="number" value={val} onChange={e=>set(Number(e.target.value))} style={{...inp({width:48,padding:"3px 5px",fontSize:12,textAlign:"center",borderRadius:8}),marginLeft:"auto"}}/>
+              <span style={{fontSize:11}}>粒</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* 常用色系浮层 */}
+      {showSeriesModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1300,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+          onClick={()=>setShowSeriesModal(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:T.card,borderRadius:"24px 24px 0 0",padding:"20px 18px 32px",boxShadow:"0 -4px 30px rgba(0,0,0,0.15)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:15,fontWeight:900,color:T.text}}>🎨 常用色系 Top5</div>
+              <button onClick={()=>setShowSeriesModal(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
+            </div>
+            {topSeries.length===0?(
+              <div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"24px 0"}}>还没有扣豆记录 ✨</div>
+            ):topSeries.map(([s,total],i)=>{
+              const maxT=topSeries[0][1]||1;
+              return(
+                <div key={s} onClick={()=>{setShowSeriesModal(false);goS(s);}} style={{marginBottom:14,cursor:"pointer"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5,fontWeight:700}}>
+                    <span style={{color:T.accent}}>#{i+1} {s} 系列</span>
+                    <span style={{color:T.textMid,fontWeight:400}}>{total} 粒</span>
+                  </div>
+                  <div style={{background:T.barBg||"rgba(74,158,255,0.1)",borderRadius:20,height:10,overflow:"hidden"}}>
+                    <div style={{width:`${(total/maxT)*100}%`,height:"100%",borderRadius:20,background:`rgba(74,158,255,${0.4+i*0.12})`,transition:"width 0.5s"}}/>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{fontSize:11,color:T.textLight,textAlign:"center",marginTop:4}}>点击色系跳转库存查看</div>
+          </div>
+        </div>
+      )}
+
+      {/* 常用色号浮层 */}
+      {showColorModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1300,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+          onClick={()=>setShowColorModal(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:T.card,borderRadius:"24px 24px 0 0",padding:"20px 18px 32px",boxShadow:"0 -4px 30px rgba(0,0,0,0.15)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:15,fontWeight:900,color:T.text}}>🫘 常用色号 Top5</div>
+              <button onClick={()=>setShowColorModal(false)} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
+            </div>
+            {topColors.length===0?(
+              <div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"24px 0"}}>还没有扣豆记录 ✨</div>
+            ):topColors.map(([id,total],i)=>{
+              const c=ALL_COLORS_MAP[id];
+              const curStock=stock[id]||0;
+              return(
+                <div key={id} style={{display:"flex",alignItems:"center",gap:12,marginBottom:14,padding:"10px 12px",background:T.bg||T.accentSoft,borderRadius:14}}>
+                  <div style={{fontSize:13,fontWeight:900,color:T.textMid,width:16}}>#{i+1}</div>
+                  {c&&<div style={{width:32,height:32,borderRadius:9,background:c.hex,border:"1.5px solid rgba(0,0,0,0.08)",flexShrink:0,boxShadow:"0 1px 4px rgba(0,0,0,0.1)"}}/>}
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>{id}</div>
+                    <div style={{fontSize:11,color:T.textMid,marginTop:2}}>累计消耗 {total} 粒 · 库存 {Math.round(curStock)} 粒</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
