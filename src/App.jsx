@@ -2593,13 +2593,23 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
   const [copied,setCopied]=React.useState(false);
   const [batchMode,setBatchMode]=React.useState(false);
   const [selected,setSelected]=React.useState({});
-  const [qtyMap,setQtyMap]=React.useState({});
+  const [bulkQty,setBulkQty]=React.useState("");      // 统一数量
+  const [overrideMap,setOverrideMap]=React.useState({}); // 单独覆盖
 
   const activeIds=initialRestock.filter(id=>!outOfStockIds.includes(id));
   const activeColors=ALL_COLORS.filter(c=>activeIds.includes(c.id));
   const bySeries=SERIES.map(s=>({s,items:activeColors.filter(c=>c.id.startsWith(s))})).filter(x=>x.items.length>0);
   const outColors=ALL_COLORS.filter(c=>outOfStockIds.includes(c.id));
   const outBySeries=SERIES.map(s=>({s,items:outColors.filter(c=>c.id.startsWith(s))})).filter(x=>x.items.length>0);
+
+  const selectedIds=Object.keys(selected).filter(id=>selected[id]);
+  const selectedCount=selectedIds.length;
+
+  // 某个色号最终用的数量：有单独覆盖就用覆盖，否则用统一值
+  function resolveQty(id){
+    if(overrideMap[id]!==undefined) return overrideMap[id];
+    return parseInt(bulkQty)||0;
+  }
 
   function copyList(){
     const txt=bySeries.map(({s,items})=>`【${s}系列】\n${items.map(c=>c.id).join('  ')}`).join('\n\n');
@@ -2609,7 +2619,7 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
   function toggleSelect(id){
     setSelected(prev=>{
       const next={...prev,[id]:!prev[id]};
-      if(!next[id]) setQtyMap(q=>{const nq={...q};delete nq[id];return nq;});
+      if(!next[id]) setOverrideMap(m=>{const nm={...m};delete nm[id];return nm;});
       return next;
     });
   }
@@ -2618,27 +2628,18 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
     const all={};activeColors.forEach(c=>{all[c.id]=true;});setSelected(all);
   }
 
-  function setQty(id,val){
-    const n=parseInt(val)||0;
-    setQtyMap(prev=>({...prev,[id]:Math.max(0,n)}));
-  }
-
   function confirmRestock(){
-    const boughtIds=Object.keys(selected).filter(id=>selected[id]);
-    const notBoughtIds=activeIds.filter(id=>!boughtIds.includes(id));
-    if(boughtIds.length>0){
+    const notBoughtIds=activeIds.filter(id=>!selected[id]);
+    if(selectedIds.length>0){
       const finalMap={};
-      boughtIds.forEach(id=>{ finalMap[id]=qtyMap[id]||0; });
+      selectedIds.forEach(id=>{ finalMap[id]=resolveQty(id); });
       onRestockConfirm(finalMap);
     }
     setOutOfStockIds(prev=>[...prev,...notBoughtIds]);
-    setSelected({});
-    setQtyMap({});
-    setBatchMode(false);
+    setSelected({});setBulkQty("");setOverrideMap({});setBatchMode(false);
   }
 
-  const selectedCount=Object.values(selected).filter(Boolean).length;
-  const inpStyle={width:52,padding:"3px 6px",borderRadius:8,border:`1.5px solid ${T.accent}`,background:T.card,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:11,fontWeight:800,textAlign:"center",outline:"none"};
+  const baseInp={border:`1.5px solid ${T.border}`,borderRadius:8,background:T.card,color:T.text,fontFamily:"'Nunito',sans-serif",fontWeight:800,outline:"none",textAlign:"center"};
 
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
@@ -2666,12 +2667,12 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
                   style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
                   全选
                 </button>
-                <button onClick={()=>{setBatchMode(false);setSelected({});setQtyMap({});}}
+                <button onClick={()=>{setBatchMode(false);setSelected({});setBulkQty("");setOverrideMap({});}}
                   style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
                   取消
                 </button>
-                <button onClick={confirmRestock}
-                  style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
+                <button onClick={confirmRestock} disabled={selectedCount===0}
+                  style={{padding:"5px 14px",borderRadius:50,border:"none",background:selectedCount>0?T.accent:"#cfd8e3",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:selectedCount>0?"pointer":"not-allowed"}}>
                   确认{selectedCount>0?` (${selectedCount})`:""}
                 </button>
               </>
@@ -2680,14 +2681,26 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
           </div>
         </div>
 
+        {/* 批量模式：统一数量栏 */}
+        {batchMode&&selectedCount>0&&(
+          <div style={{padding:"10px 18px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",gap:10,flexShrink:0,background:T.accentSoft}}>
+            <div style={{fontSize:12,fontWeight:900,color:T.text,whiteSpace:"nowrap"}}>统一补货量</div>
+            <input type="number" min="0" placeholder="粒数"
+              value={bulkQty}
+              onChange={e=>setBulkQty(e.target.value)}
+              style={{...baseInp,flex:1,padding:"5px 10px",fontSize:13,borderColor:T.accent}}/>
+            <div style={{fontSize:11,color:T.textMid,whiteSpace:"nowrap"}}>粒/色</div>
+          </div>
+        )}
+
         <div style={{overflowY:"auto",padding:"14px 16px 24px",flex:1}}>
           {initialRestock.length===0?(
             <div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"24px 0"}}>库存充足，暂无需补货 ✨</div>
           ):(
             <>
-              {batchMode&&activeColors.length>0&&(
+              {batchMode&&activeColors.length>0&&!selectedCount&&(
                 <div style={{fontSize:11,color:T.textMid,marginBottom:12,padding:"8px 12px",background:T.accentSoft,borderRadius:10}}>
-                  点击色号勾选已买到的，填入补了多少粒，未勾选的会标为缺货 📦
+                  点击色号勾选已买到的，未勾选的会标为缺货 🔴
                 </div>
               )}
 
@@ -2698,9 +2711,11 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
                   <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
                     {items.map(c=>{
                       const isSel=!!selected[c.id];
+                      const hasOverride=overrideMap[c.id]!==undefined;
+                      const displayQty=hasOverride?overrideMap[c.id]:(bulkQty||"");
                       return(
-                        <div key={c.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,
-                          opacity:batchMode&&!isSel?0.4:1,transition:"opacity 0.15s"}}>
+                        <div key={c.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,
+                          opacity:batchMode&&!isSel?0.38:1,transition:"opacity 0.15s"}}>
                           <div onClick={()=>batchMode&&toggleSelect(c.id)}
                             style={{width:36,height:36,borderRadius:10,background:c.hex,
                               border:isSel?`2.5px solid ${T.accent}`:`1.5px solid rgba(0,0,0,0.08)`,
@@ -2709,14 +2724,19 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
                             {isSel&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,background:"rgba(255,255,255,0.25)",borderRadius:8}}>✓</div>}
                           </div>
                           <div style={{fontSize:10,fontWeight:800,color:isSel?T.accent:T.text}}>{c.id}</div>
+                          {/* 勾选后显示数量，可单独覆盖 */}
                           {batchMode&&isSel&&(
-                            <input
-                              type="number" min="0" placeholder="粒数"
-                              value={qtyMap[c.id]||""}
-                              onChange={e=>setQty(c.id,e.target.value)}
+                            <input type="number" min="0" placeholder={bulkQty||"粒"}
+                              value={hasOverride?overrideMap[c.id]:""}
+                              onChange={e=>{
+                                const v=e.target.value;
+                                if(v==="") setOverrideMap(m=>{const nm={...m};delete nm[c.id];return nm;});
+                                else setOverrideMap(m=>({...m,[c.id]:Math.max(0,parseInt(v)||0)}));
+                              }}
                               onClick={e=>e.stopPropagation()}
-                              style={inpStyle}
-                            />
+                              style={{...baseInp,width:48,padding:"2px 4px",fontSize:11,
+                                borderColor:hasOverride?T.accent:T.border,
+                                color:hasOverride?T.accent:T.textMid}}/>
                           )}
                         </div>
                       );
@@ -2728,14 +2748,14 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
               {/* 缺货区 */}
               {outColors.length>0&&(
                 <div style={{marginTop:8,paddingTop:14,borderTop:`1.5px dashed ${T.border}`}}>
-                  <div style={{fontSize:12,fontWeight:900,color:T.danger||"#ff4d6d",marginBottom:10}}>🔴 本次缺货</div>
+                  <div style={{fontSize:12,fontWeight:900,color:"#ff4d6d",marginBottom:10}}>🔴 本次缺货</div>
                   {outBySeries.map(({s,items})=>(
                     <div key={s} style={{marginBottom:12}}>
                       <div style={{fontSize:11,fontWeight:900,color:T.textMid,marginBottom:6,letterSpacing:0.5}}>{s} 系列</div>
                       <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                         {items.map(c=>(
                           <div key={c.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                            <div style={{width:36,height:36,borderRadius:10,background:c.hex,border:`1.5px dashed rgba(0,0,0,0.2)`,opacity:0.45,boxShadow:"none"}}/>
+                            <div style={{width:36,height:36,borderRadius:10,background:c.hex,border:`1.5px dashed rgba(0,0,0,0.2)`,opacity:0.4}}/>
                             <div style={{fontSize:10,fontWeight:800,color:T.textLight}}>{c.id}</div>
                           </div>
                         ))}
