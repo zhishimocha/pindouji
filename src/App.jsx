@@ -1196,7 +1196,19 @@ export default function App(){
           </div>
         )}
 
-        {showRestock&&<RestockModal T={T} stock={stock} wL={wL} onClose={()=>setShowRestock(false)}/>}
+        {showRestock&&<RestockModal T={T} stock={stock} wL={wL} onClose={()=>setShowRestock(false)}
+          onRestockConfirm={(ids)=>{
+            pushHistory(stock,used);
+            setStock(prev=>{
+              const ns={...prev};
+              ids.forEach(id=>{
+                const shortage=wL-Math.round(ns[id]||0);
+                if(shortage>0) ns[id]=(ns[id]||0)+shortage;
+              });
+              return ns;
+            });
+          }}
+        />}
 
         {/* 专注模式浮动导航条 */}
         {focusMode&&page==="stock"&&!batch&&(
@@ -2576,43 +2588,140 @@ function BatchMovePicker({T,tasks,onConfirm,onClose}){
 }
 
 // ══════════════ 补货清单弹窗 ══════════════
-function RestockModal({T,stock,wL,onClose}){
-  const restockColors=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wL);
-  const bySeries=SERIES.map(s=>({s,items:restockColors.filter(c=>c.id.startsWith(s))})).filter(x=>x.items.length>0);
+function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
+  const initialRestock=React.useMemo(()=>ALL_COLORS.filter(c=>Math.round(stock[c.id])<wL).map(c=>c.id),[]);
+  const [outOfStockIds,setOutOfStockIds]=React.useState([]);
   const [copied,setCopied]=React.useState(false);
+  const [batchMode,setBatchMode]=React.useState(false);
+  const [selected,setSelected]=React.useState({});
+
+  const activeIds=initialRestock.filter(id=>!outOfStockIds.includes(id));
+  const activeColors=ALL_COLORS.filter(c=>activeIds.includes(c.id));
+  const bySeries=SERIES.map(s=>({s,items:activeColors.filter(c=>c.id.startsWith(s))})).filter(x=>x.items.length>0);
+  const outColors=ALL_COLORS.filter(c=>outOfStockIds.includes(c.id));
+  const outBySeries=SERIES.map(s=>({s,items:outColors.filter(c=>c.id.startsWith(s))})).filter(x=>x.items.length>0);
+
   function copyList(){
     const txt=bySeries.map(({s,items})=>`【${s}系列】\n${items.map(c=>c.id).join('  ')}`).join('\n\n');
     navigator.clipboard.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1800);});
   }
+
+  function toggleSelect(id){
+    setSelected(prev=>({...prev,[id]:!prev[id]}));
+  }
+
+  function selectAll(){
+    const all={};activeColors.forEach(c=>{all[c.id]=true;});setSelected(all);
+  }
+
+  function confirmRestock(){
+    const boughtIds=Object.keys(selected).filter(id=>selected[id]);
+    const notBoughtIds=activeIds.filter(id=>!boughtIds.includes(id));
+    if(boughtIds.length>0) onRestockConfirm(boughtIds);
+    setOutOfStockIds(prev=>[...prev,...notBoughtIds]);
+    setSelected({});
+    setBatchMode(false);
+  }
+
+  const selectedCount=Object.values(selected).filter(Boolean).length;
+
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:1200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
       onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,maxHeight:"80vh",background:T.card,borderRadius:"24px 24px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+
+        {/* 顶部栏 */}
         <div style={{padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
           <div style={{fontSize:15,fontWeight:900,color:T.text}}>📋 补货清单</div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <button onClick={copyList} style={{padding:"5px 14px",borderRadius:50,border:`1.5px solid ${T.accent}`,background:T.accentSoft,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
-              {copied?"✅ 已复制":"📋 复制清单"}
-            </button>
+            {!batchMode?(
+              <>
+                <button onClick={copyList} title="复制清单"
+                  style={{width:34,height:34,borderRadius:50,border:`1.5px solid ${T.accent}`,background:copied?T.accentSoft:"transparent",color:T.accent,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {copied?"✅":"📋"}
+                </button>
+                <button onClick={()=>setBatchMode(true)} title="批量入库"
+                  style={{width:34,height:34,borderRadius:50,border:`1.5px solid ${T.accent}`,background:"transparent",color:T.accent,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  🛒
+                </button>
+              </>
+            ):(
+              <>
+                <button onClick={selectAll}
+                  style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
+                  全选
+                </button>
+                <button onClick={()=>{setBatchMode(false);setSelected({});}}
+                  style={{padding:"5px 10px",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
+                  取消
+                </button>
+                <button onClick={confirmRestock}
+                  style={{padding:"5px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
+                  确认{selectedCount>0?` (${selectedCount})`:""}
+                </button>
+              </>
+            )}
             <button onClick={onClose} style={{background:"none",border:"none",fontSize:18,color:T.textMid,cursor:"pointer"}}>✕</button>
           </div>
         </div>
+
         <div style={{overflowY:"auto",padding:"14px 16px 24px",flex:1}}>
-          {restockColors.length===0?(
+          {initialRestock.length===0?(
             <div style={{textAlign:"center",color:T.textLight,fontSize:13,padding:"24px 0"}}>库存充足，暂无需补货 ✨</div>
-          ):bySeries.map(({s,items})=>(
-            <div key={s} style={{marginBottom:16}}>
-              <div style={{fontSize:12,fontWeight:900,color:T.textMid,marginBottom:8,letterSpacing:0.5}}>{s} 系列</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {items.map(c=>(
-                  <div key={c.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                    <div style={{width:36,height:36,borderRadius:10,background:c.hex,border:`1.5px solid rgba(0,0,0,0.08)`,boxShadow:"0 1px 4px rgba(0,0,0,0.1)"}}/>
-                    <div style={{fontSize:10,fontWeight:800,color:T.text}}>{c.id}</div>
+          ):(
+            <>
+              {/* 批量模式提示 */}
+              {batchMode&&activeColors.length>0&&(
+                <div style={{fontSize:11,color:T.textMid,marginBottom:12,padding:"8px 12px",background:T.accentSoft,borderRadius:10}}>
+                  点击色号勾选已买到的，未勾选的会标记为缺货 📦
+                </div>
+              )}
+
+              {/* 待补货色号 */}
+              {bySeries.map(({s,items})=>(
+                <div key={s} style={{marginBottom:16}}>
+                  <div style={{fontSize:12,fontWeight:900,color:T.textMid,marginBottom:8,letterSpacing:0.5}}>{s} 系列</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                    {items.map(c=>{
+                      const isSel=!!selected[c.id];
+                      return(
+                        <div key={c.id} onClick={()=>batchMode&&toggleSelect(c.id)}
+                          style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:batchMode?"pointer":"default",transition:"opacity 0.15s",opacity:batchMode&&!isSel?0.45:1}}>
+                          <div style={{width:36,height:36,borderRadius:10,background:c.hex,
+                            border:isSel?`2.5px solid ${T.accent}`:`1.5px solid rgba(0,0,0,0.08)`,
+                            boxShadow:isSel?`0 0 0 3px ${T.accentSoft}`:"0 1px 4px rgba(0,0,0,0.1)",
+                            transition:"all 0.15s",position:"relative"}}>
+                            {isSel&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,background:"rgba(255,255,255,0.25)",borderRadius:8}}>✓</div>}
+                          </div>
+                          <div style={{fontSize:10,fontWeight:800,color:isSel?T.accent:T.text}}>{c.id}</div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                </div>
+              ))}
+
+              {/* 缺货区 */}
+              {outColors.length>0&&(
+                <div style={{marginTop:8,paddingTop:14,borderTop:`1.5px dashed ${T.border}`}}>
+                  <div style={{fontSize:12,fontWeight:900,color:T.danger||"#ff4d6d",marginBottom:10}}>🔴 本次缺货</div>
+                  {outBySeries.map(({s,items})=>(
+                    <div key={s} style={{marginBottom:12}}>
+                      <div style={{fontSize:11,fontWeight:900,color:T.textMid,marginBottom:6,letterSpacing:0.5}}>{s} 系列</div>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                        {items.map(c=>(
+                          <div key={c.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                            <div style={{width:36,height:36,borderRadius:10,background:c.hex,border:`1.5px dashed rgba(0,0,0,0.2)`,opacity:0.45,boxShadow:"none"}}/>
+                            <div style={{fontSize:10,fontWeight:800,color:T.textLight}}>{c.id}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
