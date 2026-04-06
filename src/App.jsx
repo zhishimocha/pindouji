@@ -1470,58 +1470,66 @@ function MissingColorPage({T,stock,onBack}){
               setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
             }}
             onPointerUp={()=>setCropDrag(null)}
+            onPointerCancel={()=>setCropDrag(null)}
           >
-            <img
-              ref={cropImgRef}
-              src={cropImg}
-              alt=""
-              onLoad={ev=>{
-                const {clientWidth:w,clientHeight:h}=ev.target;
-                setCropBox({x:w*0.04,y:h*0.76,w:w*0.92,h:h*0.20});
-              }}
-              style={{display:"block",width:"100%",height:"auto",maxWidth:"100%",maxHeight:"none",objectFit:"contain",userSelect:"none",touchAction:"none"}}
-            />
-            {cropBox&&(
-              <>
-                <div style={{position:"absolute",left:0,top:0,width:cropBox.x,height:"100%",background:"rgba(0,0,0,0.45)",pointerEvents:"none"}}/>
-                <div style={{position:"absolute",left:cropBox.x+cropBox.w,top:0,right:0,height:"100%",background:"rgba(0,0,0,0.45)",pointerEvents:"none"}}/>
-                <div style={{position:"absolute",left:cropBox.x,top:0,width:cropBox.w,height:cropBox.y,background:"rgba(0,0,0,0.45)",pointerEvents:"none"}}/>
-                <div style={{position:"absolute",left:cropBox.x,top:cropBox.y+cropBox.h,width:cropBox.w,bottom:0,background:"rgba(0,0,0,0.45)",pointerEvents:"none"}}/>
-                <div
-                  onPointerDown={ev=>{
-                    ev.stopPropagation();
-                    const el=cropImgRef.current.getBoundingClientRect();
-                    setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});
-                    ev.currentTarget.setPointerCapture(ev.pointerId);
-                  }}
-                  style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none"}}
-                >
-                  {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.4)"}}/>)}
-                  {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.4)"}}/>)}
-                  {[
-                    {type:"tl",style:{top:-8,left:-8,cursor:"nw-resize"}},
-                    {type:"t", style:{top:-8,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
-                    {type:"tr",style:{top:-8,right:-8,cursor:"ne-resize"}},
-                    {type:"r", style:{top:"50%",right:-8,transform:"translateY(-50%)",cursor:"e-resize"}},
-                    {type:"br",style:{bottom:-8,right:-8,cursor:"se-resize"}},
-                    {type:"b", style:{bottom:-8,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
-                    {type:"bl",style:{bottom:-8,left:-8,cursor:"sw-resize"}},
-                    {type:"l", style:{top:"50%",left:-8,transform:"translateY(-50%)",cursor:"w-resize"}},
-                  ].map(({type,style})=>(
-                    <div
-                      key={type}
-                      onPointerDown={ev=>{
-                        ev.stopPropagation();
-                        const el=cropImgRef.current.getBoundingClientRect();
-                        setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});
-                        ev.currentTarget.setPointerCapture(ev.pointerId);
-                      }}
-                      style={{position:"absolute",width:18,height:18,background:"#60d4f0",borderRadius:3,touchAction:"none",...style}}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+            <div style={{position:"relative",width:"100%",maxWidth:680,margin:"0 auto",paddingBottom:12}}>
+              <img
+                ref={cropImgRef}
+                src={cropImg}
+                alt=""
+                onLoad={ev=>{
+                  const {clientWidth:w,clientHeight:h}=ev.target;
+                  const defaultH=Math.max(44,Math.min(h*0.22,110));
+                  setCropBox({x:Math.max(8,w*0.04),y:Math.max(8,h-defaultH-8),w:Math.max(80,w*0.92),h:defaultH});
+                  const scroller=ev.target.parentElement?.parentElement;
+                  if(scroller){
+                    requestAnimationFrame(()=>{scroller.scrollTop=Math.max(0,h-scroller.clientHeight);});
+                  }
+                }}
+                style={{display:"block",width:"100%",height:"auto",maxWidth:"100%",maxHeight:"none",objectFit:"contain",userSelect:"none",touchAction:"none",position:"relative",zIndex:1}}
+              />
+              {cropBox&&(
+                <>
+                  <div style={{position:"absolute",left:0,top:0,width:cropBox.x,height:cropImgRef.current?.clientHeight||0,background:"rgba(0,0,0,0.45)",pointerEvents:"none",zIndex:2}}/>
+                  <div style={{position:"absolute",left:cropBox.x+cropBox.w,top:0,right:0,height:cropImgRef.current?.clientHeight||0,background:"rgba(0,0,0,0.45)",pointerEvents:"none",zIndex:2}}/>
+                  <div style={{position:"absolute",left:cropBox.x,top:0,width:cropBox.w,height:cropBox.y,background:"rgba(0,0,0,0.45)",pointerEvents:"none",zIndex:2}}/>
+                  <div style={{position:"absolute",left:cropBox.x,top:cropBox.y+cropBox.h,width:cropBox.w,height:Math.max(0,(cropImgRef.current?.clientHeight||0)-cropBox.y-cropBox.h),background:"rgba(0,0,0,0.45)",pointerEvents:"none",zIndex:2}}/>
+                  <div
+                    onPointerDown={ev=>{
+                      ev.stopPropagation();
+                      const el=cropImgRef.current.getBoundingClientRect();
+                      setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});
+                      ev.currentTarget.setPointerCapture(ev.pointerId);
+                    }}
+                    style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none",zIndex:3,background:"rgba(96,212,240,0.08)"}}
+                  >
+                    {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.45)"}}/>)}
+                    {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.45)"}}/>)}
+                    {[
+                      {type:"tl",style:{top:-10,left:-10,cursor:"nw-resize"}},
+                      {type:"t", style:{top:-10,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
+                      {type:"tr",style:{top:-10,right:-10,cursor:"ne-resize"}},
+                      {type:"r", style:{top:"50%",right:-10,transform:"translateY(-50%)",cursor:"e-resize"}},
+                      {type:"br",style:{bottom:-10,right:-10,cursor:"se-resize"}},
+                      {type:"b", style:{bottom:-10,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
+                      {type:"bl",style:{bottom:-10,left:-10,cursor:"sw-resize"}},
+                      {type:"l", style:{top:"50%",left:-10,transform:"translateY(-50%)",cursor:"w-resize"}},
+                    ].map(({type,style})=>(
+                      <div
+                        key={type}
+                        onPointerDown={ev=>{
+                          ev.stopPropagation();
+                          const el=cropImgRef.current.getBoundingClientRect();
+                          setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});
+                          ev.currentTarget.setPointerCapture(ev.pointerId);
+                        }}
+                        style={{position:"absolute",width:20,height:20,background:"#60d4f0",borderRadius:6,border:"2px solid #fff",boxSizing:"border-box",touchAction:"none",...style}}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
           <div style={{display:"flex",gap:12,marginTop:12,justifyContent:"center",padding:"10px 0 4px",flexShrink:0}}>
             <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
