@@ -837,9 +837,9 @@ export default function App(){
       <div className="tt" style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
 
         {/* 裁剪弹窗 */}
-        {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.88)",display:"flex",flexDirection:"column",padding:"10px 12px",boxSizing:"border-box"}}>
-          <div style={{fontSize:13,color:"#fff",fontWeight:700,textAlign:"center",padding:"4px 0 10px",flexShrink:0}}>拖拽边框调整选区 · 框选统计表区域</div>
-          <div style={{position:"relative",flex:1,minHeight:0,overflow:"auto",borderRadius:12,display:"flex",alignItems:"flex-start",justifyContent:"center",WebkitOverflowScrolling:"touch"}}
+        {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{fontSize:13,color:"#fff",fontWeight:700,marginBottom:10}}>拖拽边框调整选区 · 框选统计表区域</div>
+          <div style={{position:"relative",maxWidth:"100%",maxHeight:"65vh",overflow:"hidden",borderRadius:12}}
             onPointerMove={ev=>{
               if(!cropDrag||!cropImgRef.current)return;
               const el=cropImgRef.current.getBoundingClientRect();
@@ -869,9 +869,9 @@ export default function App(){
               onLoad={ev=>{
                 const {clientWidth:w,clientHeight:h}=ev.target;
                 // 默认框选下半部分（统计表通常在下方）
-                setCropBox({x:w*0.04,y:h*0.76,w:w*0.92,h:h*0.20});
+                setCropBox({x:w*0.05,y:h*0.65,w:w*0.9,h:h*0.32});
               }}
-              style={{display:"block",width:"100%",height:"auto",maxWidth:"100%",maxHeight:"none",objectFit:"contain",userSelect:"none",touchAction:"none"}}/>
+              style={{display:"block",maxWidth:"100%",maxHeight:"65vh",objectFit:"contain",userSelect:"none"}}/>
             {cropBox&&<>
               {/* 暗色遮罩四周 */}
               <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`
@@ -905,7 +905,7 @@ export default function App(){
               </div>
             </>}
           </div>
-          <div style={{display:"flex",gap:12,marginTop:12,justifyContent:"center",padding:"10px 0 4px",flexShrink:0}}>
+          <div style={{display:"flex",gap:12,marginTop:14}}>
             <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
             <button onClick={confirmCrop} disabled={imgLoading} style={{padding:"8px 28px",borderRadius:50,border:"none",background:"#60d4f0",color:"#1a2a3a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
               {imgLoading?"识别中…":"✓ 确认识别"}
@@ -1296,44 +1296,240 @@ function MissingColorPage({T,stock,onBack}){
   const [replaces,setReplaces]=useState({});
   const [expanded,setExpanded]=useState({});
   const fileRef=useRef(null);
+  const cropImgRef=useRef(null);
+  const [cropImg,setCropImg]=useState(null);
+  const [cropBox,setCropBox]=useState(null);
+  const [cropDrag,setCropDrag]=useState(null);
+
   // --- 单色搜索 ---
   const [searchQ,setSearchQ]=useState("");
   const searchColor=ALL_COLORS.find(c=>c.id===searchQ.trim().toUpperCase());
-  const searchResults=searchColor?getSimilarColors(searchColor.id,stock,10):[];
+  const searchResults=searchColor
+    ? (REPLACE_TABLE[searchColor.id]||[])
+        .map(id=>ALL_COLORS.find(c=>c.id===id))
+        .filter(Boolean)
+        .map(c=>({...c,qty:stock[c.id]||0,fromTable:true}))
+    : [];
 
   function handleFile(e){
-    const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=ev=>setImgSrc(ev.target.result);
-    r.readAsDataURL(f);e.target.value="";
+    const f=e.target.files?.[0];
+    if(!f)return;
+    const url=URL.createObjectURL(f);
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const max=1600;
+      let w=img.width,h=img.height;
+      if(w>max||h>max){
+        if(w>h){h=Math.round(h*max/w);w=max;}
+        else{w=Math.round(w*max/h);h=max;}
+      }
+      canvas.width=w;
+      canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      setCropImg(canvas.toDataURL('image/jpeg',0.92));
+      setCropBox(null);
+      setErr("");
+    };
+    img.src=url;
+    e.target.value="";
+  }
+
+  async function confirmCrop(){
+    if(!cropImg)return;
+    try{
+      let finalB64=cropImg;
+      if(cropBox&&cropImgRef.current){
+        const el=cropImgRef.current;
+        const scaleX=el.naturalWidth/el.clientWidth;
+        const scaleY=el.naturalHeight/el.clientHeight;
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.max(1,Math.round(cropBox.w*scaleX));
+        canvas.height=Math.max(1,Math.round(cropBox.h*scaleY));
+        const ctx=canvas.getContext('2d');
+        const imgEl=new Image();
+        await new Promise(res=>{imgEl.onload=res;imgEl.src=cropImg;});
+        ctx.drawImage(
+          imgEl,
+          Math.round(cropBox.x*scaleX),
+          Math.round(cropBox.y*scaleY),
+          canvas.width,
+          canvas.height,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+        finalB64=canvas.toDataURL('image/jpeg',0.92);
+      }
+      setImgSrc(finalB64);
+      setCropImg(null);
+      setCropBox(null);
+    }catch(e){
+      setErr("框选失败，请重试～");
+    }
   }
 
   async function recognize(){
     if(!imgSrc)return;
-    setLoading(true);setErr("");
+    setLoading(true);
+    setErr("");
     try{
-      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({image:imgSrc,prompt:`请识别图纸下方色块统计区域，提取每个色号和对应的颗数，格式为：色号 颗数，每行一个，例如：\nA1 200\nB3 150\n只输出色号和数字，不要其他内容。`})});
+      const resp=await fetch('/api/qwen',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          image:imgSrc,
+          prompt:`请识别图纸下方色块统计区域，提取每个色号和对应的颗数，格式为：色号 颗数，每行一个，例如：\nA1 200\nB3 150\n只输出色号和数字，不要其他内容。`
+        })
+      });
       const data=await resp.json();
       if(data.result){
         const lines=data.result.split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
-        const items=lines.map(line=>{const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);return m?{id:m[1].toUpperCase(),need:parseInt(m[2])}:null;}).filter(Boolean);
-        if(items.length>0){setParsed(items);setStep("result");}
-        else{setErr("识别失败，建议截图只保留色块统计区再试～");}
-      }else{setErr("识别失败，建议截图只保留色块统计区再试～");}
-    }catch(e){setErr("请求失败："+e.message);}
-    finally{setLoading(false);}
+        const items=lines.map(line=>{
+          const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);
+          return m?{id:m[1].toUpperCase(),need:parseInt(m[2])}:null;
+        }).filter(Boolean);
+        if(items.length>0){
+          setParsed(items);
+          setStep("result");
+        }else{
+          setErr("识别失败，建议框选底部统计表区域再试～");
+        }
+      }else{
+        setErr("识别失败，建议框选底部统计表区域再试～");
+      }
+    }catch(e){
+      setErr("请求失败："+e.message);
+    }finally{
+      setLoading(false);
+    }
   }
 
-  function pickReplace(originalId,replaceId){setReplaces(prev=>({...prev,[originalId]:replaceId}));setExpanded(prev=>({...prev,[originalId]:false}));}
+  function resetScan(){
+    setStep("upload");
+    setImgSrc(null);
+    setParsed([]);
+    setReplaces({});
+    setExpanded({});
+    setErr("");
+    setLoading(false);
+  }
+
+  function pickReplace(originalId,replaceId){
+    setReplaces(prev=>({...prev,[originalId]:replaceId}));
+    setExpanded(prev=>({...prev,[originalId]:false}));
+  }
 
   const missingItems=parsed.filter(i=>(stock[i.id]||0)<i.need);
   const okItems=parsed.filter(i=>(stock[i.id]||0)>=i.need);
 
-  const tabStyle=(active)=>({padding:"7px 18px",borderRadius:50,border:"none",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer",background:active?T.accent:"transparent",color:active?"#fff":T.textMid,transition:"all 0.15s"});
+  const tabStyle=(active)=>({
+    padding:"7px 18px",
+    borderRadius:50,
+    border:"none",
+    fontFamily:"'Nunito',sans-serif",
+    fontSize:12,
+    fontWeight:800,
+    cursor:"pointer",
+    background:active?T.accent:"transparent",
+    color:active?"#fff":T.textMid,
+    transition:"all 0.15s"
+  });
 
   return(
     <div className="fade" style={{padding:"18px 16px",fontFamily:"'Nunito',sans-serif"}}>
+      {cropImg&&(
+        <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.88)",display:"flex",flexDirection:"column",padding:"10px 12px",boxSizing:"border-box"}}>
+          <div style={{fontSize:13,color:"#fff",fontWeight:700,textAlign:"center",padding:"4px 0 10px",flexShrink:0}}>拖拽边框调整选区 · 框选统计表区域</div>
+          <div
+            style={{position:"relative",flex:1,minHeight:0,overflow:"auto",borderRadius:12,display:"flex",alignItems:"flex-start",justifyContent:"center",WebkitOverflowScrolling:"touch"}}
+            onPointerMove={ev=>{
+              if(!cropDrag||!cropImgRef.current)return;
+              const el=cropImgRef.current.getBoundingClientRect();
+              const cx=Math.max(0,Math.min(ev.clientX-el.left,el.width));
+              const cy=Math.max(0,Math.min(ev.clientY-el.top,el.height));
+              const dx=cx-cropDrag.lastX;
+              const dy=cy-cropDrag.lastY;
+              setCropBox(b=>{
+                if(!b)return b;
+                let {x,y,w,h}=b;
+                const minS=30;
+                if(cropDrag.type==="move"){
+                  x=Math.max(0,Math.min(x+dx,el.width-w));
+                  y=Math.max(0,Math.min(y+dy,el.height-h));
+                }else{
+                  if(cropDrag.type.includes("l")){const nx=Math.min(x+dx,x+w-minS);w=w-(nx-x);x=nx;}
+                  if(cropDrag.type.includes("r")){w=Math.max(minS,Math.min(w+dx,el.width-x));}
+                  if(cropDrag.type.includes("t")){const ny=Math.min(y+dy,y+h-minS);h=h-(ny-y);y=ny;}
+                  if(cropDrag.type.includes("b")){h=Math.max(minS,Math.min(h+dy,el.height-y));}
+                }
+                return {x,y,w,h};
+              });
+              setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
+            }}
+            onPointerUp={()=>setCropDrag(null)}
+          >
+            <img
+              ref={cropImgRef}
+              src={cropImg}
+              alt=""
+              onLoad={ev=>{
+                const {clientWidth:w,clientHeight:h}=ev.target;
+                setCropBox({x:w*0.04,y:h*0.76,w:w*0.92,h:h*0.20});
+              }}
+              style={{display:"block",width:"100%",height:"auto",maxWidth:"100%",maxHeight:"none",objectFit:"contain",userSelect:"none",touchAction:"none"}}
+            />
+            {cropBox&&(
+              <>
+                <div style={{position:"absolute",left:0,top:0,width:cropBox.x,height:"100%",background:"rgba(0,0,0,0.45)",pointerEvents:"none"}}/>
+                <div style={{position:"absolute",left:cropBox.x+cropBox.w,top:0,right:0,height:"100%",background:"rgba(0,0,0,0.45)",pointerEvents:"none"}}/>
+                <div style={{position:"absolute",left:cropBox.x,top:0,width:cropBox.w,height:cropBox.y,background:"rgba(0,0,0,0.45)",pointerEvents:"none"}}/>
+                <div style={{position:"absolute",left:cropBox.x,top:cropBox.y+cropBox.h,width:cropBox.w,bottom:0,background:"rgba(0,0,0,0.45)",pointerEvents:"none"}}/>
+                <div
+                  onPointerDown={ev=>{
+                    ev.stopPropagation();
+                    const el=cropImgRef.current.getBoundingClientRect();
+                    setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});
+                    ev.currentTarget.setPointerCapture(ev.pointerId);
+                  }}
+                  style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none"}}
+                >
+                  {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.4)"}}/>)}
+                  {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.4)"}}/>)}
+                  {[
+                    {type:"tl",style:{top:-8,left:-8,cursor:"nw-resize"}},
+                    {type:"t", style:{top:-8,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
+                    {type:"tr",style:{top:-8,right:-8,cursor:"ne-resize"}},
+                    {type:"r", style:{top:"50%",right:-8,transform:"translateY(-50%)",cursor:"e-resize"}},
+                    {type:"br",style:{bottom:-8,right:-8,cursor:"se-resize"}},
+                    {type:"b", style:{bottom:-8,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
+                    {type:"bl",style:{bottom:-8,left:-8,cursor:"sw-resize"}},
+                    {type:"l", style:{top:"50%",left:-8,transform:"translateY(-50%)",cursor:"w-resize"}},
+                  ].map(({type,style})=>(
+                    <div
+                      key={type}
+                      onPointerDown={ev=>{
+                        ev.stopPropagation();
+                        const el=cropImgRef.current.getBoundingClientRect();
+                        setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});
+                        ev.currentTarget.setPointerCapture(ev.pointerId);
+                      }}
+                      style={{position:"absolute",width:18,height:18,background:"#60d4f0",borderRadius:3,touchAction:"none",...style}}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div style={{display:"flex",gap:12,marginTop:12,justifyContent:"center",padding:"10px 0 4px",flexShrink:0}}>
+            <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"8px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.3)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
+            <button onClick={confirmCrop} style={{padding:"8px 28px",borderRadius:50,border:"none",background:"#60d4f0",color:"#1a2a3a",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>✓ 确认框选</button>
+          </div>
+        </div>
+      )}
+
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
         <button onClick={onBack} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
         <div style={{fontSize:15,fontWeight:800,color:T.text}}>🔍 缺色替换</div>
@@ -1363,6 +1559,9 @@ function MissingColorPage({T,stock,onBack}){
                 </div>
               </div>
               <div style={{fontSize:12,fontWeight:800,color:T.textMid,marginBottom:10}}>推荐替换色</div>
+              {searchResults.length===0&&(
+                <div style={{textAlign:"center",color:T.textLight,fontSize:12,padding:"10px 0 16px"}}>这个色号暂时没有预设替换表</div>
+              )}
               {searchResults.map((c,i)=>{
                 const enough=(stock[c.id]||0)>0;
                 return(
@@ -1389,13 +1588,13 @@ function MissingColorPage({T,stock,onBack}){
               <div onClick={()=>fileRef.current?.click()} style={{background:T.accentSoft,border:`2px dashed ${T.accent}`,borderRadius:22,padding:"36px 20px",textAlign:"center",cursor:"pointer",marginBottom:16}}>
                 <div style={{fontSize:40,marginBottom:10}}>📷</div>
                 <div style={{fontSize:14,fontWeight:800,color:T.accent}}>点击上传图纸</div>
-                <div style={{fontSize:11,color:T.textMid,marginTop:6,lineHeight:1.7}}>建议截取图纸下方<br/>「色块统计区」识别更准确</div>
+                <div style={{fontSize:11,color:T.textMid,marginTop:6,lineHeight:1.7}}>上传后可框选图纸下方<br/>「色块统计区」再识别</div>
               </div>
             ):(
               <div style={{marginBottom:16}}>
                 <img src={imgSrc} style={{width:"100%",borderRadius:16,marginBottom:12,maxHeight:300,objectFit:"contain",background:"#f0f0f0"}} alt=""/>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>setImgSrc(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新选图</button>
+                  <button onClick={()=>{setImgSrc(null);setCropImg(null);setCropBox(null);}} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新选图</button>
                   <button onClick={recognize} disabled={loading} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:loading?0.7:1}}>
                     {loading?"🔍 识别中…":"✓ 开始识别"}
                   </button>
@@ -1496,7 +1695,7 @@ function MissingColorPage({T,stock,onBack}){
               </div>
             )}
             <div style={{display:"flex",gap:10,marginTop:8}}>
-              <button onClick={()=>{setStep("upload");setImgSrc(null);setParsed([]);setReplaces({});setExpanded({});setErr("");}}
+              <button onClick={resetScan}
                 style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新识别</button>
               {missingItems.length>0&&(
                 <button onClick={()=>setStep("summary")}
@@ -1535,13 +1734,14 @@ function MissingColorPage({T,stock,onBack}){
               );
             })}
             <button onClick={()=>setStep("result")}
-              style={{width:"100%",padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:8}}>← 返回修改</button>
+              style={{width:"100%",marginTop:8,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>← 返回修改</button>
           </div>
         )}
       </>)}
     </div>
   );
 }
+
 
 // ══════════════════════════════════
 //  FocusMode（专注模式全屏）
