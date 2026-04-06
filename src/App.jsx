@@ -1287,7 +1287,6 @@ function getSimilarColors(targetId,stock,count=6){
 // ══════════════════════════════════
 function MissingColorPage({T,stock,onBack}){
   const [mode,setMode]=useState("scan"); // scan | search
-  // --- 图纸识别 ---
   const [step,setStep]=useState("upload");
   const [imgSrc,setImgSrc]=useState(null);
   const [loading,setLoading]=useState(false);
@@ -1296,36 +1295,130 @@ function MissingColorPage({T,stock,onBack}){
   const [replaces,setReplaces]=useState({});
   const [expanded,setExpanded]=useState({});
   const fileRef=useRef(null);
-  // --- 单色搜索 ---
+  const cropImgRef=useRef(null);
+
+  const [cropImg,setCropImg]=useState(null);
+  const [cropBox,setCropBox]=useState(null);
+  const [cropDrag,setCropDrag]=useState(null);
+
   const [searchQ,setSearchQ]=useState("");
   const searchColor=ALL_COLORS.find(c=>c.id===searchQ.trim().toUpperCase());
-  const searchResults=searchColor?getSimilarColors(searchColor.id,stock,10):[];
+  const searchResults=searchColor
+    ? (REPLACE_TABLE[searchColor.id]||[])
+        .map(id=>ALL_COLORS.find(c=>c.id===id))
+        .filter(Boolean)
+        .map(c=>({...c,qty:stock[c.id]||0,fromTable:true}))
+    : [];
 
-  function handleFile(e){
-    const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=ev=>setImgSrc(ev.target.result);
-    r.readAsDataURL(f);e.target.value="";
-  }
-
-  async function recognize(){
-    if(!imgSrc)return;
+  async function recognizeImage(imageBase64){
+    if(!imageBase64)return;
     setLoading(true);setErr("");
     try{
-      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({image:imgSrc,prompt:`请识别图纸下方色块统计区域，提取每个色号和对应的颗数，格式为：色号 颗数，每行一个，例如：\nA1 200\nB3 150\n只输出色号和数字，不要其他内容。`})});
+      const resp=await fetch('/api/qwen',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          image:imageBase64,
+          prompt:`请识别图纸下方色块统计区域，提取每个色号和对应的颗数，格式为：色号 颗数，每行一个，例如：\nA1 200\nB3 150\n只输出色号和数字，不要其他内容。`
+        })
+      });
       const data=await resp.json();
       if(data.result){
         const lines=data.result.split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
-        const items=lines.map(line=>{const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);return m?{id:m[1].toUpperCase(),need:parseInt(m[2])}:null;}).filter(Boolean);
-        if(items.length>0){setParsed(items);setStep("result");}
-        else{setErr("识别失败，建议截图只保留色块统计区再试～");}
-      }else{setErr("识别失败，建议截图只保留色块统计区再试～");}
-    }catch(e){setErr("请求失败："+e.message);}
-    finally{setLoading(false);}
+        const items=lines.map(line=>{
+          const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);
+          return m?{id:m[1].toUpperCase(),need:parseInt(m[2])}:null;
+        }).filter(Boolean);
+        if(items.length>0){
+          setParsed(items);
+          setStep("result");
+        }else{
+          setErr("识别失败，建议框选底部统计表区域再试～");
+        }
+      }else{
+        setErr("识别失败，建议框选底部统计表区域再试～");
+      }
+    }catch(e){
+      setErr("请求失败："+e.message);
+    }finally{
+      setLoading(false);
+    }
   }
 
-  function pickReplace(originalId,replaceId){setReplaces(prev=>({...prev,[originalId]:replaceId}));setExpanded(prev=>({...prev,[originalId]:false}));}
+  function handleFile(e){
+    const file=e.target.files?.[0];
+    if(!file)return;
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const max=1600;
+      let w=img.width,h=img.height;
+      if(w>max||h>max){
+        if(w>h){h=Math.round(h*max/w);w=max;}
+        else{w=Math.round(w*max/h);h=max;}
+      }
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      setCropImg(canvas.toDataURL('image/jpeg',0.92));
+      setCropBox(null);
+      setErr("");
+    };
+    img.src=url;
+    e.target.value="";
+  }
+
+  async function confirmCrop(){
+    if(!cropImg)return;
+    try{
+      let finalB64=cropImg;
+      if(cropBox&&cropImgRef.current){
+        const el=cropImgRef.current;
+        const scaleX=el.naturalWidth/el.clientWidth;
+        const scaleY=el.naturalHeight/el.clientHeight;
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.max(1,Math.round(cropBox.w*scaleX));
+        canvas.height=Math.max(1,Math.round(cropBox.h*scaleY));
+        const ctx=canvas.getContext('2d');
+        const imgEl=new Image();
+        await new Promise(res=>{imgEl.onload=res;imgEl.src=cropImg;});
+        ctx.drawImage(
+          imgEl,
+          Math.round(cropBox.x*scaleX),
+          Math.round(cropBox.y*scaleY),
+          canvas.width,
+          canvas.height,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+        finalB64=canvas.toDataURL('image/jpeg',0.92);
+      }
+      setImgSrc(finalB64);
+      setCropImg(null);
+      setCropBox(null);
+      await recognizeImage(finalB64);
+    }catch(e){
+      setErr("裁剪失败："+e.message);
+    }
+  }
+
+  function resetScan(){
+    setStep("upload");
+    setImgSrc(null);
+    setParsed([]);
+    setReplaces({});
+    setExpanded({});
+    setErr("");
+    setLoading(false);
+  }
+
+  function pickReplace(originalId,replaceId){
+    setReplaces(prev=>({...prev,[originalId]:replaceId}));
+    setExpanded(prev=>({...prev,[originalId]:false}));
+  }
 
   const missingItems=parsed.filter(i=>(stock[i.id]||0)<i.need);
   const okItems=parsed.filter(i=>(stock[i.id]||0)>=i.need);
@@ -1334,18 +1427,101 @@ function MissingColorPage({T,stock,onBack}){
 
   return(
     <div className="fade" style={{padding:"18px 16px",fontFamily:"'Nunito',sans-serif"}}>
+      {cropImg&&(
+        <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.82)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{fontSize:13,color:"#fff",fontWeight:800,marginBottom:10,textAlign:"center"}}>拖拽边框调整选区 · 框选统计表区域</div>
+          <div
+            style={{position:"relative",maxWidth:"100%",maxHeight:"66vh",overflow:"hidden",borderRadius:14}}
+            onPointerMove={ev=>{
+              if(!cropDrag||!cropImgRef.current)return;
+              const el=cropImgRef.current.getBoundingClientRect();
+              const cx=Math.max(0,Math.min(ev.clientX-el.left,el.width));
+              const cy=Math.max(0,Math.min(ev.clientY-el.top,el.height));
+              const dx=cx-cropDrag.lastX;
+              const dy=cy-cropDrag.lastY;
+              setCropBox(b=>{
+                if(!b)return b;
+                let {x,y,w,h}=b;
+                const minS=30;
+                if(cropDrag.type==="move"){
+                  x=Math.max(0,Math.min(x+dx,el.width-w));
+                  y=Math.max(0,Math.min(y+dy,el.height-h));
+                }else{
+                  if(cropDrag.type.includes("l")){const nx=Math.min(x+dx,x+w-minS);w=w-(nx-x);x=nx;}
+                  if(cropDrag.type.includes("r")){w=Math.max(minS,Math.min(w+dx,el.width-x));}
+                  if(cropDrag.type.includes("t")){const ny=Math.min(y+dy,y+h-minS);h=h-(ny-y);y=ny;}
+                  if(cropDrag.type.includes("b")){h=Math.max(minS,Math.min(h+dy,el.height-y));}
+                }
+                return {x,y,w,h};
+              });
+              setCropDrag(d=>({...d,lastX:cx,lastY:cy}));
+            }}
+            onPointerUp={()=>setCropDrag(null)}
+          >
+            <img
+              ref={cropImgRef}
+              src={cropImg}
+              alt=""
+              onLoad={ev=>{
+                const {clientWidth:w,clientHeight:h}=ev.target;
+                setCropBox({x:w*0.04,y:h*0.62,w:w*0.92,h:h*0.30});
+              }}
+              style={{display:"block",maxWidth:"100%",maxHeight:"66vh",objectFit:"contain",userSelect:"none"}}
+            />
+            {cropBox&&(<>
+              <div style={{position:"absolute",inset:0,pointerEvents:"none",background:`linear-gradient(to bottom, rgba(0,0,0,0.45) ${cropBox.y}px, transparent ${cropBox.y}px, transparent ${cropBox.y+cropBox.h}px, rgba(0,0,0,0.45) ${cropBox.y+cropBox.h}px)`}}/>
+              <div
+                onPointerDown={ev=>{
+                  ev.stopPropagation();
+                  const el=cropImgRef.current.getBoundingClientRect();
+                  setCropDrag({type:"move",lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});
+                  ev.currentTarget.setPointerCapture(ev.pointerId);
+                }}
+                style={{position:"absolute",left:cropBox.x,top:cropBox.y,width:cropBox.w,height:cropBox.h,border:"2px solid #60d4f0",boxSizing:"border-box",cursor:"move",touchAction:"none"}}
+              >
+                {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.3}%`,top:0,bottom:0,width:1,background:"rgba(96,212,240,0.45)"}}/>)}
+                {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.3}%`,left:0,right:0,height:1,background:"rgba(96,212,240,0.45)"}}/>)}
+                {[
+                  {type:"tl",style:{top:-8,left:-8,cursor:"nw-resize"}},
+                  {type:"t",style:{top:-8,left:"50%",transform:"translateX(-50%)",cursor:"n-resize"}},
+                  {type:"tr",style:{top:-8,right:-8,cursor:"ne-resize"}},
+                  {type:"r",style:{top:"50%",right:-8,transform:"translateY(-50%)",cursor:"e-resize"}},
+                  {type:"br",style:{bottom:-8,right:-8,cursor:"se-resize"}},
+                  {type:"b",style:{bottom:-8,left:"50%",transform:"translateX(-50%)",cursor:"s-resize"}},
+                  {type:"bl",style:{bottom:-8,left:-8,cursor:"sw-resize"}},
+                  {type:"l",style:{top:"50%",left:-8,transform:"translateY(-50%)",cursor:"w-resize"}},
+                ].map(({type,style})=>(
+                  <div
+                    key={type}
+                    onPointerDown={ev=>{
+                      ev.stopPropagation();
+                      const el=cropImgRef.current.getBoundingClientRect();
+                      setCropDrag({type,lastX:ev.clientX-el.left,lastY:ev.clientY-el.top});
+                      ev.currentTarget.setPointerCapture(ev.pointerId);
+                    }}
+                    style={{position:"absolute",width:18,height:18,background:"#60d4f0",borderRadius:4,touchAction:"none",...style}}
+                  />
+                ))}
+              </div>
+            </>)}
+          </div>
+          <div style={{display:"flex",gap:12,marginTop:14}}>
+            <button onClick={()=>{setCropImg(null);setCropBox(null);}} style={{padding:"9px 24px",borderRadius:50,border:"1.5px solid rgba(255,255,255,0.35)",background:"transparent",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>取消</button>
+            <button onClick={confirmCrop} disabled={loading} style={{padding:"9px 28px",borderRadius:50,border:"none",background:"#60d4f0",color:"#173140",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:loading?0.7:1}}>{loading?"识别中…":"✓ 确认识别"}</button>
+          </div>
+        </div>
+      )}
+
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
         <button onClick={onBack} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer"}}>←</button>
         <div style={{fontSize:15,fontWeight:800,color:T.text}}>🔍 缺色替换</div>
       </div>
 
-      {/* Tab切换 */}
       <div style={{display:"flex",gap:4,background:T.bg||T.accentSoft,borderRadius:50,padding:4,marginBottom:18}}>
         <button style={tabStyle(mode==="scan")} onClick={()=>setMode("scan")}>图纸识别</button>
         <button style={tabStyle(mode==="search")} onClick={()=>setMode("search")}>单色查询</button>
       </div>
 
-      {/* 单色查询 */}
       {mode==="search"&&(
         <div>
           <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="输入色号，如 A1、H12…"
@@ -1363,7 +1539,9 @@ function MissingColorPage({T,stock,onBack}){
                 </div>
               </div>
               <div style={{fontSize:12,fontWeight:800,color:T.textMid,marginBottom:10}}>推荐替换色</div>
-              {searchResults.map((c,i)=>{
+              {searchResults.length===0?(
+                <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:14,padding:"16px 14px",fontSize:12,color:T.textMid}}>这个色号目前没有预设替换推荐。</div>
+              ):(searchResults.map((c,i)=>{
                 const enough=(stock[c.id]||0)>0;
                 return(
                   <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:T.card,borderRadius:14,border:`1.5px solid ${enough?T.border+"88":T.border}`,marginBottom:8,boxShadow:T.cardShadow}}>
@@ -1371,18 +1549,17 @@ function MissingColorPage({T,stock,onBack}){
                     <div style={{width:32,height:32,borderRadius:9,background:c.hex,border:"1.5px solid rgba(0,0,0,0.08)",flexShrink:0}}/>
                     <div style={{flex:1}}>
                       <div style={{fontSize:13,fontWeight:900,color:T.text}}>{c.id}</div>
-                      {c.fromTable&&<div style={{fontSize:9,color:T.accent,fontWeight:800,marginTop:1}}>对照表推荐</div>}
+                      <div style={{fontSize:9,color:T.accent,fontWeight:800,marginTop:1}}>对照表推荐</div>
                     </div>
                     <div style={{fontSize:11,fontWeight:700,color:enough?"#4caf50":T.textLight}}>{enough?`库存${Math.round(stock[c.id]||0)}粒`:"无库存"}</div>
                   </div>
                 );
-              })}
+              }))}
             </div>
           )}
         </div>
       )}
 
-      {/* 图纸识别 */}
       {mode==="scan"&&(<>
         {step==="upload"&&(
           <div>
@@ -1390,15 +1567,15 @@ function MissingColorPage({T,stock,onBack}){
               <div onClick={()=>fileRef.current?.click()} style={{background:T.accentSoft,border:`2px dashed ${T.accent}`,borderRadius:22,padding:"36px 20px",textAlign:"center",cursor:"pointer",marginBottom:16}}>
                 <div style={{fontSize:40,marginBottom:10}}>📷</div>
                 <div style={{fontSize:14,fontWeight:800,color:T.accent}}>点击上传图纸</div>
-                <div style={{fontSize:11,color:T.textMid,marginTop:6,lineHeight:1.7}}>建议截取图纸下方<br/>「色块统计区」识别更准确</div>
+                <div style={{fontSize:11,color:T.textMid,marginTop:6,lineHeight:1.7}}>上传后可手动框选统计表区域<br/>识别逻辑和库存页批量框选一致</div>
               </div>
             ):(
               <div style={{marginBottom:16}}>
                 <img src={imgSrc} style={{width:"100%",borderRadius:16,marginBottom:12,maxHeight:300,objectFit:"contain",background:"#f0f0f0"}} alt=""/>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>setImgSrc(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新选图</button>
-                  <button onClick={recognize} disabled={loading} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:loading?0.7:1}}>
-                    {loading?"🔍 识别中…":"✓ 开始识别"}
+                  <button onClick={resetScan} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新选图</button>
+                  <button onClick={()=>imgSrc&&recognizeImage(imgSrc)} disabled={loading} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:loading?0.7:1}}>
+                    {loading?"🔍 识别中…":"✓ 再识别一次"}
                   </button>
                 </div>
               </div>
@@ -1410,6 +1587,7 @@ function MissingColorPage({T,stock,onBack}){
 
         {step==="result"&&(
           <div>
+            {imgSrc&&<img src={imgSrc} style={{width:"100%",borderRadius:16,marginBottom:14,maxHeight:220,objectFit:"contain",background:"#f4f4f4"}} alt=""/>}
             {missingItems.length>0&&(
               <div style={{marginBottom:16}}>
                 <div style={{fontSize:12,fontWeight:800,color:T.warn,marginBottom:10,letterSpacing:0.5}}>⚠️ 库存不足 · {missingItems.length}个色号</div>
@@ -1497,7 +1675,7 @@ function MissingColorPage({T,stock,onBack}){
               </div>
             )}
             <div style={{display:"flex",gap:10,marginTop:8}}>
-              <button onClick={()=>{setStep("upload");setImgSrc(null);setParsed([]);setReplaces({});setExpanded({});setErr("");}}
+              <button onClick={resetScan}
                 style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>重新识别</button>
               {missingItems.length>0&&(
                 <button onClick={()=>setStep("summary")}
@@ -1543,7 +1721,6 @@ function MissingColorPage({T,stock,onBack}){
     </div>
   );
 }
-
 // ══════════════════════════════════
 //  FocusMode（专注模式全屏）
 // ══════════════════════════════════
