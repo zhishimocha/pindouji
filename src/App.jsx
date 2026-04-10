@@ -1911,6 +1911,8 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const pickedTask=pickedId?tasks.find(t=>t.id===pickedId):null;
   // 缺色替换页
   if(view==="missing")return <MissingColorPage T={T} stock={stock} onBack={()=>setView("home")}/>;
+  // 图纸助手页
+  if(view==="guide")return <GuideAssistant T={T} onBack={()=>setView("home")}/> ;
 
   // 日记页
   if(view==="diary")return(
@@ -2047,6 +2049,14 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
       {/* 工具入口 */}
       <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
+          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
+          <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🧰</div>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>工具箱</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
+            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>豆板豆针豆铲</div>
+          </div>
+        </div>
         <div className="cc" onClick={()=>setView("missing")}
           style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
           <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#e8f4ff,#c8e6ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔍</div>
@@ -2055,12 +2065,12 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
             <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>图纸识别·找替代色</div>
           </div>
         </div>
-        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
-          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
-          <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🧰</div>
+        <div className="cc" onClick={()=>setView("guide")}
+          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center",gridColumn:"1/-1"}}>
+          <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#fff3e0,#ffe0b2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🗺️</div>
           <div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>工具箱</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
-            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>豆板豆针豆铲</div>
+            <div style={{fontSize:13,fontWeight:900,color:T.text}}>图纸助手</div>
+            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>上传图纸·高亮单色·辅助拼豆</div>
           </div>
         </div>
       </div>
@@ -3417,6 +3427,261 @@ function ToolboxModal({toolbox,setToolbox,T,onClose}){
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════
+//  GuideAssistant（图纸助手）
+// ══════════════════════════════════
+function GuideAssistant({T, onBack}){
+  const [step, setStep] = useState("upload");
+  const [imgSrc, setImgSrc] = useState(null);
+  const [imgNaturalW, setImgNaturalW] = useState(0);
+  const [imgNaturalH, setImgNaturalH] = useState(0);
+  const [gridPx, setGridPx] = useState(40);
+  const [originX, setOriginX] = useState(0);
+  const [originY, setOriginY] = useState(0);
+  const [cropX1, setCropX1] = useState(0.05);
+  const [cropY1, setCropY1] = useState(0.05);
+  const [cropX2, setCropX2] = useState(0.95);
+  const [cropY2, setCropY2] = useState(0.80);
+  const [colorGrid, setColorGrid] = useState(null);
+  const [colorList, setColorList] = useState([]);
+  const [activeColor, setActiveColor] = useState(null);
+  const fileRef = useRef(null);
+  const canvasRef = useRef(null);
+  const gridCanvasRef = useRef(null);
+
+  function handleUpload(e){
+    const f = e.target.files[0]; if(!f) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      setImgNaturalW(img.naturalWidth); setImgNaturalH(img.naturalHeight);
+      setImgSrc(url);
+      const est = Math.round(img.naturalWidth / 50);
+      setGridPx(Math.max(10, Math.min(est, 80)));
+      setOriginX(0); setOriginY(0);
+      setStep("align");
+    };
+    img.src = url; e.target.value="";
+  }
+
+  // 绘制网格叠加
+  useEffect(()=>{
+    if(step!=="align"||!gridCanvasRef.current||!imgNaturalW) return;
+    const el = gridCanvasRef.current;
+    el.width = imgNaturalW; el.height = imgNaturalH;
+    const ctx = el.getContext("2d");
+    ctx.clearRect(0,0,imgNaturalW,imgNaturalH);
+    const ox = Math.round(originX*imgNaturalW);
+    const oy = Math.round(originY*imgNaturalH);
+    ctx.strokeStyle="rgba(255,80,80,0.75)"; ctx.lineWidth=1;
+    for(let x=(ox%gridPx+gridPx)%gridPx; x<imgNaturalW; x+=gridPx){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,imgNaturalH);ctx.stroke();}
+    for(let y=(oy%gridPx+gridPx)%gridPx; y<imgNaturalH; y+=gridPx){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(imgNaturalW,y);ctx.stroke();}
+  },[step,imgNaturalW,imgNaturalH,gridPx,originX,originY]);
+
+  function analyzeColors(){
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img,0,0);
+      const x1=Math.round(cropX1*img.naturalWidth), y1=Math.round(cropY1*img.naturalHeight);
+      const x2=Math.round(cropX2*img.naturalWidth), y2=Math.round(cropY2*img.naturalHeight);
+      const ox=Math.round(originX*img.naturalWidth), oy=Math.round(originY*img.naturalHeight);
+      const cols=Math.floor((x2-x1)/gridPx), rows=Math.floor((y2-y1)/gridPx);
+      const clusters=[];
+      function findCluster(r,g,b){
+        let best=null,bestD=28;
+        for(const c of clusters){const d=Math.sqrt((r-c.r)**2+(g-c.g)**2+(b-c.b)**2);if(d<bestD){bestD=d;best=c;}}
+        return best;
+      }
+      const rawGrid=[];
+      for(let row=0;row<rows;row++){
+        const rowArr=[];
+        for(let col=0;col<cols;col++){
+          const cx=x1+ox%gridPx+col*gridPx+Math.floor(gridPx/2);
+          const cy=y1+oy%gridPx+row*gridPx+Math.floor(gridPx/2);
+          if(cx>=img.naturalWidth||cy>=img.naturalHeight){rowArr.push(null);continue;}
+          let rs=0,gs=0,bs=0,n=0;
+          for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+            const nx=Math.max(0,Math.min(img.naturalWidth-1,cx+dx));
+            const ny=Math.max(0,Math.min(img.naturalHeight-1,cy+dy));
+            const px=ctx.getImageData(nx,ny,1,1).data;
+            rs+=px[0];gs+=px[1];bs+=px[2];n++;
+          }
+          const r=Math.round(rs/n),g=Math.round(gs/n),b=Math.round(bs/n);
+          let cluster=findCluster(r,g,b);
+          if(!cluster){cluster={id:`C${clusters.length+1}`,r,g,b,count:0};clusters.push(cluster);}
+          cluster.count++;
+          rowArr.push(cluster.id);
+        }
+        rawGrid.push(rowArr);
+      }
+      const valid=clusters.filter(c=>c.count>=2);
+      valid.sort((a,b)=>b.count-a.count);
+      setColorGrid(rawGrid); setColorList(valid);
+      setActiveColor(valid[0]?.id||null); setStep("highlight");
+    };
+    img.src=imgSrc;
+  }
+
+  // 渲染高亮canvas
+  useEffect(()=>{
+    if(step!=="highlight"||!colorGrid||!canvasRef.current||!imgSrc) return;
+    const canvas=canvasRef.current;
+    const ctx=canvas.getContext("2d");
+    const img=new Image();
+    img.onload=()=>{
+      const x1=Math.round(cropX1*img.naturalWidth),y1=Math.round(cropY1*img.naturalHeight);
+      const x2=Math.round(cropX2*img.naturalWidth),y2=Math.round(cropY2*img.naturalHeight);
+      const ox=Math.round(originX*img.naturalWidth),oy=Math.round(originY*img.naturalHeight);
+      canvas.width=x2-x1; canvas.height=y2-y1;
+      ctx.drawImage(img,x1,y1,x2-x1,y2-y1,0,0,x2-x1,y2-y1);
+      colorGrid.forEach((row,ri)=>row.forEach((id,ci)=>{
+        const cx=ox%gridPx+ci*gridPx, cy=oy%gridPx+ri*gridPx;
+        if(id===activeColor){
+          ctx.fillStyle="rgba(255,220,0,0.5)"; ctx.fillRect(cx,cy,gridPx,gridPx);
+          ctx.strokeStyle="rgba(255,160,0,0.9)"; ctx.lineWidth=1.5;
+          ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
+        } else if(id){
+          ctx.fillStyle="rgba(0,0,0,0.58)"; ctx.fillRect(cx,cy,gridPx,gridPx);
+        }
+      }));
+    };
+    img.src=imgSrc;
+  },[step,colorGrid,activeColor,imgSrc,cropX1,cropY1,cropX2,cropY2,originX,originY,gridPx]);
+
+  const adjBtn=(label,fn)=>(
+    <button onClick={fn} style={{padding:"8px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
+      {label}
+    </button>
+  );
+
+  return(
+    <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg}}>
+      <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${T.border}`,background:T.card,position:"sticky",top:0,zIndex:50}}>
+        <button onClick={onBack} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer",lineHeight:1}}>←</button>
+        <div style={{fontSize:15,fontWeight:800,color:T.text}}>🗺️ 图纸助手</div>
+        {step!=="upload"&&(
+          <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+            {["align","crop","highlight"].map(s=>(
+              <div key={s} style={{width:8,height:8,borderRadius:"50%",background:step===s?T.accent:T.border,transition:"background 0.2s"}}/>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {step==="upload"&&(
+        <div style={{padding:"48px 24px",display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
+          <div style={{fontSize:52}}>🗺️</div>
+          <div style={{fontSize:17,fontWeight:900,color:T.text,textAlign:"center"}}>上传你的图纸</div>
+          <div style={{fontSize:13,color:T.textMid,textAlign:"center",lineHeight:1.8}}>支持作者导出的图纸图片<br/>上传后高亮单色辅助拼豆</div>
+          <button onClick={()=>fileRef.current?.click()}
+            style={{padding:"14px 40px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:15,fontWeight:900,cursor:"pointer",boxShadow:`0 4px 16px ${T.accent}55`}}>
+            📂 选择图纸
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleUpload}/>
+          <div style={{fontSize:11,color:T.textLight,textAlign:"center",lineHeight:1.8,maxWidth:280}}>
+            💡 上传整张图纸，下一步引导你对齐网格和框选主体
+          </div>
+        </div>
+      )}
+
+      {step==="align"&&imgSrc&&(
+        <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
+          <div style={{flex:1,overflow:"auto",background:"#111",position:"relative"}}>
+            <div style={{position:"relative",display:"inline-block",minWidth:"100%"}}>
+              <img src={imgSrc} style={{display:"block",maxWidth:"100%",userSelect:"none"}} alt="图纸"/>
+              <canvas ref={gridCanvasRef} style={{position:"absolute",inset:0,pointerEvents:"none",width:"100%",height:"100%"}}/>
+            </div>
+          </div>
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"16px",flexShrink:0}}>
+            <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 1/3 · 网格对齐</div>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>调整格子大小，让红线对齐图纸格子边界</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>格子大小</div>
+              <button onClick={()=>setGridPx(v=>Math.max(8,v-1))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
+              <div style={{fontSize:17,fontWeight:900,color:T.accent,minWidth:36,textAlign:"center"}}>{gridPx}</div>
+              <button onClick={()=>setGridPx(v=>Math.min(120,v+1))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
+              <div style={{fontSize:11,color:T.textLight}}>px/格</div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+              <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>位置微调</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6,flex:1}}>
+                {adjBtn("←X",()=>setOriginX(v=>Math.max(-0.05,v-0.002)))}
+                {adjBtn("X→",()=>setOriginX(v=>Math.min(0.05,v+0.002)))}
+                {adjBtn("↑Y",()=>setOriginY(v=>Math.max(-0.05,v-0.002)))}
+                {adjBtn("Y↓",()=>setOriginY(v=>Math.min(0.05,v+0.002)))}
+              </div>
+            </div>
+            <button onClick={()=>setStep("crop")}
+              style={{width:"100%",padding:"13px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:900,cursor:"pointer"}}>
+              下一步：框选主体 →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step==="crop"&&imgSrc&&(
+        <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
+          <div style={{flex:1,overflow:"auto",background:"#111",position:"relative"}}>
+            <div style={{position:"relative",display:"inline-block",minWidth:"100%"}}>
+              <img src={imgSrc} style={{display:"block",maxWidth:"100%",userSelect:"none",opacity:0.5}} alt="图纸"/>
+              <div style={{position:"absolute",left:`${cropX1*100}%`,top:`${cropY1*100}%`,width:`${(cropX2-cropX1)*100}%`,height:`${(cropY2-cropY1)*100}%`,border:"2.5px solid #4a9eff",boxShadow:"0 0 0 9999px rgba(0,0,0,0.4)",boxSizing:"border-box",pointerEvents:"none"}}/>
+            </div>
+          </div>
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"16px",flexShrink:0}}>
+            <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 2/3 · 框选主体</div>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>调整范围，只保留图案主体，去掉坐标轴和底部色块</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+              {[["上",cropY1,v=>setCropY1(v),0,cropY2-0.05],["下",cropY2,v=>setCropY2(v),cropY1+0.05,1],["左",cropX1,v=>setCropX1(v),0,cropX2-0.05],["右",cropX2,v=>setCropX2(v),cropX1+0.05,1]].map(([label,val,setter,min,max])=>(
+                <div key={label} style={{background:T.bg,borderRadius:14,padding:"10px 12px",border:`1px solid ${T.border}`}}>
+                  <div style={{fontSize:10,color:T.textMid,fontWeight:700,marginBottom:6}}>{label}边界</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <button onClick={()=>setter(Math.max(min,val-0.01))} style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.card,cursor:"pointer",fontSize:14}}>－</button>
+                    <div style={{flex:1,textAlign:"center",fontSize:12,fontWeight:800,color:T.text}}>{Math.round(val*100)}%</div>
+                    <button onClick={()=>setter(Math.min(max,val+0.01))} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer",fontSize:14}}>＋</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setStep("align")} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>← 上一步</button>
+              <button onClick={analyzeColors} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>✨ 开始分析</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step==="highlight"&&(
+        <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
+          <div style={{flex:1,overflow:"auto",background:"#111",display:"flex",alignItems:"flex-start",justifyContent:"center"}}>
+            <canvas ref={canvasRef} style={{maxWidth:"100%",display:"block"}}/>
+          </div>
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"12px 16px",flexShrink:0}}>
+            <div style={{fontSize:11,color:T.textMid,fontWeight:700,marginBottom:8}}>
+              点选色块高亮 · 识别到 {colorList.length} 种颜色
+            </div>
+            <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
+              {colorList.map(c=>(
+                <button key={c.id} onClick={()=>setActiveColor(c.id)}
+                  style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:`2px solid ${activeColor===c.id?T.accent:T.border}`,borderRadius:12,padding:"8px 10px",cursor:"pointer",transform:activeColor===c.id?"scale(1.08)":"scale(1)",transition:"all 0.15s"}}>
+                  <div style={{width:28,height:28,borderRadius:8,background:`rgb(${c.r},${c.g},${c.b})`,border:"1.5px solid rgba(0,0,0,0.1)"}}/>
+                  <div style={{fontSize:9,fontWeight:800,color:activeColor===c.id?T.accent:T.textMid}}>{c.count}格</div>
+                </button>
+              ))}
+            </div>
+            <button onClick={()=>{setStep("upload");setImgSrc(null);setColorGrid(null);setColorList([]);}}
+              style={{marginTop:10,width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              重新上传图纸
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
