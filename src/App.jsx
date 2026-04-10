@@ -3436,6 +3436,7 @@ function ToolboxModal({toolbox,setToolbox,T,onClose}){
 // ══════════════════════════════════
 
 
+
 function GuideAssistant({T, onBack}){
   const [step, setStep] = useState("upload");
   const [imgSrc, setImgSrc] = useState(null);
@@ -3456,17 +3457,22 @@ function GuideAssistant({T, onBack}){
   const [colorList, setColorList] = useState([]);
   const [activeColor, setActiveColor] = useState(null);
   const [completedColors, setCompletedColors] = useState([]);
-  const [highlightZoom, setHighlightZoom] = useState(1);
   const [renderSize, setRenderSize] = useState({w:0,h:0});
+  const [cropRect, setCropRect] = useState(null);
+
+  const [highlightZoom, setHighlightZoom] = useState(1);
+  const [highlightPan, setHighlightPan] = useState({x:0,y:0});
 
   const fileRef = useRef(null);
   const gridCanvasRef = useRef(null);
   const alignWrapRef = useRef(null);
   const cropWrapRef = useRef(null);
   const canvasRef = useRef(null);
+  const highlightViewportRef = useRef(null);
 
-  const touchState = useRef({ mode:null, lastX:0, lastY:0, startDist:0, startZoom:1 });
+  const alignTouch = useRef({ mode:null, lastX:0, lastY:0, startDist:0, startZoom:1 });
   const cropDrag = useRef(null);
+  const highlightTouch = useRef({ mode:null, startDist:0, startZoom:1, startPanX:0, startPanY:0, lastX:0, lastY:0 });
 
   const visibleColors = useMemo(
     ()=> colorList.filter(c=>!completedColors.includes(c.id)),
@@ -3496,10 +3502,12 @@ function GuideAssistant({T, onBack}){
       setOriginY(0);
       setAlignZoom(1);
       setHighlightZoom(1);
+      setHighlightPan({x:0,y:0});
       setCompletedColors([]);
       setColorGrid(null);
       setColorList([]);
       setActiveColor(null);
+      setCropRect(null);
       setCropX1(0.05);
       setCropY1(0.05);
       setCropX2(0.95);
@@ -3520,7 +3528,7 @@ function GuideAssistant({T, onBack}){
     const ox = ((originX % gridPx) + gridPx) % gridPx;
     const oy = ((originY % gridPx) + gridPx) % gridPx;
     ctx.strokeStyle = "rgba(255,60,60,0.88)";
-    ctx.lineWidth = Math.max(1, imgNaturalW/500);
+    ctx.lineWidth = Math.max(1, imgNaturalW/520);
     for(let x=ox; x<imgNaturalW; x+=gridPx){
       ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,imgNaturalH); ctx.stroke();
     }
@@ -3530,7 +3538,7 @@ function GuideAssistant({T, onBack}){
   },[step,imgNaturalW,imgNaturalH,gridPx,originX,originY]);
 
   function onAlignTouchStart(e){
-    const ts = touchState.current;
+    const ts = alignTouch.current;
     if(e.touches.length===2){
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -3543,9 +3551,8 @@ function GuideAssistant({T, onBack}){
       ts.lastY = e.touches[0].clientY;
     }
   }
-
   function onAlignTouchMove(e){
-    const ts = touchState.current;
+    const ts = alignTouch.current;
     if(ts.mode==="pinch" && e.touches.length===2){
       e.preventDefault();
       const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -3558,14 +3565,14 @@ function GuideAssistant({T, onBack}){
       const dx = e.touches[0].clientX - ts.lastX;
       const dy = e.touches[0].clientY - ts.lastY;
       const displayWidth = alignWrapRef.current?.clientWidth || imgNaturalW;
-      const naturalPerDisplay = imgNaturalW / (displayWidth / alignZoom || 1);
+      const naturalPerDisplay = imgNaturalW / (displayWidth || 1);
       setOriginX(v=>v + dx * naturalPerDisplay);
       setOriginY(v=>v + dy * naturalPerDisplay);
       ts.lastX = e.touches[0].clientX;
       ts.lastY = e.touches[0].clientY;
     }
   }
-  function onAlignTouchEnd(){ touchState.current.mode = null; }
+  function onAlignTouchEnd(){ alignTouch.current.mode = null; }
 
   function nudgeGrid(dx,dy){
     setOriginX(v=>v+dx);
@@ -3664,26 +3671,30 @@ function GuideAssistant({T, onBack}){
 
       const x1 = Math.round(cropX1*img.naturalWidth), y1 = Math.round(cropY1*img.naturalHeight);
       const x2 = Math.round(cropX2*img.naturalWidth), y2 = Math.round(cropY2*img.naturalHeight);
-      const ox = ((originX%gridPx)+gridPx)%gridPx;
-      const oy = ((originY%gridPx)+gridPx)%gridPx;
-      const cols = Math.max(1, Math.floor((x2-x1)/gridPx));
-      const rows = Math.max(1, Math.floor((y2-y1)/gridPx));
+      const w = Math.max(1, x2 - x1);
+      const h = Math.max(1, y2 - y1);
+      const oxGlobal = ((originX%gridPx)+gridPx)%gridPx;
+      const oyGlobal = ((originY%gridPx)+gridPx)%gridPx;
+      const localGridX = ((oxGlobal - x1)%gridPx + gridPx)%gridPx;
+      const localGridY = ((oyGlobal - y1)%gridPx + gridPx)%gridPx;
+      const cols = Math.max(1, Math.floor((w - localGridX) / gridPx));
+      const rows = Math.max(1, Math.floor((h - localGridY) / gridPx));
 
       const cellColors = [];
       for(let row=0; row<rows; row++){
         for(let col=0; col<cols; col++){
-          const cx = x1 + Math.round(ox) + col*gridPx + Math.floor(gridPx/2);
-          const cy = y1 + Math.round(oy) + row*gridPx + Math.floor(gridPx/2);
+          const cx = x1 + localGridX + col*gridPx + Math.floor(gridPx/2);
+          const cy = y1 + localGridY + row*gridPx + Math.floor(gridPx/2);
           if(cx>=img.naturalWidth || cy>=img.naturalHeight){
             cellColors.push(null);
             continue;
           }
           let rs=0, gs=0, bs=0, n=0;
-          const r2 = Math.max(1, Math.floor(gridPx*0.3));
+          const r2 = Math.max(1, Math.floor(gridPx*0.28));
           for(let ddy=-r2; ddy<=r2; ddy++){
             for(let ddx=-r2; ddx<=r2; ddx++){
-              const nx = Math.max(0, Math.min(img.naturalWidth-1, cx+ddx));
-              const ny = Math.max(0, Math.min(img.naturalHeight-1, cy+ddy));
+              const nx = Math.max(0, Math.min(img.naturalWidth-1, Math.round(cx+ddx)));
+              const ny = Math.max(0, Math.min(img.naturalHeight-1, Math.round(cy+ddy)));
               const [pr,pg,pb] = getPixel(nx,ny);
               rs+=pr; gs+=pg; bs+=pb; n++;
             }
@@ -3694,7 +3705,7 @@ function GuideAssistant({T, onBack}){
 
       const clusters = [];
       function findCluster(r,g,b){
-        let best = null, bestD = 45;
+        let best = null, bestD = 44;
         for(const c of clusters){
           const d = Math.sqrt((r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2);
           if(d<bestD){bestD=d; best=c;}
@@ -3776,45 +3787,44 @@ function GuideAssistant({T, onBack}){
       setColorList(decoratedClusters);
       setActiveColor(decoratedClusters[0]?.id || null);
       setHighlightZoom(1);
+      setHighlightPan({x:0,y:0});
+      setRenderSize({w,h});
+      setCropRect({x1,y1,x2,y2,w,h,localGridX,localGridY,rows,cols});
       setStep("highlight");
     };
     img.src = imgSrc;
   }
 
   useEffect(()=>{
-    if(step!=="highlight" || !colorGrid || !canvasRef.current || !imgSrc) return;
+    if(step!=="highlight" || !colorGrid || !canvasRef.current || !imgSrc || !cropRect) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const img = new Image();
     img.onload = ()=>{
-      const x1 = Math.round(cropX1*img.naturalWidth), y1 = Math.round(cropY1*img.naturalHeight);
-      const x2 = Math.round(cropX2*img.naturalWidth), y2 = Math.round(cropY2*img.naturalHeight);
-      const ox = ((originX%gridPx)+gridPx)%gridPx;
-      const oy = ((originY%gridPx)+gridPx)%gridPx;
-      const w = x2 - x1;
-      const h = y2 - y1;
+      const {x1,y1,w,h,localGridX,localGridY} = cropRect;
       canvas.width = w;
       canvas.height = h;
-      setRenderSize({w,h});
 
       ctx.clearRect(0,0,w,h);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0,0,w,h);
       ctx.drawImage(img,x1,y1,w,h,0,0,w,h);
 
       colorGrid.forEach((row,ri)=>row.forEach((id,ci)=>{
         if(!id || completedColors.includes(id)) return;
-        const cx = Math.round(ox)+ci*gridPx;
-        const cy = Math.round(oy)+ri*gridPx;
+        const cx = localGridX + ci*gridPx;
+        const cy = localGridY + ri*gridPx;
         if(id===activeColor){
-          ctx.fillStyle="rgba(255,220,0,0.48)";
+          ctx.fillStyle="rgba(255,220,0,0.36)";
           ctx.fillRect(cx,cy,gridPx,gridPx);
-          ctx.strokeStyle="rgba(255,150,0,0.98)";
-          ctx.lineWidth=1.5;
+          ctx.strokeStyle="rgba(255,170,0,1)";
+          ctx.lineWidth=Math.max(1.2, gridPx*0.06);
           ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
         }
       }));
     };
     img.src = imgSrc;
-  },[step,colorGrid,activeColor,imgSrc,cropX1,cropY1,cropX2,cropY2,originX,originY,gridPx,completedColors]);
+  },[step,colorGrid,activeColor,imgSrc,cropRect,gridPx,completedColors]);
 
   function markCurrentDone(){
     if(!activeColor) return;
@@ -3826,6 +3836,71 @@ function GuideAssistant({T, onBack}){
   }
 
   const activeMeta = colorList.find(c=>c.id===activeColor);
+  const completedMeta = colorList.filter(c=>completedColors.includes(c.id));
+
+  function startHighlightTouch(e){
+    const ts = highlightTouch.current;
+    if(e.touches.length===2){
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      ts.mode = "pinch";
+      ts.startDist = Math.sqrt(dx*dx + dy*dy) || 1;
+      ts.startZoom = highlightZoom;
+    }else if(e.touches.length===1 && highlightZoom>1){
+      ts.mode = "pan";
+      ts.lastX = e.touches[0].clientX;
+      ts.lastY = e.touches[0].clientY;
+      ts.startPanX = highlightPan.x;
+      ts.startPanY = highlightPan.y;
+    }
+  }
+  function clampHighlightPan(nx, ny, zoomVal=highlightZoom){
+    const viewport = highlightViewportRef.current;
+    if(!viewport || !renderSize.w || !renderSize.h) return {x:nx,y:ny};
+    const vw = viewport.clientWidth;
+    const vh = viewport.clientHeight;
+    const baseScale = Math.min(vw/renderSize.w, vh/renderSize.h);
+    const displayW = renderSize.w * baseScale * zoomVal;
+    const displayH = renderSize.h * baseScale * zoomVal;
+    const limitX = Math.max(0, (displayW - vw) / 2);
+    const limitY = Math.max(0, (displayH - vh) / 2);
+    return {
+      x: Math.max(-limitX, Math.min(limitX, nx)),
+      y: Math.max(-limitY, Math.min(limitY, ny)),
+    };
+  }
+  function onHighlightTouchMove(e){
+    const ts = highlightTouch.current;
+    if(ts.mode==="pinch" && e.touches.length===2){
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const ratio = dist / (ts.startDist || 1);
+      const nextZoom = Math.max(1, Math.min(6, Number((ts.startZoom * ratio).toFixed(2))));
+      setHighlightZoom(nextZoom);
+      setHighlightPan(p=>clampHighlightPan(p.x,p.y,nextZoom));
+    }else if(ts.mode==="pan" && e.touches.length===1){
+      e.preventDefault();
+      const dx = e.touches[0].clientX - ts.lastX;
+      const dy = e.touches[0].clientY - ts.lastY;
+      setHighlightPan(p=>clampHighlightPan(p.x+dx,p.y+dy));
+      ts.lastX = e.touches[0].clientX;
+      ts.lastY = e.touches[0].clientY;
+    }
+  }
+  function endHighlightTouch(){ highlightTouch.current.mode = null; }
+
+  useEffect(()=>{
+    if(highlightZoom<=1) setHighlightPan({x:0,y:0});
+    else setHighlightPan(p=>clampHighlightPan(p.x,p.y,highlightZoom));
+  },[highlightZoom, renderSize.w, renderSize.h]);
+
+  const viewportW = typeof window !== "undefined" ? window.innerWidth : 375;
+  const viewportH = typeof window !== "undefined" ? Math.max(260, window.innerHeight - 280) : 400;
+  const baseScale = renderSize.w && renderSize.h ? Math.min(viewportW/renderSize.w, viewportH/renderSize.h) : 1;
+  const fittedW = renderSize.w * baseScale;
+  const fittedH = renderSize.h * baseScale;
 
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg}}>
@@ -3887,7 +3962,7 @@ function GuideAssistant({T, onBack}){
 
           <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 16px",flexShrink:0,maxHeight:"42vh",overflowY:"auto"}}>
             <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 1/3 · 网格对齐</div>
-            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>图纸可以放大看，拖动是调红线位置，不是拖整张图</div>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>先把红线和原图黑格对准，后面高亮框才会大小一致</div>
 
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
               <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>格子大小</div>
@@ -4017,22 +4092,38 @@ function GuideAssistant({T, onBack}){
       {step==="highlight"&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
           <div style={{padding:"8px 12px",background:T.card,borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-            <div style={{fontSize:11,color:T.textMid,fontWeight:800}}>图纸可放大查看具体色号</div>
+            <div style={{fontSize:11,color:T.textMid,fontWeight:800}}>默认是正常图例，双指或按钮放大后再看细色号</div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={()=>setHighlightZoom(v=>Math.max(0.8, Number((v-0.2).toFixed(2))))} style={{width:32,height:32,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
+              <button onClick={()=>setHighlightZoom(v=>Math.max(1, Number((v-0.2).toFixed(2))))} style={{width:32,height:32,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
               <div style={{fontSize:12,fontWeight:900,color:T.accent,minWidth:44,textAlign:"center"}}>{Math.round(highlightZoom*100)}%</div>
               <button onClick={()=>setHighlightZoom(v=>Math.min(6, Number((v+0.2).toFixed(2))))} style={{width:32,height:32,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
             </div>
           </div>
 
-          <div style={{flex:1,overflow:"auto",background:"#fff"}}>
-            <div style={{width:Math.max(renderSize.w*highlightZoom, window.innerWidth-24),minHeight:"100%",padding:0}}>
+          <div
+            ref={highlightViewportRef}
+            style={{flex:1,overflow:"hidden",background:"#fff",touchAction:"none",position:"relative"}}
+            onTouchStart={startHighlightTouch}
+            onTouchMove={onHighlightTouchMove}
+            onTouchEnd={endHighlightTouch}
+          >
+            <div
+              style={{
+                position:"absolute",
+                left:"50%",
+                top:"50%",
+                width:fittedW,
+                height:fittedH,
+                transform:`translate(calc(-50% + ${highlightPan.x}px), calc(-50% + ${highlightPan.y}px)) scale(${highlightZoom})`,
+                transformOrigin:"center center"
+              }}
+            >
               <canvas
                 ref={canvasRef}
                 style={{
                   display:"block",
-                  width: renderSize.w ? renderSize.w*highlightZoom : "100%",
-                  height: renderSize.h ? renderSize.h*highlightZoom : "auto",
+                  width:"100%",
+                  height:"100%",
                   background:"#fff"
                 }}
               />
@@ -4047,52 +4138,49 @@ function GuideAssistant({T, onBack}){
               {activeMeta && (
                 <button
                   onClick={markCurrentDone}
-                  style={{padding:"8px 12px",borderRadius:20,border:"none",background:"#18b63f",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}
+                  style={{padding:"8px 12px",borderRadius:20,border:"none",background:"#19bf38",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}
                 >
                   ✓ {activeMeta.code || activeMeta.id} 已完成
                 </button>
               )}
             </div>
 
-            <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,WebkitOverflowScrolling:"touch"}}>
+            <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:4,marginBottom:completedMeta.length?8:0}}>
               {visibleColors.map(c=>(
-                <button key={c.id} onClick={()=>setActiveColor(c.id)}
-                  style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:`2px solid ${activeColor===c.id?T.accent:T.border}`,borderRadius:12,padding:"8px 10px",cursor:"pointer",transform:activeColor===c.id?"scale(1.05)":"scale(1)",transition:"all 0.15s"}}>
-                  <div style={{width:30,height:30,borderRadius:8,background:`rgb(${c.r},${c.g},${c.b})`,border:"1.5px solid rgba(0,0,0,0.1)",boxShadow:activeColor===c.id?`0 0 0 3px ${T.accent}44`:""}}/>
-                  <div style={{fontSize:11,fontWeight:900,color:activeColor===c.id?T.accent:T.text}}>{c.code || c.id}</div>
-                  <div style={{fontSize:9,fontWeight:800,color:T.textMid,whiteSpace:"nowrap"}}>{c.count}格</div>
+                <button
+                  key={c.id}
+                  onClick={()=>setActiveColor(c.id)}
+                  style={{
+                    minWidth:88,
+                    padding:"10px 10px 8px",
+                    borderRadius:18,
+                    border:activeColor===c.id?`2.5px solid ${T.accent}`:`1.5px solid ${T.border}`,
+                    background:T.bg,
+                    cursor:"pointer",
+                    boxShadow:activeColor===c.id?`0 0 0 2px ${T.accent}22`:"none",
+                    flexShrink:0
+                  }}
+                >
+                  <div style={{width:36,height:36,borderRadius:12,margin:"0 auto 6px",background:`rgb(${c.r},${c.g},${c.b})`,border:"1px solid rgba(0,0,0,0.08)"}}/>
+                  <div style={{fontSize:14,fontWeight:900,color:T.text,lineHeight:1.2}}>{c.code || c.id}</div>
+                  <div style={{fontSize:10,color:T.textMid,marginTop:2}}>{c.count}格</div>
                 </button>
               ))}
             </div>
 
-            {completedColors.length > 0 && (
-              <div style={{marginTop:10}}>
-                <div style={{fontSize:10,color:T.textLight,fontWeight:800,marginBottom:6}}>已完成</div>
-                <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-                  {completedColors.map(id=>{
-                    const item = colorList.find(c=>c.id===id);
-                    if(!item) return null;
-                    return (
-                      <button
-                        key={id}
-                        onClick={()=>undoDoneColor(id)}
-                        style={{flexShrink:0,padding:"6px 10px",borderRadius:16,border:`1px solid ${T.border}`,background:T.bg,color:T.textMid,fontSize:11,fontWeight:800,cursor:"pointer"}}
-                      >
-                        {item.code || item.id} · 恢复
-                      </button>
-                    );
-                  })}
+            {completedMeta.length>0&&(
+              <div style={{borderTop:`1px dashed ${T.border}`,paddingTop:8}}>
+                <div style={{fontSize:10,color:T.textLight,fontWeight:700,marginBottom:6}}>已完成</div>
+                <div style={{display:"flex",gap:8,overflowX:"auto"}}>
+                  {completedMeta.map(c=>(
+                    <button key={c.id} onClick={()=>undoDoneColor(c.id)}
+                      style={{padding:"6px 10px",borderRadius:16,border:`1px solid ${T.border}`,background:T.bg,cursor:"pointer",fontSize:11,fontWeight:800,color:T.textMid,whiteSpace:"nowrap"}}>
+                      ↺ {c.code || c.id}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
-
-            <div style={{display:"flex",gap:8,marginTop:10}}>
-              <button onClick={()=>setStep("crop")} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>← 重新裁剪</button>
-              <button onClick={()=>{setStep("upload");setImgSrc(null);setColorGrid(null);setColorList([]);setCompletedColors([]);setActiveColor(null);}}
-                style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                重新上传
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -4101,62 +4189,4 @@ function GuideAssistant({T, onBack}){
 }
 
 
-
-const LOVE_WORDS=["豆豆们今天有没有乖乖待在格子里 🟡","库存充足，拼图安心 ✨","记得定期更新库存哦～","豆子虽小，作品不小 💛","认真管理的你最可爱了","今天拼了几粒？快来记录一下","库存快不足了？快补货！","每一粒豆子都有它的位置 🌟","拼豆人最有耐心了","快去拼一张吧，加油！🎨"];
-
-function FoxBtn({T,tn}){
-  const [msg,setMsg]=useState(null);const [vis,setVis]=useState(false);const [bounce,setBounce]=useState(false);const [sparkle,setSparkle]=useState(false);
-  function handleClick(){const w=LOVE_WORDS[Math.floor(Math.random()*LOVE_WORDS.length)];setMsg(w);setVis(true);setBounce(true);setSparkle(true);setTimeout(()=>setBounce(false),350);setTimeout(()=>setSparkle(false),800);setTimeout(()=>setVis(false),3200);}
-  return(
-    <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
-      {vis&&<div style={{position:"absolute",left:58,top:"50%",transform:"translateY(-50%)",background:tn==="sky"?"#ffffff":"#1e3352",border:`1.5px solid ${T.border}`,borderRadius:18,padding:"9px 16px",fontSize:12,fontWeight:700,color:T.text,whiteSpace:"nowrap",boxShadow:T.cardShadow,zIndex:999,animation:"popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-        <style>{`@keyframes popIn{from{opacity:0;transform:translateY(-50%) scale(0.7);}to{opacity:1;transform:translateY(-50%) scale(1);}}`}</style>
-        <div style={{position:"absolute",left:-7,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"6px solid transparent",borderBottom:"6px solid transparent",borderRight:`7px solid ${T.border}`}}/>
-        <div style={{position:"absolute",left:-5,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:"5px solid transparent",borderBottom:"5px solid transparent",borderRight:`6px solid ${tn==="sky"?"#ffffff":"#1e3352"}`}}/>
-        {msg}
-      </div>}
-      {sparkle&&<div style={{position:"absolute",left:14,top:-10,fontSize:13,animation:"floatUp 0.8s ease both",zIndex:998,pointerEvents:"none"}}>
-        <style>{`@keyframes floatUp{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(-28px) scale(1.4);}}`}</style>✨
-      </div>}
-      <div onClick={handleClick} style={{cursor:"pointer",userSelect:"none",transform:bounce?"scale(0.82)":"scale(1)",transition:"transform 0.25s cubic-bezier(0.34,1.56,0.64,1)"}}>
-        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* 大豆子 中间 */}
-          <circle cx="22" cy="22" r="11" fill={tn==="sky"?"#FFD700":"#FFB800"}/>
-          <circle cx="22" cy="22" r="11" fill="url(#beadGrad)" />
-          <circle cx="18" cy="18" r="3.5" fill="rgba(255,255,255,0.35)"/>
-          {/* 小豆子 右上 */}
-          <circle cx="35" cy="12" r="6" fill={tn==="sky"?"#FFB347":"#FF9900"}/>
-          <circle cx="35" cy="12" r="6" fill="url(#beadGrad2)"/>
-          <circle cx="33" cy="10" r="2" fill="rgba(255,255,255,0.3)"/>
-          {/* 小豆子 左下 */}
-          <circle cx="10" cy="34" r="5" fill={tn==="sky"?"#FFEAA0":"#FFD060"}/>
-          <circle cx="10" cy="34" r="5" fill="url(#beadGrad3)"/>
-          <circle cx="9" cy="33" r="1.5" fill="rgba(255,255,255,0.35)"/>
-          {/* 小豆子 左上 */}
-          <circle cx="9" cy="11" r="4" fill={tn==="sky"?"#FFD700":"#FFB800"}/>
-          <circle cx="9" cy="11" r="4" fill="url(#beadGrad)"/>
-          <circle cx="8" cy="10" r="1.2" fill="rgba(255,255,255,0.3)"/>
-          {/* 小豆子 右下 */}
-          <circle cx="34" cy="34" r="4.5" fill={tn==="sky"?"#FFB347":"#FF9900"}/>
-          <circle cx="34" cy="34" r="4.5" fill="url(#beadGrad2)"/>
-          <circle cx="32.5" cy="32.5" r="1.5" fill="rgba(255,255,255,0.3)"/>
-          <defs>
-            <radialGradient id="beadGrad" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.4)"/>
-              <stop offset="100%" stopColor="rgba(0,0,0,0.08)"/>
-            </radialGradient>
-            <radialGradient id="beadGrad2" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.35)"/>
-              <stop offset="100%" stopColor="rgba(0,0,0,0.1)"/>
-            </radialGradient>
-            <radialGradient id="beadGrad3" cx="35%" cy="30%" r="65%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.4)"/>
-              <stop offset="100%" stopColor="rgba(0,0,0,0.06)"/>
-            </radialGradient>
-          </defs>
-        </svg>
-      </div>
-    </div>
-  );
-}
 
