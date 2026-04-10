@@ -3440,7 +3440,7 @@ function GuideAssistant({T, onBack}){
   const [imgNaturalW, setImgNaturalW] = useState(0);
   const [imgNaturalH, setImgNaturalH] = useState(0);
   const [gridPx, setGridPx] = useState(40);
-  const [originX, setOriginX] = useState(0);
+  const [originX, setOriginX] = useState(0); // px offset
   const [originY, setOriginY] = useState(0);
   const [cropX1, setCropX1] = useState(0.05);
   const [cropY1, setCropY1] = useState(0.05);
@@ -3449,9 +3449,13 @@ function GuideAssistant({T, onBack}){
   const [colorGrid, setColorGrid] = useState(null);
   const [colorList, setColorList] = useState([]);
   const [activeColor, setActiveColor] = useState(null);
+  const [scale, setScale] = useState(1);
   const fileRef = useRef(null);
   const canvasRef = useRef(null);
   const gridCanvasRef = useRef(null);
+  const viewRef = useRef(null);
+  const touchState = useRef({lastDist:0, lastX:0, lastY:0, mode:null});
+  const cropDrag = useRef(null);
 
   function handleUpload(e){
     const f = e.target.files[0]; if(!f) return;
@@ -3462,7 +3466,7 @@ function GuideAssistant({T, onBack}){
       setImgSrc(url);
       const est = Math.round(img.naturalWidth / 50);
       setGridPx(Math.max(10, Math.min(est, 80)));
-      setOriginX(0); setOriginY(0);
+      setOriginX(0); setOriginY(0); setScale(1);
       setStep("align");
     };
     img.src = url; e.target.value="";
@@ -3475,12 +3479,103 @@ function GuideAssistant({T, onBack}){
     el.width = imgNaturalW; el.height = imgNaturalH;
     const ctx = el.getContext("2d");
     ctx.clearRect(0,0,imgNaturalW,imgNaturalH);
-    const ox = Math.round(originX*imgNaturalW);
-    const oy = Math.round(originY*imgNaturalH);
-    ctx.strokeStyle="rgba(255,80,80,0.75)"; ctx.lineWidth=1;
-    for(let x=(ox%gridPx+gridPx)%gridPx; x<imgNaturalW; x+=gridPx){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,imgNaturalH);ctx.stroke();}
-    for(let y=(oy%gridPx+gridPx)%gridPx; y<imgNaturalH; y+=gridPx){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(imgNaturalW,y);ctx.stroke();}
+    const ox = ((originX % gridPx) + gridPx) % gridPx;
+    const oy = ((originY % gridPx) + gridPx) % gridPx;
+    ctx.strokeStyle="rgba(255,60,60,0.85)"; ctx.lineWidth=Math.max(1, imgNaturalW/400);
+    for(let x=ox; x<imgNaturalW; x+=gridPx){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,imgNaturalH);ctx.stroke();}
+    for(let y=oy; y<imgNaturalH; y+=gridPx){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(imgNaturalW,y);ctx.stroke();}
   },[step,imgNaturalW,imgNaturalH,gridPx,originX,originY]);
+
+  // 触摸手势：双指缩放 + 单指拖拽网格偏移
+  function onAlignTouchStart(e){
+    const ts = touchState.current;
+    if(e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      ts.lastDist=Math.sqrt(dx*dx+dy*dy);
+      ts.mode="pinch"; ts.baseScale=scale; ts.baseGridPx=gridPx;
+    } else if(e.touches.length===1){
+      ts.mode="drag"; ts.lastX=e.touches[0].clientX; ts.lastY=e.touches[0].clientY;
+    }
+  }
+  function onAlignTouchMove(e){
+    e.preventDefault();
+    const ts = touchState.current;
+    if(ts.mode==="pinch"&&e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const ratio=dist/ts.lastDist;
+      const newGpx=Math.max(8,Math.min(120,Math.round(ts.baseGridPx*ratio)));
+      setGridPx(newGpx);
+    } else if(ts.mode==="drag"&&e.touches.length===1){
+      const dx=e.touches[0].clientX-ts.lastX;
+      const dy=e.touches[0].clientY-ts.lastY;
+      // 把屏幕位移换算成图纸像素位移（要考虑图纸在屏幕上的缩放比）
+      const imgEl = viewRef.current?.querySelector("img");
+      const ratio = imgEl ? imgNaturalW/imgEl.offsetWidth : 1;
+      setOriginX(v=>v+dx*ratio);
+      setOriginY(v=>v+dy*ratio);
+      ts.lastX=e.touches[0].clientX; ts.lastY=e.touches[0].clientY;
+    }
+  }
+  function onAlignTouchEnd(){ touchState.current.mode=null; }
+
+  // 裁剪框拖拽（手指拖动边/角）
+  function getCropHandle(tx, ty, rect){
+    // tx/ty 是相对于图片显示区域的比例坐标
+    const THRESH = 0.04;
+    const onL=Math.abs(tx-cropX1)<THRESH, onR=Math.abs(tx-cropX2)<THRESH;
+    const onT=Math.abs(ty-cropY1)<THRESH, onB=Math.abs(ty-cropY2)<THRESH;
+    const inX=tx>cropX1&&tx<cropX2, inY=ty>cropY1&&ty<cropY2;
+    if(onL&&onT) return "TL";
+    if(onR&&onT) return "TR";
+    if(onL&&onB) return "BL";
+    if(onR&&onB) return "BR";
+    if(onL&&inY) return "L";
+    if(onR&&inY) return "R";
+    if(onT&&inX) return "T";
+    if(onB&&inX) return "B";
+    if(inX&&inY) return "MOVE";
+    return null;
+  }
+  function onCropTouchStart(e){
+    if(e.touches.length!==1) return;
+    const touch=e.touches[0];
+    const el=e.currentTarget;
+    const rect=el.getBoundingClientRect();
+    const tx=(touch.clientX-rect.left)/rect.width;
+    const ty=(touch.clientY-rect.top)/rect.height;
+    const handle=getCropHandle(tx,ty,rect);
+    if(handle){
+      e.preventDefault();
+      cropDrag.current={handle,startTx:tx,startTy:ty,sx1:cropX1,sy1:cropY1,sx2:cropX2,sy2:cropY2};
+    }
+  }
+  function onCropTouchMove(e){
+    if(!cropDrag.current||e.touches.length!==1) return;
+    e.preventDefault();
+    const touch=e.touches[0];
+    const el=e.currentTarget;
+    const rect=el.getBoundingClientRect();
+    const tx=(touch.clientX-rect.left)/rect.width;
+    const ty=(touch.clientY-rect.top)/rect.height;
+    const {handle,startTx,startTy,sx1,sy1,sx2,sy2}=cropDrag.current;
+    const dx=tx-startTx, dy=ty-startTy;
+    const MIN=0.05;
+    if(handle==="MOVE"){
+      const w=sx2-sx1,h=sy2-sy1;
+      const nx1=Math.max(0,Math.min(1-w,sx1+dx));
+      const ny1=Math.max(0,Math.min(1-h,sy1+dy));
+      setCropX1(nx1);setCropY1(ny1);setCropX2(nx1+w);setCropY2(ny1+h);
+    } else {
+      if(handle.includes("L")) setCropX1(Math.max(0,Math.min(sx2-MIN,sx1+dx)));
+      if(handle.includes("R")) setCropX2(Math.min(1,Math.max(sx1+MIN,sx2+dx)));
+      if(handle.includes("T")) setCropY1(Math.max(0,Math.min(sy2-MIN,sy1+dy)));
+      if(handle.includes("B")) setCropY2(Math.min(1,Math.max(sy1+MIN,sy2+dy)));
+    }
+  }
+  function onCropTouchEnd(){ cropDrag.current=null; }
 
   function analyzeColors(){
     const img = new Image();
@@ -3489,42 +3584,101 @@ function GuideAssistant({T, onBack}){
       canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img,0,0);
+
+      // 用 getImageData 一次性读取整张图，避免逐像素 getImageData 的性能问题
+      const fullData = ctx.getImageData(0,0,img.naturalWidth,img.naturalHeight).data;
+      function getPixel(x,y){
+        const i=(y*img.naturalWidth+x)*4;
+        return [fullData[i],fullData[i+1],fullData[i+2]];
+      }
+
       const x1=Math.round(cropX1*img.naturalWidth), y1=Math.round(cropY1*img.naturalHeight);
       const x2=Math.round(cropX2*img.naturalWidth), y2=Math.round(cropY2*img.naturalHeight);
-      const ox=Math.round(originX*img.naturalWidth), oy=Math.round(originY*img.naturalHeight);
+      const ox=((originX%gridPx)+gridPx)%gridPx;
+      const oy=((originY%gridPx)+gridPx)%gridPx;
       const cols=Math.floor((x2-x1)/gridPx), rows=Math.floor((y2-y1)/gridPx);
-      const clusters=[];
-      function findCluster(r,g,b){
-        let best=null,bestD=28;
-        for(const c of clusters){const d=Math.sqrt((r-c.r)**2+(g-c.g)**2+(b-c.b)**2);if(d<bestD){bestD=d;best=c;}}
-        return best;
-      }
-      const rawGrid=[];
+
+      // 两遍聚类：第一遍收集所有格子颜色，第二遍用较大阈值合并
+      const cellColors=[];
       for(let row=0;row<rows;row++){
-        const rowArr=[];
         for(let col=0;col<cols;col++){
-          const cx=x1+ox%gridPx+col*gridPx+Math.floor(gridPx/2);
-          const cy=y1+oy%gridPx+row*gridPx+Math.floor(gridPx/2);
-          if(cx>=img.naturalWidth||cy>=img.naturalHeight){rowArr.push(null);continue;}
+          const cx=x1+Math.round(ox)+col*gridPx+Math.floor(gridPx/2);
+          const cy=y1+Math.round(oy)+row*gridPx+Math.floor(gridPx/2);
+          if(cx>=img.naturalWidth||cy>=img.naturalHeight){cellColors.push(null);continue;}
+          // 采样5x5中心区域
           let rs=0,gs=0,bs=0,n=0;
-          for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+          const r2=Math.floor(gridPx*0.3);
+          for(let dy=-r2;dy<=r2;dy++) for(let dx=-r2;dx<=r2;dx++){
             const nx=Math.max(0,Math.min(img.naturalWidth-1,cx+dx));
             const ny=Math.max(0,Math.min(img.naturalHeight-1,cy+dy));
-            const px=ctx.getImageData(nx,ny,1,1).data;
-            rs+=px[0];gs+=px[1];bs+=px[2];n++;
+            const [pr,pg,pb]=getPixel(nx,ny);
+            rs+=pr;gs+=pg;bs+=pb;n++;
           }
-          const r=Math.round(rs/n),g=Math.round(gs/n),b=Math.round(bs/n);
-          let cluster=findCluster(r,g,b);
-          if(!cluster){cluster={id:`C${clusters.length+1}`,r,g,b,count:0};clusters.push(cluster);}
-          cluster.count++;
-          rowArr.push(cluster.id);
+          cellColors.push([Math.round(rs/n),Math.round(gs/n),Math.round(bs/n)]);
         }
-        rawGrid.push(rowArr);
       }
-      const valid=clusters.filter(c=>c.count>=2);
-      valid.sort((a,b)=>b.count-a.count);
-      setColorGrid(rawGrid); setColorList(valid);
-      setActiveColor(valid[0]?.id||null); setStep("highlight");
+
+      // 聚类（阈值45，相比之前28更宽松）
+      const clusters=[];
+      function findCluster(r,g,b){
+        let best=null,bestD=45;
+        for(const c of clusters){
+          const d=Math.sqrt((r-c.r)**2+(g-c.g)**2+(b-c.b)**2);
+          if(d<bestD){bestD=d;best=c;}
+        }
+        return best;
+      }
+
+      const idList=cellColors.map(cell=>{
+        if(!cell) return null;
+        const [r,g,b]=cell;
+        let cluster=findCluster(r,g,b);
+        if(!cluster){cluster={id:`C${clusters.length+1}`,r,g,b,count:0};clusters.push(cluster);}
+        cluster.count++;
+        return cluster.id;
+      });
+
+      // 二次合并：把count<3的小cluster合并到最近的大cluster
+      const validClusters=clusters.filter(c=>c.count>=3);
+      function findValidCluster(r,g,b){
+        let best=null,bestD=999;
+        for(const c of validClusters){
+          const d=Math.sqrt((r-c.r)**2+(g-c.g)**2+(b-c.b)**2);
+          if(d<bestD){bestD=d;best=c;}
+        }
+        return best;
+      }
+
+      const idMap={};
+      clusters.forEach(c=>{
+        if(c.count>=3){idMap[c.id]=c.id;}
+        else{
+          const nearest=findValidCluster(c.r,c.g,c.b);
+          idMap[c.id]=nearest?nearest.id:c.id;
+        }
+      });
+
+      // 重新统计
+      validClusters.forEach(c=>c.count=0);
+      const finalIdList=idList.map(id=>id?idMap[id]:null);
+      finalIdList.forEach(id=>{
+        if(!id) return;
+        const c=validClusters.find(x=>x.id===id);
+        if(c) c.count++;
+      });
+      validClusters.sort((a,b)=>b.count-a.count);
+
+      // 重建二维grid
+      const finalGrid=[];
+      let idx=0;
+      for(let row=0;row<rows;row++){
+        const rowArr=[];
+        for(let col=0;col<cols;col++) rowArr.push(finalIdList[idx++]||null);
+        finalGrid.push(rowArr);
+      }
+
+      setColorGrid(finalGrid); setColorList(validClusters);
+      setActiveColor(validClusters[0]?.id||null); setStep("highlight");
     };
     img.src=imgSrc;
   }
@@ -3538,28 +3692,23 @@ function GuideAssistant({T, onBack}){
     img.onload=()=>{
       const x1=Math.round(cropX1*img.naturalWidth),y1=Math.round(cropY1*img.naturalHeight);
       const x2=Math.round(cropX2*img.naturalWidth),y2=Math.round(cropY2*img.naturalHeight);
-      const ox=Math.round(originX*img.naturalWidth),oy=Math.round(originY*img.naturalHeight);
+      const ox=((originX%gridPx)+gridPx)%gridPx;
+      const oy=((originY%gridPx)+gridPx)%gridPx;
       canvas.width=x2-x1; canvas.height=y2-y1;
       ctx.drawImage(img,x1,y1,x2-x1,y2-y1,0,0,x2-x1,y2-y1);
       colorGrid.forEach((row,ri)=>row.forEach((id,ci)=>{
-        const cx=ox%gridPx+ci*gridPx, cy=oy%gridPx+ri*gridPx;
+        const cx=Math.round(ox)+ci*gridPx, cy=Math.round(oy)+ri*gridPx;
         if(id===activeColor){
-          ctx.fillStyle="rgba(255,220,0,0.5)"; ctx.fillRect(cx,cy,gridPx,gridPx);
-          ctx.strokeStyle="rgba(255,160,0,0.9)"; ctx.lineWidth=1.5;
+          ctx.fillStyle="rgba(255,220,0,0.52)"; ctx.fillRect(cx,cy,gridPx,gridPx);
+          ctx.strokeStyle="rgba(255,150,0,0.95)"; ctx.lineWidth=1.5;
           ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
         } else if(id){
-          ctx.fillStyle="rgba(0,0,0,0.58)"; ctx.fillRect(cx,cy,gridPx,gridPx);
+          ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.fillRect(cx,cy,gridPx,gridPx);
         }
       }));
     };
     img.src=imgSrc;
   },[step,colorGrid,activeColor,imgSrc,cropX1,cropY1,cropX2,cropY2,originX,originY,gridPx]);
-
-  const adjBtn=(label,fn)=>(
-    <button onClick={fn} style={{padding:"8px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>
-      {label}
-    </button>
-  );
 
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg}}>
@@ -3575,6 +3724,7 @@ function GuideAssistant({T, onBack}){
         )}
       </div>
 
+      {/* 上传 */}
       {step==="upload"&&(
         <div style={{padding:"48px 24px",display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
           <div style={{fontSize:52}}>🗺️</div>
@@ -3591,32 +3741,35 @@ function GuideAssistant({T, onBack}){
         </div>
       )}
 
+      {/* 网格对齐 */}
       {step==="align"&&imgSrc&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
-          <div style={{flex:1,overflow:"auto",background:"#111",position:"relative"}}>
-            <div style={{position:"relative",display:"inline-block",minWidth:"100%"}}>
-              <img src={imgSrc} style={{display:"block",maxWidth:"100%",userSelect:"none"}} alt="图纸"/>
-              <canvas ref={gridCanvasRef} style={{position:"absolute",inset:0,pointerEvents:"none",width:"100%",height:"100%"}}/>
+          <div ref={viewRef} style={{flex:1,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
+            onTouchStart={onAlignTouchStart}
+            onTouchMove={onAlignTouchMove}
+            onTouchEnd={onAlignTouchEnd}>
+            <div style={{width:"100%",height:"100%",overflow:"auto"}}>
+              <div style={{position:"relative",display:"inline-block",minWidth:"100%"}}>
+                <img src={imgSrc} style={{display:"block",maxWidth:"100%",userSelect:"none",pointerEvents:"none"}} alt="图纸"/>
+                <canvas ref={gridCanvasRef} style={{position:"absolute",inset:0,pointerEvents:"none",width:"100%",height:"100%"}}/>
+              </div>
+            </div>
+            <div style={{position:"absolute",top:8,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
+              <div style={{display:"inline-block",background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:11,borderRadius:20,padding:"4px 12px"}}>
+                双指缩放调格子大小 · 单指拖动对齐网格
+              </div>
             </div>
           </div>
-          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"16px",flexShrink:0}}>
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 16px",flexShrink:0}}>
             <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 1/3 · 网格对齐</div>
-            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>调整格子大小，让红线对齐图纸格子边界</div>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>让红线精确对齐图纸格子边界</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
               <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>格子大小</div>
               <button onClick={()=>setGridPx(v=>Math.max(8,v-1))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
               <div style={{fontSize:17,fontWeight:900,color:T.accent,minWidth:36,textAlign:"center"}}>{gridPx}</div>
               <button onClick={()=>setGridPx(v=>Math.min(120,v+1))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
               <div style={{fontSize:11,color:T.textLight}}>px/格</div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>位置微调</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6,flex:1}}>
-                {adjBtn("←X",()=>setOriginX(v=>Math.max(-0.05,v-0.002)))}
-                {adjBtn("X→",()=>setOriginX(v=>Math.min(0.05,v+0.002)))}
-                {adjBtn("↑Y",()=>setOriginY(v=>Math.max(-0.05,v-0.002)))}
-                {adjBtn("Y↓",()=>setOriginY(v=>Math.min(0.05,v+0.002)))}
-              </div>
+              <div style={{marginLeft:"auto",fontSize:11,color:T.textLight}}>偏移: ({Math.round(((originX%gridPx)+gridPx)%gridPx)}, {Math.round(((originY%gridPx)+gridPx)%gridPx)})</div>
             </div>
             <button onClick={()=>setStep("crop")}
               style={{width:"100%",padding:"13px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:900,cursor:"pointer"}}>
@@ -3626,25 +3779,51 @@ function GuideAssistant({T, onBack}){
         </div>
       )}
 
+      {/* 框选主体 */}
       {step==="crop"&&imgSrc&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
-          <div style={{flex:1,overflow:"auto",background:"#111",position:"relative"}}>
-            <div style={{position:"relative",display:"inline-block",minWidth:"100%"}}>
-              <img src={imgSrc} style={{display:"block",maxWidth:"100%",userSelect:"none",opacity:0.5}} alt="图纸"/>
-              <div style={{position:"absolute",left:`${cropX1*100}%`,top:`${cropY1*100}%`,width:`${(cropX2-cropX1)*100}%`,height:`${(cropY2-cropY1)*100}%`,border:"2.5px solid #4a9eff",boxShadow:"0 0 0 9999px rgba(0,0,0,0.4)",boxSizing:"border-box",pointerEvents:"none"}}/>
+          <div style={{flex:1,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
+            onTouchStart={onCropTouchStart}
+            onTouchMove={onCropTouchMove}
+            onTouchEnd={onCropTouchEnd}>
+            <div style={{width:"100%",height:"100%",overflow:"auto"}}>
+              <div style={{position:"relative",display:"inline-block",minWidth:"100%"}}>
+                <img src={imgSrc} style={{display:"block",maxWidth:"100%",userSelect:"none",pointerEvents:"none",opacity:0.45}} alt="图纸"/>
+                {/* 裁剪框 */}
+                <div style={{
+                  position:"absolute",
+                  left:`${cropX1*100}%`, top:`${cropY1*100}%`,
+                  width:`${(cropX2-cropX1)*100}%`, height:`${(cropY2-cropY1)*100}%`,
+                  border:"2.5px solid #4a9eff",
+                  boxShadow:"0 0 0 9999px rgba(0,0,0,0.42)",
+                  boxSizing:"border-box",pointerEvents:"none",
+                }}>
+                  {/* 四角把手 */}
+                  {[["TL","top:0;left:0"],["TR","top:0;right:0"],["BL","bottom:0;left:0"],["BR","bottom:0;right:0"]].map(([,pos])=>(
+                    <div key={pos} style={{position:"absolute",...Object.fromEntries(pos.split(";").map(p=>{const[k,v]=p.split(":");return[k.trim(),v.trim()];})),width:20,height:20,background:"#4a9eff",borderRadius:4,transform:"translate(-25%,-25%)"}}/>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{position:"absolute",top:8,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
+              <div style={{display:"inline-block",background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:11,borderRadius:20,padding:"4px 12px"}}>
+                拖动边框/角点调整 · 也可用下方按钮微调
+              </div>
             </div>
           </div>
-          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"16px",flexShrink:0}}>
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 16px",flexShrink:0}}>
             <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 2/3 · 框选主体</div>
-            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>调整范围，只保留图案主体，去掉坐标轴和底部色块</div>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:10}}>只保留图案主体，去掉坐标轴和底部色块</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
               {[["上",cropY1,v=>setCropY1(v),0,cropY2-0.05],["下",cropY2,v=>setCropY2(v),cropY1+0.05,1],["左",cropX1,v=>setCropX1(v),0,cropX2-0.05],["右",cropX2,v=>setCropX2(v),cropX1+0.05,1]].map(([label,val,setter,min,max])=>(
-                <div key={label} style={{background:T.bg,borderRadius:14,padding:"10px 12px",border:`1px solid ${T.border}`}}>
-                  <div style={{fontSize:10,color:T.textMid,fontWeight:700,marginBottom:6}}>{label}边界</div>
+                <div key={label} style={{background:T.bg,borderRadius:14,padding:"8px 12px",border:`1px solid ${T.border}`}}>
+                  <div style={{fontSize:10,color:T.textMid,fontWeight:700,marginBottom:4}}>{label}边界 {Math.round(val*100)}%</div>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <button onClick={()=>setter(Math.max(min,val-0.01))} style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.card,cursor:"pointer",fontSize:14}}>－</button>
-                    <div style={{flex:1,textAlign:"center",fontSize:12,fontWeight:800,color:T.text}}>{Math.round(val*100)}%</div>
-                    <button onClick={()=>setter(Math.min(max,val+0.01))} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer",fontSize:14}}>＋</button>
+                    <button onClick={()=>setter(Math.max(min,val-0.01))} style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.card,cursor:"pointer",fontSize:14,flexShrink:0}}>－</button>
+                    <input type="range" min={Math.round(min*100)} max={Math.round(max*100)} value={Math.round(val*100)}
+                      onChange={e=>setter(Number(e.target.value)/100)}
+                      style={{flex:1,accentColor:T.accent}}/>
+                    <button onClick={()=>setter(Math.min(max,val+0.01))} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer",fontSize:14,flexShrink:0}}>＋</button>
                   </div>
                 </div>
               ))}
@@ -3657,6 +3836,7 @@ function GuideAssistant({T, onBack}){
         </div>
       )}
 
+      {/* 高亮模式 */}
       {step==="highlight"&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
           <div style={{flex:1,overflow:"auto",background:"#111",display:"flex",alignItems:"flex-start",justifyContent:"center"}}>
@@ -3666,19 +3846,22 @@ function GuideAssistant({T, onBack}){
             <div style={{fontSize:11,color:T.textMid,fontWeight:700,marginBottom:8}}>
               点选色块高亮 · 识别到 {colorList.length} 种颜色
             </div>
-            <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
+            <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,WebkitOverflowScrolling:"touch"}}>
               {colorList.map(c=>(
                 <button key={c.id} onClick={()=>setActiveColor(c.id)}
-                  style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:`2px solid ${activeColor===c.id?T.accent:T.border}`,borderRadius:12,padding:"8px 10px",cursor:"pointer",transform:activeColor===c.id?"scale(1.08)":"scale(1)",transition:"all 0.15s"}}>
-                  <div style={{width:28,height:28,borderRadius:8,background:`rgb(${c.r},${c.g},${c.b})`,border:"1.5px solid rgba(0,0,0,0.1)"}}/>
-                  <div style={{fontSize:9,fontWeight:800,color:activeColor===c.id?T.accent:T.textMid}}>{c.count}格</div>
+                  style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:`2px solid ${activeColor===c.id?T.accent:T.border}`,borderRadius:12,padding:"8px 10px",cursor:"pointer",transform:activeColor===c.id?"scale(1.1)":"scale(1)",transition:"all 0.15s"}}>
+                  <div style={{width:30,height:30,borderRadius:8,background:`rgb(${c.r},${c.g},${c.b})`,border:"1.5px solid rgba(0,0,0,0.1)",boxShadow:activeColor===c.id?`0 0 0 3px ${T.accent}44`:""}}/>
+                  <div style={{fontSize:9,fontWeight:800,color:activeColor===c.id?T.accent:T.textMid,whiteSpace:"nowrap"}}>{c.count}格</div>
                 </button>
               ))}
             </div>
-            <button onClick={()=>{setStep("upload");setImgSrc(null);setColorGrid(null);setColorList([]);}}
-              style={{marginTop:10,width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-              重新上传图纸
-            </button>
+            <div style={{display:"flex",gap:8,marginTop:10}}>
+              <button onClick={()=>setStep("crop")} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>← 重新框选</button>
+              <button onClick={()=>{setStep("upload");setImgSrc(null);setColorGrid(null);setColorList([]);}}
+                style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                重新上传
+              </button>
+            </div>
           </div>
         </div>
       )}
