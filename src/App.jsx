@@ -3440,76 +3440,43 @@ function GuideAssistant({T, onBack}){
   const [imgSrc, setImgSrc] = useState(null);
   const [imgNaturalW, setImgNaturalW] = useState(0);
   const [imgNaturalH, setImgNaturalH] = useState(0);
-
-  // 网格参数（单位：原图像素）
-  const [gridPx, setGridPx] = useState(24);
+  const [gridPx, setGridPx] = useState(40);
   const [originX, setOriginX] = useState(0);
   const [originY, setOriginY] = useState(0);
-
-  // 裁剪区域（相对原图比例）
   const [cropX1, setCropX1] = useState(0.05);
   const [cropY1, setCropY1] = useState(0.05);
   const [cropX2, setCropX2] = useState(0.95);
   const [cropY2, setCropY2] = useState(0.80);
-
   const [colorGrid, setColorGrid] = useState(null);
   const [colorList, setColorList] = useState([]);
   const [activeColor, setActiveColor] = useState(null);
-
-  // 图片视图缩放/平移
-  const [baseFitScale, setBaseFitScale] = useState(1);
-  const [zoom, setZoom] = useState(1);
+  const [scale, setScale] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
-
+  const [completedColors, setCompletedColors] = useState([]);
   const fileRef = useRef(null);
-  const gridCanvasRef = useRef(null);
   const canvasRef = useRef(null);
-  const alignViewRef = useRef(null);
-  const cropViewRef = useRef(null);
-  const highlightViewRef = useRef(null);
+  const gridCanvasRef = useRef(null);
+  const viewRef = useRef(null);
+  const cropWrapRef = useRef(null);
+  const touchState = useRef({lastDist:0, lastX:0, lastY:0, mode:null});
+  const cropDrag = useRef(null);
 
-  const touchRef = useRef({
-    mode:null,
-    startX:0,
-    startY:0,
-    startPanX:0,
-    startPanY:0,
-    startZoom:1,
-    startDist:0,
-    startCenterX:0,
-    startCenterY:0,
-  });
-
-  const cropDragRef = useRef(null);
-
-  const currentScale = Math.max(0.05, baseFitScale * zoom);
-
-  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
-
-  function resetViewport(viewEl){
-    if(!viewEl || !imgNaturalW || !imgNaturalH) return;
-    const rect = viewEl.getBoundingClientRect();
-    if(!rect.width || !rect.height) return;
-    const fit = Math.min(rect.width / imgNaturalW, rect.height / imgNaturalH);
-    setBaseFitScale(fit || 1);
-    setZoom(1);
-    setPanX((rect.width - imgNaturalW * (fit || 1)) / 2);
-    setPanY((rect.height - imgNaturalH * (fit || 1)) / 2);
-  }
+  const visibleColors = useMemo(
+    ()=> colorList.filter(c=>!completedColors.includes(c.id)),
+    [colorList, completedColors]
+  );
 
   useEffect(()=>{
-    const el = step === "align" ? alignViewRef.current : step === "crop" ? cropViewRef.current : step === "highlight" ? highlightViewRef.current : null;
-    if(!el || !imgNaturalW || !imgNaturalH) return;
-    const run = ()=> resetViewport(el);
-    run();
-    const ro = new ResizeObserver(run);
-    ro.observe(el);
-    return ()=> ro.disconnect();
-  }, [step, imgNaturalW, imgNaturalH]);
+    if(activeColor && !visibleColors.find(c=>c.id===activeColor)){
+      setActiveColor(visibleColors[0]?.id || null);
+    } else if(!activeColor && visibleColors.length){
+      setActiveColor(visibleColors[0].id);
+    }
+  },[visibleColors, activeColor]);
 
   function handleUpload(e){
-    const f = e.target.files?.[0];
+    const f = e.target.files[0];
     if(!f) return;
     const url = URL.createObjectURL(f);
     const img = new Image();
@@ -3517,403 +3484,384 @@ function GuideAssistant({T, onBack}){
       setImgNaturalW(img.naturalWidth);
       setImgNaturalH(img.naturalHeight);
       setImgSrc(url);
-
-      const est = img.naturalWidth / 50;
-      setGridPx(Math.max(6, Math.min(80, Math.round(est * 10) / 10)));
+      const est = Math.round(img.naturalWidth / 50);
+      setGridPx(Math.max(10, Math.min(est, 80)));
       setOriginX(0);
       setOriginY(0);
+      setScale(1);
+      setPanX(0);
+      setPanY(0);
+      setCompletedColors([]);
+      setColorGrid(null);
+      setColorList([]);
+      setActiveColor(null);
       setCropX1(0.05);
       setCropY1(0.05);
       setCropX2(0.95);
       setCropY2(0.80);
-      setColorGrid(null);
-      setColorList([]);
-      setActiveColor(null);
       setStep("align");
     };
     img.src = url;
     e.target.value = "";
   }
 
-  // 绘制网格叠加（原图坐标系）
+  function clampPan(nextScale, nextPanX, nextPanY){
+    const vw = viewRef.current?.clientWidth || window.innerWidth;
+    const vh = viewRef.current?.clientHeight || (window.innerHeight - 180);
+    const scaledW = imgNaturalW * nextScale;
+    const scaledH = imgNaturalH * nextScale;
+    const minX = Math.min(0, vw - scaledW);
+    const minY = Math.min(0, vh - scaledH);
+    return {
+      x: Math.max(minX, Math.min(0, nextPanX)),
+      y: Math.max(minY, Math.min(0, nextPanY)),
+    };
+  }
+
   useEffect(()=>{
-    if(step !== "align" || !gridCanvasRef.current || !imgNaturalW || !imgNaturalH) return;
+    if(step!=="align"||!gridCanvasRef.current||!imgNaturalW) return;
     const el = gridCanvasRef.current;
     el.width = imgNaturalW;
     el.height = imgNaturalH;
     const ctx = el.getContext("2d");
-    ctx.clearRect(0, 0, imgNaturalW, imgNaturalH);
-
-    const safeGrid = Math.max(1, gridPx);
-    const ox = ((originX % safeGrid) + safeGrid) % safeGrid;
-    const oy = ((originY % safeGrid) + safeGrid) % safeGrid;
-
-    ctx.strokeStyle = "rgba(255,50,50,0.92)";
-    ctx.lineWidth = Math.max(1, imgNaturalW / 700);
-
-    for(let x = ox; x < imgNaturalW; x += safeGrid){
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, imgNaturalH);
-      ctx.stroke();
+    ctx.clearRect(0,0,imgNaturalW,imgNaturalH);
+    const ox = ((originX % gridPx) + gridPx) % gridPx;
+    const oy = ((originY % gridPx) + gridPx) % gridPx;
+    ctx.strokeStyle = "rgba(255,60,60,0.85)";
+    ctx.lineWidth = Math.max(1, imgNaturalW/500);
+    for(let x=ox; x<imgNaturalW; x+=gridPx){
+      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,imgNaturalH); ctx.stroke();
     }
-    for(let y = oy; y < imgNaturalH; y += safeGrid){
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(imgNaturalW, y);
-      ctx.stroke();
+    for(let y=oy; y<imgNaturalH; y+=gridPx){
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(imgNaturalW,y); ctx.stroke();
     }
-  }, [step, imgNaturalW, imgNaturalH, gridPx, originX, originY]);
+  },[step,imgNaturalW,imgNaturalH,gridPx,originX,originY]);
 
-  function getDist(t1, t2){
-    const dx = t1.clientX - t2.clientX;
-    const dy = t1.clientY - t2.clientY;
-    return Math.sqrt(dx*dx + dy*dy);
-  }
-
-  function getCenter(t1, t2){
-    return {
-      x: (t1.clientX + t2.clientX) / 2,
-      y: (t1.clientY + t2.clientY) / 2,
-    };
-  }
-
-  function startViewportTouch(e){
-    const st = touchRef.current;
-    if(e.touches.length === 2){
-      const center = getCenter(e.touches[0], e.touches[1]);
-      st.mode = "pinch";
-      st.startDist = getDist(e.touches[0], e.touches[1]);
-      st.startZoom = zoom;
-      st.startPanX = panX;
-      st.startPanY = panY;
-      st.startCenterX = center.x;
-      st.startCenterY = center.y;
-    }else if(e.touches.length === 1){
-      st.mode = "pan";
-      st.startX = e.touches[0].clientX;
-      st.startY = e.touches[0].clientY;
-      st.startPanX = panX;
-      st.startPanY = panY;
+  function onAlignTouchStart(e){
+    const ts = touchState.current;
+    if(e.touches.length===2){
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      ts.lastDist = Math.sqrt(dx*dx + dy*dy);
+      ts.mode = "pinch";
+      ts.baseGridPx = gridPx;
+      ts.baseScale = scale;
+      ts.basePanX = panX;
+      ts.basePanY = panY;
+      ts.midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      ts.midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    }else if(e.touches.length===1){
+      ts.mode = "drag";
+      ts.lastX = e.touches[0].clientX;
+      ts.lastY = e.touches[0].clientY;
     }
   }
 
-  function moveViewportTouch(e){
-    const st = touchRef.current;
-    if(st.mode === "pinch" && e.touches.length === 2){
-      e.preventDefault();
-      const dist = getDist(e.touches[0], e.touches[1]);
-      const center = getCenter(e.touches[0], e.touches[1]);
-      const ratio = dist / (st.startDist || dist || 1);
-      setZoom(clamp(st.startZoom * ratio, 0.5, 8));
-      setPanX(st.startPanX + (center.x - st.startCenterX));
-      setPanY(st.startPanY + (center.y - st.startCenterY));
-    }else if(st.mode === "pan" && e.touches.length === 1){
-      e.preventDefault();
-      const dx = e.touches[0].clientX - st.startX;
-      const dy = e.touches[0].clientY - st.startY;
-      setPanX(st.startPanX + dx);
-      setPanY(st.startPanY + dy);
+  function onAlignTouchMove(e){
+    e.preventDefault();
+    const ts = touchState.current;
+    if(ts.mode==="pinch" && e.touches.length===2){
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const ratio = dist / (ts.lastDist || dist || 1);
+      const nextScale = Math.max(0.7, Math.min(4, Number((ts.baseScale * ratio).toFixed(2))));
+      setScale(nextScale);
+      const nextGrid = Math.max(8, Math.min(120, Number((ts.baseGridPx * ratio).toFixed(2))));
+      setGridPx(nextGrid);
+      const clamped = clampPan(nextScale, ts.basePanX, ts.basePanY);
+      setPanX(clamped.x);
+      setPanY(clamped.y);
+    }else if(ts.mode==="drag" && e.touches.length===1){
+      const dx = e.touches[0].clientX - ts.lastX;
+      const dy = e.touches[0].clientY - ts.lastY;
+      const clamped = clampPan(scale, panX + dx, panY + dy);
+      setPanX(clamped.x);
+      setPanY(clamped.y);
+      ts.lastX = e.touches[0].clientX;
+      ts.lastY = e.touches[0].clientY;
     }
   }
 
-  function endViewportTouch(){
-    touchRef.current.mode = null;
+  function onAlignTouchEnd(){
+    touchState.current.mode = null;
   }
 
-  function nudgeGridSize(delta){
-    setGridPx(v => Math.max(4, Math.min(120, Math.round((v + delta) * 100) / 100)));
-  }
-
-  function nudgeOrigin(dx, dy){
-    setOriginX(v => Math.round((v + dx) * 100) / 100);
-    setOriginY(v => Math.round((v + dy) * 100) / 100);
-  }
-
-  function adjustCrop(side, delta){
-    const minSize = 0.04;
-    if(side === "L") setCropX1(v => clamp(Math.round((v + delta) * 1000) / 1000, 0, cropX2 - minSize));
-    if(side === "R") setCropX2(v => clamp(Math.round((v + delta) * 1000) / 1000, cropX1 + minSize, 1));
-    if(side === "T") setCropY1(v => clamp(Math.round((v + delta) * 1000) / 1000, 0, cropY2 - minSize));
-    if(side === "B") setCropY2(v => clamp(Math.round((v + delta) * 1000) / 1000, cropY1 + minSize, 1));
+  function getRelativePoint(clientX, clientY){
+    const rect = cropWrapRef.current?.getBoundingClientRect();
+    if(!rect) return null;
+    const tx = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const ty = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+    return {tx, ty};
   }
 
   function getCropHandle(tx, ty){
-    const thresh = 0.04;
-    const onL = Math.abs(tx - cropX1) < thresh;
-    const onR = Math.abs(tx - cropX2) < thresh;
-    const onT = Math.abs(ty - cropY1) < thresh;
-    const onB = Math.abs(ty - cropY2) < thresh;
-    const inX = tx > cropX1 && tx < cropX2;
-    const inY = ty > cropY1 && ty < cropY2;
-
-    if(onL && onT) return "TL";
-    if(onR && onT) return "TR";
-    if(onL && onB) return "BL";
-    if(onR && onB) return "BR";
-    if(onL && inY) return "L";
-    if(onR && inY) return "R";
-    if(onT && inX) return "T";
-    if(onB && inX) return "B";
-    if(inX && inY) return "MOVE";
+    const THRESH = 0.045;
+    const onL = Math.abs(tx-cropX1)<THRESH, onR = Math.abs(tx-cropX2)<THRESH;
+    const onT = Math.abs(ty-cropY1)<THRESH, onB = Math.abs(ty-cropY2)<THRESH;
+    const inX = tx>cropX1 && tx<cropX2, inY = ty>cropY1 && ty<cropY2;
+    if(onL&&onT) return "TL";
+    if(onR&&onT) return "TR";
+    if(onL&&onB) return "BL";
+    if(onR&&onB) return "BR";
+    if(onL&&inY) return "L";
+    if(onR&&inY) return "R";
+    if(onT&&inX) return "T";
+    if(onB&&inX) return "B";
+    if(inX&&inY) return "MOVE";
     return null;
   }
 
-  function startCropPointer(e){
-    const wrapper = e.currentTarget;
-    const rect = wrapper.getBoundingClientRect();
-    const tx = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-    const ty = clamp((e.clientY - rect.top) / rect.height, 0, 1);
-    const handle = getCropHandle(tx, ty);
+  function startCropDrag(clientX, clientY){
+    const p = getRelativePoint(clientX, clientY);
+    if(!p) return;
+    const handle = getCropHandle(p.tx, p.ty);
     if(!handle) return;
-    cropDragRef.current = {
+    cropDrag.current = {
       handle,
-      startTx: tx,
-      startTy: ty,
+      startTx: p.tx,
+      startTy: p.ty,
       sx1: cropX1,
       sy1: cropY1,
       sx2: cropX2,
-      sy2: cropY2,
+      sy2: cropY2
     };
-    e.preventDefault();
-    e.stopPropagation();
-    wrapper.setPointerCapture?.(e.pointerId);
   }
 
-  function moveCropPointer(e){
-    if(!cropDragRef.current) return;
-    const wrapper = e.currentTarget;
-    const rect = wrapper.getBoundingClientRect();
-    const tx = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-    const ty = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+  function updateCropDrag(clientX, clientY){
+    if(!cropDrag.current) return;
+    const p = getRelativePoint(clientX, clientY);
+    if(!p) return;
+    const {handle, startTx, startTy, sx1, sy1, sx2, sy2} = cropDrag.current;
+    const dx = p.tx - startTx;
+    const dy = p.ty - startTy;
+    const MIN = 0.06;
+    let nx1=sx1, ny1=sy1, nx2=sx2, ny2=sy2;
 
-    const { handle, startTx, startTy, sx1, sy1, sx2, sy2 } = cropDragRef.current;
-    const dx = tx - startTx;
-    const dy = ty - startTy;
-    const minSize = 0.04;
-
-    if(handle === "MOVE"){
-      const w = sx2 - sx1;
-      const h = sy2 - sy1;
-      const nx1 = clamp(sx1 + dx, 0, 1 - w);
-      const ny1 = clamp(sy1 + dy, 0, 1 - h);
-      setCropX1(nx1);
-      setCropY1(ny1);
-      setCropX2(nx1 + w);
-      setCropY2(ny1 + h);
+    if(handle==="MOVE"){
+      const w = sx2 - sx1, h = sy2 - sy1;
+      nx1 = Math.max(0, Math.min(1-w, sx1 + dx));
+      ny1 = Math.max(0, Math.min(1-h, sy1 + dy));
+      nx2 = nx1 + w;
+      ny2 = ny1 + h;
     }else{
-      let nx1 = sx1, ny1 = sy1, nx2 = sx2, ny2 = sy2;
-      if(handle.includes("L")) nx1 = clamp(sx1 + dx, 0, sx2 - minSize);
-      if(handle.includes("R")) nx2 = clamp(sx2 + dx, sx1 + minSize, 1);
-      if(handle.includes("T")) ny1 = clamp(sy1 + dy, 0, sy2 - minSize);
-      if(handle.includes("B")) ny2 = clamp(sy2 + dy, sy1 + minSize, 1);
-      setCropX1(nx1);
-      setCropY1(ny1);
-      setCropX2(nx2);
-      setCropY2(ny2);
+      if(handle.includes("L")) nx1 = Math.max(0, Math.min(sx2-MIN, sx1+dx));
+      if(handle.includes("R")) nx2 = Math.min(1, Math.max(sx1+MIN, sx2+dx));
+      if(handle.includes("T")) ny1 = Math.max(0, Math.min(sy2-MIN, sy1+dy));
+      if(handle.includes("B")) ny2 = Math.min(1, Math.max(sy1+MIN, sy2+dy));
     }
-    e.preventDefault();
-    e.stopPropagation();
+
+    setCropX1(nx1); setCropY1(ny1); setCropX2(nx2); setCropY2(ny2);
   }
 
-  function endCropPointer(e){
-    if(!cropDragRef.current) return;
-    cropDragRef.current = null;
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  function endCropDrag(){
+    cropDrag.current = null;
+  }
+
+  function onCropPointerDown(e){
+    e.preventDefault();
+    startCropDrag(e.clientX, e.clientY);
+  }
+  function onCropPointerMove(e){
+    if(!cropDrag.current) return;
+    e.preventDefault();
+    updateCropDrag(e.clientX, e.clientY);
+  }
+  function onCropPointerUp(){
+    endCropDrag();
+  }
+  function onCropTouchStart(e){
+    if(e.touches.length!==1) return;
+    e.preventDefault();
+    startCropDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }
+  function onCropTouchMove(e){
+    if(!cropDrag.current || e.touches.length!==1) return;
+    e.preventDefault();
+    updateCropDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }
+  function onCropTouchEnd(){
+    endCropDrag();
   }
 
   function analyzeColors(){
-    if(!imgSrc) return;
     const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalH;
-    };
-    img.onerror = () => {};
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
       const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img,0,0);
 
-      const fullData = ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
-      function getPixel(x, y){
-        const i = (y * img.naturalWidth + x) * 4;
+      const fullData = ctx.getImageData(0,0,img.naturalWidth,img.naturalHeight).data;
+      function getPixel(x,y){
+        const i = (y*img.naturalWidth+x)*4;
         return [fullData[i], fullData[i+1], fullData[i+2]];
       }
 
-      const x1 = Math.round(cropX1 * img.naturalWidth);
-      const y1 = Math.round(cropY1 * img.naturalHeight);
-      const x2 = Math.round(cropX2 * img.naturalWidth);
-      const y2 = Math.round(cropY2 * img.naturalHeight);
-
-      const safeGrid = Math.max(1, gridPx);
-      const ox = ((originX % safeGrid) + safeGrid) % safeGrid;
-      const oy = ((originY % safeGrid) + safeGrid) % safeGrid;
-
-      const cols = Math.max(1, Math.floor((x2 - x1) / safeGrid));
-      const rows = Math.max(1, Math.floor((y2 - y1) / safeGrid));
+      const x1 = Math.round(cropX1*img.naturalWidth), y1 = Math.round(cropY1*img.naturalHeight);
+      const x2 = Math.round(cropX2*img.naturalWidth), y2 = Math.round(cropY2*img.naturalHeight);
+      const ox = ((originX%gridPx)+gridPx)%gridPx;
+      const oy = ((originY%gridPx)+gridPx)%gridPx;
+      const cols = Math.floor((x2-x1)/gridPx), rows = Math.floor((y2-y1)/gridPx);
 
       const cellColors = [];
-      for(let row = 0; row < rows; row++){
-        for(let col = 0; col < cols; col++){
-          const cx = x1 + Math.round(ox) + Math.round(col * safeGrid + safeGrid / 2);
-          const cy = y1 + Math.round(oy) + Math.round(row * safeGrid + safeGrid / 2);
-          if(cx >= img.naturalWidth || cy >= img.naturalHeight || cx < 0 || cy < 0){
+      for(let row=0; row<rows; row++){
+        for(let col=0; col<cols; col++){
+          const cx = x1 + Math.round(ox) + col*gridPx + Math.floor(gridPx/2);
+          const cy = y1 + Math.round(oy) + row*gridPx + Math.floor(gridPx/2);
+          if(cx>=img.naturalWidth || cy>=img.naturalHeight){
             cellColors.push(null);
             continue;
           }
-          let rs = 0, gs = 0, bs = 0, n = 0;
-          const r2 = Math.max(1, Math.floor(safeGrid * 0.22));
-          for(let dy = -r2; dy <= r2; dy++){
-            for(let dx = -r2; dx <= r2; dx++){
-              const nx = clamp(cx + dx, 0, img.naturalWidth - 1);
-              const ny = clamp(cy + dy, 0, img.naturalHeight - 1);
-              const [pr, pg, pb] = getPixel(nx, ny);
-              rs += pr; gs += pg; bs += pb; n++;
+          let rs=0, gs=0, bs=0, n=0;
+          const r2 = Math.max(1, Math.floor(gridPx*0.3));
+          for(let dy=-r2; dy<=r2; dy++){
+            for(let dx=-r2; dx<=r2; dx++){
+              const nx = Math.max(0, Math.min(img.naturalWidth-1, cx+dx));
+              const ny = Math.max(0, Math.min(img.naturalHeight-1, cy+dy));
+              const [pr,pg,pb] = getPixel(nx,ny);
+              rs+=pr; gs+=pg; bs+=pb; n++;
             }
           }
-          cellColors.push([Math.round(rs / n), Math.round(gs / n), Math.round(bs / n)]);
+          cellColors.push([Math.round(rs/n), Math.round(gs/n), Math.round(bs/n)]);
         }
       }
 
       const clusters = [];
-      function findCluster(r, g, b){
-        let best = null;
-        let bestD = 46;
+      function findCluster(r,g,b){
+        let best = null, bestD = 45;
         for(const c of clusters){
-          const d = Math.sqrt((r - c.r) ** 2 + (g - c.g) ** 2 + (b - c.b) ** 2);
-          if(d < bestD){
-            bestD = d;
-            best = c;
-          }
+          const d = Math.sqrt((r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2);
+          if(d<bestD){bestD=d; best=c;}
         }
         return best;
       }
 
-      const idList = cellColors.map(cell => {
+      const idList = cellColors.map(cell=>{
         if(!cell) return null;
-        const [r, g, b] = cell;
-        let cluster = findCluster(r, g, b);
+        const [r,g,b] = cell;
+        let cluster = findCluster(r,g,b);
         if(!cluster){
-          cluster = { id: `C${clusters.length + 1}`, r, g, b, count: 0 };
+          cluster = {id:`C${clusters.length+1}`, r, g, b, count:0};
           clusters.push(cluster);
         }
         cluster.count++;
         return cluster.id;
       });
 
-      const validClusters = clusters.filter(c => c.count >= 3);
-      function findValidCluster(r, g, b){
-        let best = null;
-        let bestD = 999;
+      const validClusters = clusters.filter(c=>c.count>=3);
+      function findValidCluster(r,g,b){
+        let best = null, bestD = 999;
         for(const c of validClusters){
-          const d = Math.sqrt((r - c.r) ** 2 + (g - c.g) ** 2 + (b - c.b) ** 2);
-          if(d < bestD){
-            bestD = d;
-            best = c;
-          }
+          const d = Math.sqrt((r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2);
+          if(d<bestD){bestD=d; best=c;}
         }
         return best;
       }
 
       const idMap = {};
-      clusters.forEach(c => {
-        if(c.count >= 3){
-          idMap[c.id] = c.id;
-        }else{
-          const nearest = findValidCluster(c.r, c.g, c.b);
+      clusters.forEach(c=>{
+        if(c.count>=3) idMap[c.id]=c.id;
+        else{
+          const nearest = findValidCluster(c.r,c.g,c.b);
           idMap[c.id] = nearest ? nearest.id : c.id;
         }
       });
 
-      validClusters.forEach(c => c.count = 0);
-      const finalIdList = idList.map(id => id ? idMap[id] : null);
-      finalIdList.forEach(id => {
+      validClusters.forEach(c=>c.count=0);
+      const finalIdList = idList.map(id=>id ? idMap[id] : null);
+      finalIdList.forEach(id=>{
         if(!id) return;
-        const c = validClusters.find(x => x.id === id);
+        const c = validClusters.find(x=>x.id===id);
         if(c) c.count++;
       });
-      validClusters.sort((a, b) => b.count - a.count);
+      validClusters.sort((a,b)=>b.count-a.count);
+
+      function nearestPaletteCode(r,g,b){
+        let best = null;
+        let bestD = Infinity;
+        for(const c of ALL_COLORS){
+          const rr = parseInt(c.hex.slice(1,3),16);
+          const gg = parseInt(c.hex.slice(3,5),16);
+          const bb = parseInt(c.hex.slice(5,7),16);
+          const d = Math.sqrt((r-rr)**2 + (g-gg)**2 + (b-bb)**2);
+          if(d < bestD){
+            bestD = d;
+            best = c;
+          }
+        }
+        return best?.id || null;
+      }
+
+      const decoratedClusters = validClusters.map(c=>({
+        ...c,
+        code: nearestPaletteCode(c.r,c.g,c.b)
+      }));
 
       const finalGrid = [];
       let idx = 0;
-      for(let row = 0; row < rows; row++){
+      for(let row=0; row<rows; row++){
         const rowArr = [];
-        for(let col = 0; col < cols; col++) rowArr.push(finalIdList[idx++] || null);
+        for(let col=0; col<cols; col++) rowArr.push(finalIdList[idx++] || null);
         finalGrid.push(rowArr);
       }
 
+      setCompletedColors([]);
       setColorGrid(finalGrid);
-      setColorList(validClusters);
-      setActiveColor(validClusters[0]?.id || null);
+      setColorList(decoratedClusters);
+      setActiveColor(decoratedClusters[0]?.id || null);
       setStep("highlight");
     };
     img.src = imgSrc;
   }
 
   useEffect(()=>{
-    if(step !== "highlight" || !colorGrid || !canvasRef.current || !imgSrc) return;
+    if(step!=="highlight"||!colorGrid||!canvasRef.current||!imgSrc) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const img = new Image();
-    img.onload = () => {
-      const x1 = Math.round(cropX1 * img.naturalWidth);
-      const y1 = Math.round(cropY1 * img.naturalHeight);
-      const x2 = Math.round(cropX2 * img.naturalWidth);
-      const y2 = Math.round(cropY2 * img.naturalHeight);
-      const safeGrid = Math.max(1, gridPx);
-      const ox = ((originX % safeGrid) + safeGrid) % safeGrid;
-      const oy = ((originY % safeGrid) + safeGrid) % safeGrid;
+    img.onload = ()=>{
+      const x1 = Math.round(cropX1*img.naturalWidth), y1 = Math.round(cropY1*img.naturalHeight);
+      const x2 = Math.round(cropX2*img.naturalWidth), y2 = Math.round(cropY2*img.naturalHeight);
+      const ox = ((originX%gridPx)+gridPx)%gridPx;
+      const oy = ((originY%gridPx)+gridPx)%gridPx;
+      canvas.width = x2-x1;
+      canvas.height = y2-y1;
+      ctx.drawImage(img,x1,y1,x2-x1,y2-y1,0,0,x2-x1,y2-y1);
 
-      canvas.width = Math.max(1, x2 - x1);
-      canvas.height = Math.max(1, y2 - y1);
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, x1, y1, x2 - x1, y2 - y1, 0, 0, x2 - x1, y2 - y1);
-
-      colorGrid.forEach((row, ri) => row.forEach((id, ci) => {
-        const cx = Math.round(ox + ci * safeGrid);
-        const cy = Math.round(oy + ri * safeGrid);
-        if(id === activeColor){
-          ctx.fillStyle = "rgba(255,220,0,0.52)";
-          ctx.fillRect(cx, cy, safeGrid, safeGrid);
-          ctx.strokeStyle = "rgba(255,150,0,0.95)";
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(cx + 0.75, cy + 0.75, safeGrid - 1.5, safeGrid - 1.5);
+      colorGrid.forEach((row,ri)=>row.forEach((id,ci)=>{
+        const cx = Math.round(ox)+ci*gridPx, cy = Math.round(oy)+ri*gridPx;
+        if(completedColors.includes(id)) return;
+        if(id===activeColor){
+          ctx.fillStyle="rgba(255,220,0,0.52)";
+          ctx.fillRect(cx,cy,gridPx,gridPx);
+          ctx.strokeStyle="rgba(255,150,0,0.95)";
+          ctx.lineWidth=1.5;
+          ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
         }else if(id){
-          ctx.fillStyle = "rgba(0,0,0,0.60)";
-          ctx.fillRect(cx, cy, safeGrid, safeGrid);
+          ctx.fillStyle="rgba(0,0,0,0.6)";
+          ctx.fillRect(cx,cy,gridPx,gridPx);
         }
       }));
-      resetViewport(highlightViewRef.current);
     };
     img.src = imgSrc;
-  }, [step, colorGrid, activeColor, imgSrc, cropX1, cropY1, cropX2, cropY2, originX, originY, gridPx]);
+  },[step,colorGrid,activeColor,imgSrc,cropX1,cropY1,cropX2,cropY2,originX,originY,gridPx,completedColors]);
 
-  const mediaWrapStyle = {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: imgNaturalW,
-    height: imgNaturalH,
-    transformOrigin: "0 0",
-    transform: `translate(${panX}px, ${panY}px) scale(${currentScale})`,
-  };
+  function markCurrentDone(){
+    if(!activeColor) return;
+    setCompletedColors(prev=>{
+      if(prev.includes(activeColor)) return prev;
+      return [...prev, activeColor];
+    });
+  }
 
-  const cropRectStyle = {
-    position: "absolute",
-    left: `${cropX1 * 100}%`,
-    top: `${cropY1 * 100}%`,
-    width: `${(cropX2 - cropX1) * 100}%`,
-    height: `${(cropY2 - cropY1) * 100}%`,
-    border: "2.5px solid #4a9eff",
-    boxShadow: "0 0 0 9999px rgba(0,0,0,0.42)",
-    boxSizing: "border-box",
-    background: "rgba(74,158,255,0.08)",
-  };
+  function undoDoneColor(id){
+    setCompletedColors(prev=>prev.filter(x=>x!==id));
+    setActiveColor(id);
+  }
+
+  const activeMeta = colorList.find(c=>c.id===activeColor);
 
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg}}>
@@ -3940,85 +3888,54 @@ function GuideAssistant({T, onBack}){
           </button>
           <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleUpload}/>
           <div style={{fontSize:11,color:T.textLight,textAlign:"center",lineHeight:1.8,maxWidth:280}}>
-            💡 上传整张图纸，下一步先放大原图，再微调红线去对齐黑色格线
+            💡 上传整张图纸，下一步引导你对齐网格和框选主体
           </div>
         </div>
       )}
 
       {step==="align"&&imgSrc&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
-          <div
-            ref={alignViewRef}
-            style={{flex:1,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
-            onTouchStart={startViewportTouch}
-            onTouchMove={moveViewportTouch}
-            onTouchEnd={endViewportTouch}
-          >
-            <div style={mediaWrapStyle}>
-              <img src={imgSrc} alt="图纸" style={{display:"block",width:imgNaturalW,height:imgNaturalH,userSelect:"none",pointerEvents:"none"}} />
-              <canvas ref={gridCanvasRef} style={{position:"absolute",inset:0,width:imgNaturalW,height:imgNaturalH,pointerEvents:"none"}} />
+          <div ref={viewRef} style={{flex:1,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
+            onTouchStart={onAlignTouchStart}
+            onTouchMove={onAlignTouchMove}
+            onTouchEnd={onAlignTouchEnd}>
+            <div style={{width:"100%",height:"100%",overflow:"hidden",position:"relative"}}>
+              <div
+                style={{
+                  position:"absolute",
+                  left: panX,
+                  top: panY,
+                  transform:`scale(${scale})`,
+                  transformOrigin:"top left",
+                  width: imgNaturalW,
+                  height: imgNaturalH
+                }}
+              >
+                <img src={imgSrc} style={{display:"block",width:imgNaturalW,height:imgNaturalH,userSelect:"none",pointerEvents:"none"}} alt="图纸"/>
+                <canvas ref={gridCanvasRef} style={{position:"absolute",inset:0,pointerEvents:"none",width:"100%",height:"100%"}}/>
+              </div>
             </div>
             <div style={{position:"absolute",top:8,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
               <div style={{display:"inline-block",background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:11,borderRadius:20,padding:"4px 12px"}}>
-                双指缩放原图 · 单指拖动画面 · 下方按钮微调红线
+                双指缩放图纸和网格 · 单指拖动画面
               </div>
             </div>
           </div>
-
-          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 14px 18px",flexShrink:0,maxHeight:"42vh",overflowY:"auto"}}>
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 16px",flexShrink:0}}>
             <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 1/3 · 网格对齐</div>
-            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>先把原图放大看清，再把红线慢慢对到原图黑色网格</div>
-
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-              <div style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:16,padding:"10px 12px"}}>
-                <div style={{fontSize:11,fontWeight:800,color:T.textMid,marginBottom:8}}>原图缩放</div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <button onClick={()=>setZoom(v=>clamp(Math.round((v-0.1)*100)/100,0.5,8))} style={{width:32,height:32,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
-                  <div style={{minWidth:52,textAlign:"center",fontSize:18,fontWeight:900,color:T.accent}}>{zoom.toFixed(2)}x</div>
-                  <button onClick={()=>setZoom(v=>clamp(Math.round((v+0.1)*100)/100,0.5,8))} style={{width:32,height:32,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
-                  <button onClick={()=>resetViewport(alignViewRef.current)} style={{marginLeft:"auto",padding:"7px 10px",borderRadius:12,border:`1px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:11,cursor:"pointer"}}>重置视图</button>
-                </div>
-              </div>
-
-              <div style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:16,padding:"10px 12px"}}>
-                <div style={{fontSize:11,fontWeight:800,color:T.textMid,marginBottom:8}}>格子大小</div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <button onClick={()=>nudgeGridSize(-1)} style={{width:30,height:30,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
-                  <button onClick={()=>nudgeGridSize(-0.1)} style={{padding:"6px 8px",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer",fontSize:11}}>-0.1</button>
-                  <div style={{minWidth:52,textAlign:"center",fontSize:18,fontWeight:900,color:T.accent}}>{gridPx.toFixed(2)}</div>
-                  <button onClick={()=>nudgeGridSize(0.1)} style={{padding:"6px 8px",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer",fontSize:11}}>+0.1</button>
-                  <button onClick={()=>nudgeGridSize(1)} style={{width:30,height:30,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
-                </div>
-              </div>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>让红线精确对齐图纸格子边界</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+              <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>格子大小</div>
+              <button onClick={()=>setGridPx(v=>Math.max(8, Number((v-1).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
+              <button onClick={()=>setGridPx(v=>Math.max(8, Number((v-0.1).toFixed(2))))} style={{padding:"0 10px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:13,cursor:"pointer"}}>-0.1</button>
+              <div style={{fontSize:17,fontWeight:900,color:T.accent,minWidth:48,textAlign:"center"}}>{Number(gridPx).toFixed(gridPx % 1 === 0 ? 0 : 2)}</div>
+              <button onClick={()=>setGridPx(v=>Math.min(120, Number((v+0.1).toFixed(2))))} style={{padding:"0 10px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:13,cursor:"pointer"}}>+0.1</button>
+              <button onClick={()=>setGridPx(v=>Math.min(120, Number((v+1).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
+              <div style={{fontSize:11,color:T.textLight}}>px/格</div>
             </div>
-
-            <div style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:16,padding:"10px 12px",marginBottom:12}}>
-              <div style={{fontSize:11,fontWeight:800,color:T.textMid,marginBottom:8}}>红线偏移微调</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <div>
-                  <div style={{fontSize:10,color:T.textLight,marginBottom:6}}>横向 X：{originX.toFixed(2)}</div>
-                  <div style={{display:"flex",gap:6}}>
-                    <button onClick={()=>nudgeOrigin(-1,0)} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>←1</button>
-                    <button onClick={()=>nudgeOrigin(-0.1,0)} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>←0.1</button>
-                    <button onClick={()=>nudgeOrigin(0.1,0)} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>0.1→</button>
-                    <button onClick={()=>nudgeOrigin(1,0)} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>1→</button>
-                  </div>
-                </div>
-                <div>
-                  <div style={{fontSize:10,color:T.textLight,marginBottom:6}}>纵向 Y：{originY.toFixed(2)}</div>
-                  <div style={{display:"flex",gap:6}}>
-                    <button onClick={()=>nudgeOrigin(0,-1)} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>↑1</button>
-                    <button onClick={()=>nudgeOrigin(0,-0.1)} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>↑0.1</button>
-                    <button onClick={()=>nudgeOrigin(0,0.1)} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>0.1↓</button>
-                    <button onClick={()=>nudgeOrigin(0,1)} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>1↓</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <button onClick={()=>setStep("crop")}
               style={{width:"100%",padding:"13px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:900,cursor:"pointer"}}>
-              下一步：裁剪主体 →
+              下一步：框选主体 →
             </button>
           </div>
         </div>
@@ -4027,90 +3944,94 @@ function GuideAssistant({T, onBack}){
       {step==="crop"&&imgSrc&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
           <div
-            ref={cropViewRef}
-            style={{flex:"1 1 auto",minHeight:0,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
-            onTouchStart={startViewportTouch}
-            onTouchMove={moveViewportTouch}
-            onTouchEnd={endViewportTouch}
+            ref={cropWrapRef}
+            style={{flex:1,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
+            onPointerDown={onCropPointerDown}
+            onPointerMove={onCropPointerMove}
+            onPointerUp={onCropPointerUp}
+            onPointerLeave={onCropPointerUp}
+            onTouchStart={onCropTouchStart}
+            onTouchMove={onCropTouchMove}
+            onTouchEnd={onCropTouchEnd}
           >
-            <div style={mediaWrapStyle}>
-              <div
-                style={{position:"absolute",left:0,top:0,width:imgNaturalW,height:imgNaturalH}}
-                onPointerDown={startCropPointer}
-                onPointerMove={moveCropPointer}
-                onPointerUp={endCropPointer}
-                onPointerCancel={endCropPointer}
-              >
-                <img src={imgSrc} alt="图纸" style={{display:"block",width:imgNaturalW,height:imgNaturalH,userSelect:"none",pointerEvents:"none",opacity:0.96}} />
-                <div style={cropRectStyle}>
-                  {[1,2].map(i=><div key={`v${i}`} style={{position:"absolute",left:`${i*33.333}%`,top:0,bottom:0,width:1,background:"rgba(74,158,255,0.45)"}} />)}
-                  {[1,2].map(i=><div key={`h${i}`} style={{position:"absolute",top:`${i*33.333}%`,left:0,right:0,height:1,background:"rgba(74,158,255,0.45)"}} />)}
-                  {[
-                    {k:"tl",s:{top:-11,left:-11,cursor:"nwse-resize"}},
-                    {k:"tr",s:{top:-11,right:-11,cursor:"nesw-resize"}},
-                    {k:"bl",s:{bottom:-11,left:-11,cursor:"nesw-resize"}},
-                    {k:"br",s:{bottom:-11,right:-11,cursor:"nwse-resize"}},
-                    {k:"t",s:{top:-11,left:"50%",transform:"translateX(-50%)",cursor:"ns-resize"}},
-                    {k:"b",s:{bottom:-11,left:"50%",transform:"translateX(-50%)",cursor:"ns-resize"}},
-                    {k:"l",s:{left:-11,top:"50%",transform:"translateY(-50%)",cursor:"ew-resize"}},
-                    {k:"r",s:{right:-11,top:"50%",transform:"translateY(-50%)",cursor:"ew-resize"}},
-                  ].map(({k,s})=>(
-                    <div key={k} style={{position:"absolute",width:22,height:22,borderRadius:7,background:"#4a9eff",boxShadow:"0 2px 8px rgba(0,0,0,0.22)",...s}} />
-                  ))}
-                </div>
-              </div>
+            <img src={imgSrc} style={{display:"block",width:"100%",height:"100%",objectFit:"contain",userSelect:"none",pointerEvents:"none",opacity:0.45}} alt="图纸"/>
+            <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
+              <div style={{position:"absolute",left:0,top:0,right:0,height:`${cropY1*100}%`,background:"rgba(0,0,0,0.45)"}}/>
+              <div style={{position:"absolute",left:0,top:`${cropY2*100}%`,right:0,bottom:0,background:"rgba(0,0,0,0.45)"}}/>
+              <div style={{position:"absolute",left:0,top:`${cropY1*100}%`,width:`${cropX1*100}%`,height:`${(cropY2-cropY1)*100}%`,background:"rgba(0,0,0,0.45)"}}/>
+              <div style={{position:"absolute",left:`${cropX2*100}%`,top:`${cropY1*100}%`,right:0,height:`${(cropY2-cropY1)*100}%`,background:"rgba(0,0,0,0.45)"}}/>
+            </div>
+
+            <div
+              style={{
+                position:"absolute",
+                left:`${cropX1*100}%`,
+                top:`${cropY1*100}%`,
+                width:`${(cropX2-cropX1)*100}%`,
+                height:`${(cropY2-cropY1)*100}%`,
+                border:"2.5px solid #4a9eff",
+                boxSizing:"border-box",
+                cursor:"move"
+              }}
+            >
+              {[1,2].map(i=>(
+                <div key={"v"+i} style={{position:"absolute",left:`${i*33.33}%`,top:0,bottom:0,width:1,background:"rgba(74,158,255,0.45)"}}/>
+              ))}
+              {[1,2].map(i=>(
+                <div key={"h"+i} style={{position:"absolute",top:`${i*33.33}%`,left:0,right:0,height:1,background:"rgba(74,158,255,0.45)"}}/>
+              ))}
+              {[
+                {k:"TL",left:-10,top:-10,cursor:"nwse-resize"},
+                {k:"TR",right:-10,top:-10,cursor:"nesw-resize"},
+                {k:"BL",left:-10,bottom:-10,cursor:"nesw-resize"},
+                {k:"BR",right:-10,bottom:-10,cursor:"nwse-resize"},
+                {k:"T",left:"50%",top:-10,transform:"translateX(-50%)",cursor:"ns-resize"},
+                {k:"B",left:"50%",bottom:-10,transform:"translateX(-50%)",cursor:"ns-resize"},
+                {k:"L",left:-10,top:"50%",transform:"translateY(-50%)",cursor:"ew-resize"},
+                {k:"R",right:-10,top:"50%",transform:"translateY(-50%)",cursor:"ew-resize"},
+              ].map(h=>(
+                <div
+                  key={h.k}
+                  style={{
+                    position:"absolute",
+                    width:22,
+                    height:22,
+                    borderRadius:7,
+                    background:"#4a9eff",
+                    boxShadow:"0 2px 8px rgba(0,0,0,0.25)",
+                    ...h
+                  }}
+                />
+              ))}
             </div>
 
             <div style={{position:"absolute",top:8,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
               <div style={{display:"inline-block",background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:11,borderRadius:20,padding:"4px 12px"}}>
-                双指缩放原图 · 单指拖动画面 · 蓝框可拖动和拉伸
+                可直接拖动蓝框/边/角点，也可用下方按钮微调
               </div>
             </div>
           </div>
 
-          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 14px 18px",flex:"0 0 auto",maxHeight:"44vh",overflowY:"auto"}}>
-            <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 2/3 · 裁剪主体</div>
-            <div style={{fontSize:11,color:T.textMid,marginBottom:10}}>适配手机全屏显示，像相册那样拖动裁剪框，只保留图案主体</div>
-
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 12px",flexShrink:0,maxHeight:"42vh",overflowY:"auto"}}>
+            <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 2/3 · 框选主体</div>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:10}}>只保留图案主体，去掉坐标轴和底部色块</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-              {[["上",cropY1,()=>adjustCrop("T",-0.01),()=>adjustCrop("T",0.01)],
-                ["下",cropY2,()=>adjustCrop("B",-0.01),()=>adjustCrop("B",0.01)],
-                ["左",cropX1,()=>adjustCrop("L",-0.01),()=>adjustCrop("L",0.01)],
-                ["右",cropX2,()=>adjustCrop("R",-0.01),()=>adjustCrop("R",0.01)]
-              ].map(([label,val,minus,plus])=>(
-                <div key={label} style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:14,padding:"10px 12px"}}>
-                  <div style={{fontSize:10,color:T.textMid,fontWeight:700,marginBottom:5}}>{label}边界 {Math.round(val*100)}%</div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <button onClick={minus} style={{width:32,height:32,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.card,cursor:"pointer"}}>－</button>
-                    <input type="range" min="0" max="100" value={Math.round(val*100)}
-                      onChange={e=>{
-                        const v = Number(e.target.value) / 100;
-                        if(label === "上") setCropY1(clamp(v, 0, cropY2 - 0.04));
-                        if(label === "下") setCropY2(clamp(v, cropY1 + 0.04, 1));
-                        if(label === "左") setCropX1(clamp(v, 0, cropX2 - 0.04));
-                        if(label === "右") setCropX2(clamp(v, cropX1 + 0.04, 1));
-                      }}
+              {[["上",cropY1,v=>setCropY1(v),0,cropY2-0.05],["下",cropY2,v=>setCropY2(v),cropY1+0.05,1],["左",cropX1,v=>setCropX1(v),0,cropX2-0.05],["右",cropX2,v=>setCropX2(v),cropX1+0.05,1]].map(([label,val,setter,min,max])=>(
+                <div key={label} style={{background:T.bg,borderRadius:14,padding:"8px 10px",border:`1px solid ${T.border}`}}>
+                  <div style={{fontSize:10,color:T.textMid,fontWeight:700,marginBottom:4}}>{label}边界 {Math.round(val*100)}%</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <button onClick={()=>setter(Math.max(min, Number((val-0.01).toFixed(3))))} style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.card,cursor:"pointer",fontSize:14,flexShrink:0}}>－</button>
+                    <input type="range" min={Math.round(min*100)} max={Math.round(max*100)} value={Math.round(val*100)}
+                      onChange={e=>setter(Number(e.target.value)/100)}
                       style={{flex:1,accentColor:T.accent}}/>
-                    <button onClick={plus} style={{width:32,height:32,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
+                    <button onClick={()=>setter(Math.min(max, Number((val+0.01).toFixed(3))))} style={{width:28,height:28,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer",fontSize:14,flexShrink:0}}>＋</button>
                   </div>
                 </div>
               ))}
             </div>
-
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-              <button onClick={()=>setZoom(v=>clamp(Math.round((v-0.1)*100)/100,0.5,8))}
-                style={{padding:"10px 0",borderRadius:14,border:`1px solid ${T.border}`,background:T.bg,color:T.text,cursor:"pointer"}}>
-                缩小原图
-              </button>
-              <button onClick={()=>setZoom(v=>clamp(Math.round((v+0.1)*100)/100,0.5,8))}
-                style={{padding:"10px 0",borderRadius:14,border:`1px solid ${T.border}`,background:T.bg,color:T.text,cursor:"pointer"}}>
-                放大原图
-              </button>
-            </div>
-
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setStep("align")} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>← 上一步</button>
-              <button onClick={analyzeColors} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>下一步：高亮分析 →</button>
+              <button onClick={analyzeColors} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>✨ 开始分析</button>
             </div>
           </div>
         </div>
@@ -4118,49 +4039,59 @@ function GuideAssistant({T, onBack}){
 
       {step==="highlight"&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
-          <div
-            ref={highlightViewRef}
-            style={{flex:1,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
-            onTouchStart={startViewportTouch}
-            onTouchMove={moveViewportTouch}
-            onTouchEnd={endViewportTouch}
-          >
-            <div style={{
-              position:"absolute",
-              left:0, top:0,
-              width:canvasRef.current?.width || 1,
-              height:canvasRef.current?.height || 1,
-              transformOrigin:"0 0",
-              transform:`translate(${panX}px, ${panY}px) scale(${currentScale})`
-            }}>
-              <canvas ref={canvasRef} style={{display:"block"}} />
-            </div>
-            <div style={{position:"absolute",top:8,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
-              <div style={{display:"inline-block",background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:11,borderRadius:20,padding:"4px 12px"}}>
-                双指缩放高亮画面 · 单指拖动查看细节
-              </div>
-            </div>
+          <div style={{flex:1,overflow:"auto",background:"#111",display:"flex",alignItems:"flex-start",justifyContent:"center"}}>
+            <canvas ref={canvasRef} style={{maxWidth:"100%",display:"block"}}/>
           </div>
-          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"12px 16px",flexShrink:0,maxHeight:"40vh",overflowY:"auto"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
-              <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>点选色块高亮 · 识别到 {colorList.length} 种颜色</div>
-              <div style={{display:"flex",gap:6}}>
-                <button onClick={()=>setZoom(v=>clamp(Math.round((v-0.1)*100)/100,0.5,8))} style={{width:30,height:30,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.bg,cursor:"pointer"}}>－</button>
-                <button onClick={()=>setZoom(v=>clamp(Math.round((v+0.1)*100)/100,0.5,8))} style={{width:30,height:30,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",cursor:"pointer"}}>＋</button>
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"12px 16px",flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:8}}>
+              <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>
+                点选色块高亮 · 剩余 {visibleColors.length} 种颜色
               </div>
+              {activeMeta && (
+                <button
+                  onClick={markCurrentDone}
+                  style={{padding:"8px 12px",borderRadius:20,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}
+                >
+                  ✓ {activeMeta.code || activeMeta.id} 已完成
+                </button>
+              )}
             </div>
+
             <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,WebkitOverflowScrolling:"touch"}}>
-              {colorList.map(c=>(
+              {visibleColors.map(c=>(
                 <button key={c.id} onClick={()=>setActiveColor(c.id)}
-                  style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:`2px solid ${activeColor===c.id?T.accent:T.border}`,borderRadius:12,padding:"8px 10px",cursor:"pointer",transform:activeColor===c.id?"scale(1.1)":"scale(1)",transition:"all 0.15s"}}>
+                  style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:`2px solid ${activeColor===c.id?T.accent:T.border}`,borderRadius:12,padding:"8px 10px",cursor:"pointer",transform:activeColor===c.id?"scale(1.05)":"scale(1)",transition:"all 0.15s"}}>
                   <div style={{width:30,height:30,borderRadius:8,background:`rgb(${c.r},${c.g},${c.b})`,border:"1.5px solid rgba(0,0,0,0.1)",boxShadow:activeColor===c.id?`0 0 0 3px ${T.accent}44`:""}}/>
-                  <div style={{fontSize:9,fontWeight:800,color:activeColor===c.id?T.accent:T.textMid,whiteSpace:"nowrap"}}>{c.count}格</div>
+                  <div style={{fontSize:11,fontWeight:900,color:activeColor===c.id?T.accent:T.text}}>{c.code || c.id}</div>
+                  <div style={{fontSize:9,fontWeight:800,color:T.textMid,whiteSpace:"nowrap"}}>{c.count}格</div>
                 </button>
               ))}
             </div>
+
+            {completedColors.length > 0 && (
+              <div style={{marginTop:10}}>
+                <div style={{fontSize:10,color:T.textLight,fontWeight:800,marginBottom:6}}>已完成</div>
+                <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
+                  {completedColors.map(id=>{
+                    const item = colorList.find(c=>c.id===id);
+                    if(!item) return null;
+                    return (
+                      <button
+                        key={id}
+                        onClick={()=>undoDoneColor(id)}
+                        style={{flexShrink:0,padding:"6px 10px",borderRadius:16,border:`1px solid ${T.border}`,background:T.bg,color:T.textMid,fontSize:11,fontWeight:800,cursor:"pointer"}}
+                      >
+                        {item.code || item.id} · 恢复
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div style={{display:"flex",gap:8,marginTop:10}}>
               <button onClick={()=>setStep("crop")} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>← 重新裁剪</button>
-              <button onClick={()=>{setStep("upload");setImgSrc(null);setColorGrid(null);setColorList([]);setActiveColor(null);}}
+              <button onClick={()=>{setStep("upload");setImgSrc(null);setColorGrid(null);setColorList([]);setCompletedColors([]);setActiveColor(null);}}
                 style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                 重新上传
               </button>
