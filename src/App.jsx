@@ -3435,31 +3435,37 @@ function ToolboxModal({toolbox,setToolbox,T,onClose}){
 //  GuideAssistant（图纸助手）
 // ══════════════════════════════════
 
+
 function GuideAssistant({T, onBack}){
   const [step, setStep] = useState("upload");
   const [imgSrc, setImgSrc] = useState(null);
   const [imgNaturalW, setImgNaturalW] = useState(0);
   const [imgNaturalH, setImgNaturalH] = useState(0);
+
   const [gridPx, setGridPx] = useState(40);
   const [originX, setOriginX] = useState(0);
   const [originY, setOriginY] = useState(0);
+  const [alignZoom, setAlignZoom] = useState(1);
+
   const [cropX1, setCropX1] = useState(0.05);
   const [cropY1, setCropY1] = useState(0.05);
   const [cropX2, setCropX2] = useState(0.95);
   const [cropY2, setCropY2] = useState(0.80);
+
   const [colorGrid, setColorGrid] = useState(null);
   const [colorList, setColorList] = useState([]);
   const [activeColor, setActiveColor] = useState(null);
-  const [scale, setScale] = useState(1);
-  const [panX, setPanX] = useState(0);
-  const [panY, setPanY] = useState(0);
   const [completedColors, setCompletedColors] = useState([]);
+  const [highlightZoom, setHighlightZoom] = useState(1);
+  const [renderSize, setRenderSize] = useState({w:0,h:0});
+
   const fileRef = useRef(null);
-  const canvasRef = useRef(null);
   const gridCanvasRef = useRef(null);
-  const viewRef = useRef(null);
+  const alignWrapRef = useRef(null);
   const cropWrapRef = useRef(null);
-  const touchState = useRef({lastDist:0, lastX:0, lastY:0, mode:null});
+  const canvasRef = useRef(null);
+
+  const touchState = useRef({ mode:null, lastX:0, lastY:0, startDist:0, startZoom:1 });
   const cropDrag = useRef(null);
 
   const visibleColors = useMemo(
@@ -3470,13 +3476,13 @@ function GuideAssistant({T, onBack}){
   useEffect(()=>{
     if(activeColor && !visibleColors.find(c=>c.id===activeColor)){
       setActiveColor(visibleColors[0]?.id || null);
-    } else if(!activeColor && visibleColors.length){
+    }else if(!activeColor && visibleColors.length){
       setActiveColor(visibleColors[0].id);
     }
   },[visibleColors, activeColor]);
 
   function handleUpload(e){
-    const f = e.target.files[0];
+    const f = e.target.files?.[0];
     if(!f) return;
     const url = URL.createObjectURL(f);
     const img = new Image();
@@ -3488,9 +3494,8 @@ function GuideAssistant({T, onBack}){
       setGridPx(Math.max(10, Math.min(est, 80)));
       setOriginX(0);
       setOriginY(0);
-      setScale(1);
-      setPanX(0);
-      setPanY(0);
+      setAlignZoom(1);
+      setHighlightZoom(1);
       setCompletedColors([]);
       setColorGrid(null);
       setColorList([]);
@@ -3505,21 +3510,8 @@ function GuideAssistant({T, onBack}){
     e.target.value = "";
   }
 
-  function clampPan(nextScale, nextPanX, nextPanY){
-    const vw = viewRef.current?.clientWidth || window.innerWidth;
-    const vh = viewRef.current?.clientHeight || (window.innerHeight - 180);
-    const scaledW = imgNaturalW * nextScale;
-    const scaledH = imgNaturalH * nextScale;
-    const minX = Math.min(0, vw - scaledW);
-    const minY = Math.min(0, vh - scaledH);
-    return {
-      x: Math.max(minX, Math.min(0, nextPanX)),
-      y: Math.max(minY, Math.min(0, nextPanY)),
-    };
-  }
-
   useEffect(()=>{
-    if(step!=="align"||!gridCanvasRef.current||!imgNaturalW) return;
+    if(step!=="align" || !gridCanvasRef.current || !imgNaturalW || !imgNaturalH) return;
     const el = gridCanvasRef.current;
     el.width = imgNaturalW;
     el.height = imgNaturalH;
@@ -3527,7 +3519,7 @@ function GuideAssistant({T, onBack}){
     ctx.clearRect(0,0,imgNaturalW,imgNaturalH);
     const ox = ((originX % gridPx) + gridPx) % gridPx;
     const oy = ((originY % gridPx) + gridPx) % gridPx;
-    ctx.strokeStyle = "rgba(255,60,60,0.85)";
+    ctx.strokeStyle = "rgba(255,60,60,0.88)";
     ctx.lineWidth = Math.max(1, imgNaturalW/500);
     for(let x=ox; x<imgNaturalW; x+=gridPx){
       ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,imgNaturalH); ctx.stroke();
@@ -3542,49 +3534,42 @@ function GuideAssistant({T, onBack}){
     if(e.touches.length===2){
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
-      ts.lastDist = Math.sqrt(dx*dx + dy*dy);
       ts.mode = "pinch";
-      ts.baseGridPx = gridPx;
-      ts.baseScale = scale;
-      ts.basePanX = panX;
-      ts.basePanY = panY;
-      ts.midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      ts.midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      ts.startDist = Math.sqrt(dx*dx + dy*dy) || 1;
+      ts.startZoom = alignZoom;
     }else if(e.touches.length===1){
-      ts.mode = "drag";
+      ts.mode = "dragGrid";
       ts.lastX = e.touches[0].clientX;
       ts.lastY = e.touches[0].clientY;
     }
   }
 
   function onAlignTouchMove(e){
-    e.preventDefault();
     const ts = touchState.current;
     if(ts.mode==="pinch" && e.touches.length===2){
+      e.preventDefault();
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const ratio = dist / (ts.lastDist || dist || 1);
-      const nextScale = Math.max(0.7, Math.min(4, Number((ts.baseScale * ratio).toFixed(2))));
-      setScale(nextScale);
-      const nextGrid = Math.max(8, Math.min(120, Number((ts.baseGridPx * ratio).toFixed(2))));
-      setGridPx(nextGrid);
-      const clamped = clampPan(nextScale, ts.basePanX, ts.basePanY);
-      setPanX(clamped.x);
-      setPanY(clamped.y);
-    }else if(ts.mode==="drag" && e.touches.length===1){
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const ratio = dist / (ts.startDist || 1);
+      setAlignZoom(Math.max(0.6, Math.min(5, Number((ts.startZoom * ratio).toFixed(2)))));
+    }else if(ts.mode==="dragGrid" && e.touches.length===1){
+      e.preventDefault();
       const dx = e.touches[0].clientX - ts.lastX;
       const dy = e.touches[0].clientY - ts.lastY;
-      const clamped = clampPan(scale, panX + dx, panY + dy);
-      setPanX(clamped.x);
-      setPanY(clamped.y);
+      const displayWidth = alignWrapRef.current?.clientWidth || imgNaturalW;
+      const naturalPerDisplay = imgNaturalW / (displayWidth / alignZoom || 1);
+      setOriginX(v=>v + dx * naturalPerDisplay);
+      setOriginY(v=>v + dy * naturalPerDisplay);
       ts.lastX = e.touches[0].clientX;
       ts.lastY = e.touches[0].clientY;
     }
   }
+  function onAlignTouchEnd(){ touchState.current.mode = null; }
 
-  function onAlignTouchEnd(){
-    touchState.current.mode = null;
+  function nudgeGrid(dx,dy){
+    setOriginX(v=>v+dx);
+    setOriginY(v=>v+dy);
   }
 
   function getRelativePoint(clientX, clientY){
@@ -3654,35 +3639,13 @@ function GuideAssistant({T, onBack}){
     setCropX1(nx1); setCropY1(ny1); setCropX2(nx2); setCropY2(ny2);
   }
 
-  function endCropDrag(){
-    cropDrag.current = null;
-  }
-
-  function onCropPointerDown(e){
-    e.preventDefault();
-    startCropDrag(e.clientX, e.clientY);
-  }
-  function onCropPointerMove(e){
-    if(!cropDrag.current) return;
-    e.preventDefault();
-    updateCropDrag(e.clientX, e.clientY);
-  }
-  function onCropPointerUp(){
-    endCropDrag();
-  }
-  function onCropTouchStart(e){
-    if(e.touches.length!==1) return;
-    e.preventDefault();
-    startCropDrag(e.touches[0].clientX, e.touches[0].clientY);
-  }
-  function onCropTouchMove(e){
-    if(!cropDrag.current || e.touches.length!==1) return;
-    e.preventDefault();
-    updateCropDrag(e.touches[0].clientX, e.touches[0].clientY);
-  }
-  function onCropTouchEnd(){
-    endCropDrag();
-  }
+  function endCropDrag(){ cropDrag.current = null; }
+  function onCropPointerDown(e){ e.preventDefault(); startCropDrag(e.clientX, e.clientY); }
+  function onCropPointerMove(e){ if(!cropDrag.current) return; e.preventDefault(); updateCropDrag(e.clientX, e.clientY); }
+  function onCropPointerUp(){ endCropDrag(); }
+  function onCropTouchStart(e){ if(e.touches.length!==1) return; e.preventDefault(); startCropDrag(e.touches[0].clientX, e.touches[0].clientY); }
+  function onCropTouchMove(e){ if(!cropDrag.current || e.touches.length!==1) return; e.preventDefault(); updateCropDrag(e.touches[0].clientX, e.touches[0].clientY); }
+  function onCropTouchEnd(){ endCropDrag(); }
 
   function analyzeColors(){
     const img = new Image();
@@ -3703,7 +3666,8 @@ function GuideAssistant({T, onBack}){
       const x2 = Math.round(cropX2*img.naturalWidth), y2 = Math.round(cropY2*img.naturalHeight);
       const ox = ((originX%gridPx)+gridPx)%gridPx;
       const oy = ((originY%gridPx)+gridPx)%gridPx;
-      const cols = Math.floor((x2-x1)/gridPx), rows = Math.floor((y2-y1)/gridPx);
+      const cols = Math.max(1, Math.floor((x2-x1)/gridPx));
+      const rows = Math.max(1, Math.floor((y2-y1)/gridPx));
 
       const cellColors = [];
       for(let row=0; row<rows; row++){
@@ -3716,10 +3680,10 @@ function GuideAssistant({T, onBack}){
           }
           let rs=0, gs=0, bs=0, n=0;
           const r2 = Math.max(1, Math.floor(gridPx*0.3));
-          for(let dy=-r2; dy<=r2; dy++){
-            for(let dx=-r2; dx<=r2; dx++){
-              const nx = Math.max(0, Math.min(img.naturalWidth-1, cx+dx));
-              const ny = Math.max(0, Math.min(img.naturalHeight-1, cy+dy));
+          for(let ddy=-r2; ddy<=r2; ddy++){
+            for(let ddx=-r2; ddx<=r2; ddx++){
+              const nx = Math.max(0, Math.min(img.naturalWidth-1, cx+ddx));
+              const ny = Math.max(0, Math.min(img.naturalHeight-1, cy+ddy));
               const [pr,pg,pb] = getPixel(nx,ny);
               rs+=pr; gs+=pg; bs+=pb; n++;
             }
@@ -3811,13 +3775,14 @@ function GuideAssistant({T, onBack}){
       setColorGrid(finalGrid);
       setColorList(decoratedClusters);
       setActiveColor(decoratedClusters[0]?.id || null);
+      setHighlightZoom(1);
       setStep("highlight");
     };
     img.src = imgSrc;
   }
 
   useEffect(()=>{
-    if(step!=="highlight"||!colorGrid||!canvasRef.current||!imgSrc) return;
+    if(step!=="highlight" || !colorGrid || !canvasRef.current || !imgSrc) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const img = new Image();
@@ -3826,22 +3791,25 @@ function GuideAssistant({T, onBack}){
       const x2 = Math.round(cropX2*img.naturalWidth), y2 = Math.round(cropY2*img.naturalHeight);
       const ox = ((originX%gridPx)+gridPx)%gridPx;
       const oy = ((originY%gridPx)+gridPx)%gridPx;
-      canvas.width = x2-x1;
-      canvas.height = y2-y1;
-      ctx.drawImage(img,x1,y1,x2-x1,y2-y1,0,0,x2-x1,y2-y1);
+      const w = x2 - x1;
+      const h = y2 - y1;
+      canvas.width = w;
+      canvas.height = h;
+      setRenderSize({w,h});
+
+      ctx.clearRect(0,0,w,h);
+      ctx.drawImage(img,x1,y1,w,h,0,0,w,h);
 
       colorGrid.forEach((row,ri)=>row.forEach((id,ci)=>{
-        const cx = Math.round(ox)+ci*gridPx, cy = Math.round(oy)+ri*gridPx;
-        if(completedColors.includes(id)) return;
+        if(!id || completedColors.includes(id)) return;
+        const cx = Math.round(ox)+ci*gridPx;
+        const cy = Math.round(oy)+ri*gridPx;
         if(id===activeColor){
-          ctx.fillStyle="rgba(255,220,0,0.52)";
+          ctx.fillStyle="rgba(255,220,0,0.48)";
           ctx.fillRect(cx,cy,gridPx,gridPx);
-          ctx.strokeStyle="rgba(255,150,0,0.95)";
+          ctx.strokeStyle="rgba(255,150,0,0.98)";
           ctx.lineWidth=1.5;
           ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
-        }else if(id){
-          ctx.fillStyle="rgba(0,0,0,0.6)";
-          ctx.fillRect(cx,cy,gridPx,gridPx);
         }
       }));
     };
@@ -3850,12 +3818,8 @@ function GuideAssistant({T, onBack}){
 
   function markCurrentDone(){
     if(!activeColor) return;
-    setCompletedColors(prev=>{
-      if(prev.includes(activeColor)) return prev;
-      return [...prev, activeColor];
-    });
+    setCompletedColors(prev=> prev.includes(activeColor) ? prev : [...prev, activeColor]);
   }
-
   function undoDoneColor(id){
     setCompletedColors(prev=>prev.filter(x=>x!==id));
     setActiveColor(id);
@@ -3888,42 +3852,43 @@ function GuideAssistant({T, onBack}){
           </button>
           <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleUpload}/>
           <div style={{fontSize:11,color:T.textLight,textAlign:"center",lineHeight:1.8,maxWidth:280}}>
-            💡 上传整张图纸，下一步引导你对齐网格和框选主体
+            💡 第一步调网格，第二步框主体，第三步按色号高亮拼豆
           </div>
         </div>
       )}
 
       {step==="align"&&imgSrc&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
-          <div ref={viewRef} style={{flex:1,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
+          <div
+            style={{flex:1,overflow:"auto",background:"#111",position:"relative",touchAction:"none"}}
             onTouchStart={onAlignTouchStart}
             onTouchMove={onAlignTouchMove}
-            onTouchEnd={onAlignTouchEnd}>
-            <div style={{width:"100%",height:"100%",overflow:"hidden",position:"relative"}}>
-              <div
-                style={{
-                  position:"absolute",
-                  left: panX,
-                  top: panY,
-                  transform:`scale(${scale})`,
-                  transformOrigin:"top left",
-                  width: imgNaturalW,
-                  height: imgNaturalH
-                }}
-              >
-                <img src={imgSrc} style={{display:"block",width:imgNaturalW,height:imgNaturalH,userSelect:"none",pointerEvents:"none"}} alt="图纸"/>
-                <canvas ref={gridCanvasRef} style={{position:"absolute",inset:0,pointerEvents:"none",width:"100%",height:"100%"}}/>
-              </div>
+            onTouchEnd={onAlignTouchEnd}
+          >
+            <div
+              ref={alignWrapRef}
+              style={{
+                position:"relative",
+                width: imgNaturalW * alignZoom,
+                height: imgNaturalH * alignZoom,
+                minWidth:"100%",
+                minHeight:"100%"
+              }}
+            >
+              <img src={imgSrc} style={{display:"block",width:"100%",height:"100%",userSelect:"none",pointerEvents:"none"}} alt="图纸"/>
+              <canvas ref={gridCanvasRef} style={{position:"absolute",inset:0,pointerEvents:"none",width:"100%",height:"100%"}}/>
             </div>
-            <div style={{position:"absolute",top:8,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
+            <div style={{position:"sticky",top:8,left:0,right:0,textAlign:"center",pointerEvents:"none"}}>
               <div style={{display:"inline-block",background:"rgba(0,0,0,0.55)",color:"#fff",fontSize:11,borderRadius:20,padding:"4px 12px"}}>
-                双指缩放图纸和网格 · 单指拖动画面
+                双指放大图纸看细节 · 单指拖动红线对齐
               </div>
             </div>
           </div>
-          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 16px",flexShrink:0}}>
+
+          <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 16px",flexShrink:0,maxHeight:"42vh",overflowY:"auto"}}>
             <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 1/3 · 网格对齐</div>
-            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>让红线精确对齐图纸格子边界</div>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:12}}>图纸可以放大看，拖动是调红线位置，不是拖整张图</div>
+
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
               <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>格子大小</div>
               <button onClick={()=>setGridPx(v=>Math.max(8, Number((v-1).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
@@ -3933,6 +3898,33 @@ function GuideAssistant({T, onBack}){
               <button onClick={()=>setGridPx(v=>Math.min(120, Number((v+1).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
               <div style={{fontSize:11,color:T.textLight}}>px/格</div>
             </div>
+
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+              <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>图纸放大</div>
+              <button onClick={()=>setAlignZoom(v=>Math.max(0.6, Number((v-0.2).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
+              <div style={{fontSize:16,fontWeight:900,color:T.accent,minWidth:52,textAlign:"center"}}>{Math.round(alignZoom*100)}%</div>
+              <button onClick={()=>setAlignZoom(v=>Math.min(5, Number((v+0.2).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
+              <button onClick={()=>setAlignZoom(1)} style={{marginLeft:"auto",padding:"0 12px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:800,cursor:"pointer",color:T.textMid}}>重置缩放</button>
+            </div>
+
+            <div style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:18,padding:"12px 12px",marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:800,color:T.textMid,marginBottom:8}}>红线微调</div>
+              <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+                <button onClick={()=>nudgeGrid(0,-0.5)} style={{width:48,height:40,borderRadius:14,border:`1.5px solid ${T.border}`,background:T.card,fontSize:18,cursor:"pointer"}}>↑</button>
+              </div>
+              <div style={{display:"flex",justifyContent:"center",gap:10,alignItems:"center"}}>
+                <button onClick={()=>nudgeGrid(-0.5,0)} style={{width:48,height:40,borderRadius:14,border:`1.5px solid ${T.border}`,background:T.card,fontSize:18,cursor:"pointer"}}>←</button>
+                <button onClick={()=>{setOriginX(0);setOriginY(0);}} style={{padding:"0 14px",height:40,borderRadius:14,border:`1.5px solid ${T.border}`,background:T.card,fontSize:12,fontWeight:800,cursor:"pointer",color:T.textMid}}>归零</button>
+                <button onClick={()=>nudgeGrid(0.5,0)} style={{width:48,height:40,borderRadius:14,border:`1.5px solid ${T.border}`,background:T.card,fontSize:18,cursor:"pointer"}}>→</button>
+              </div>
+              <div style={{display:"flex",justifyContent:"center",marginTop:8}}>
+                <button onClick={()=>nudgeGrid(0,0.5)} style={{width:48,height:40,borderRadius:14,border:`1.5px solid ${T.border}`,background:T.card,fontSize:18,cursor:"pointer"}}>↓</button>
+              </div>
+              <div style={{fontSize:10,color:T.textLight,textAlign:"center",marginTop:8}}>
+                当前偏移：X {Number((((originX%gridPx)+gridPx)%gridPx)).toFixed(2)} · Y {Number((((originY%gridPx)+gridPx)%gridPx)).toFixed(2)}
+              </div>
+            </div>
+
             <button onClick={()=>setStep("crop")}
               style={{width:"100%",padding:"13px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:900,cursor:"pointer"}}>
               下一步：框选主体 →
@@ -3945,7 +3937,7 @@ function GuideAssistant({T, onBack}){
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
           <div
             ref={cropWrapRef}
-            style={{flex:1,overflow:"hidden",background:"#111",position:"relative",touchAction:"none"}}
+            style={{flex:1,overflow:"hidden",background:"#fff",position:"relative",touchAction:"none"}}
             onPointerDown={onCropPointerDown}
             onPointerMove={onCropPointerMove}
             onPointerUp={onCropPointerUp}
@@ -3954,12 +3946,12 @@ function GuideAssistant({T, onBack}){
             onTouchMove={onCropTouchMove}
             onTouchEnd={onCropTouchEnd}
           >
-            <img src={imgSrc} style={{display:"block",width:"100%",height:"100%",objectFit:"contain",userSelect:"none",pointerEvents:"none",opacity:0.45}} alt="图纸"/>
+            <img src={imgSrc} style={{display:"block",width:"100%",height:"100%",objectFit:"contain",userSelect:"none",pointerEvents:"none",opacity:0.92}} alt="图纸"/>
             <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
-              <div style={{position:"absolute",left:0,top:0,right:0,height:`${cropY1*100}%`,background:"rgba(0,0,0,0.45)"}}/>
-              <div style={{position:"absolute",left:0,top:`${cropY2*100}%`,right:0,bottom:0,background:"rgba(0,0,0,0.45)"}}/>
-              <div style={{position:"absolute",left:0,top:`${cropY1*100}%`,width:`${cropX1*100}%`,height:`${(cropY2-cropY1)*100}%`,background:"rgba(0,0,0,0.45)"}}/>
-              <div style={{position:"absolute",left:`${cropX2*100}%`,top:`${cropY1*100}%`,right:0,height:`${(cropY2-cropY1)*100}%`,background:"rgba(0,0,0,0.45)"}}/>
+              <div style={{position:"absolute",left:0,top:0,right:0,height:`${cropY1*100}%`,background:"rgba(0,0,0,0.35)"}}/>
+              <div style={{position:"absolute",left:0,top:`${cropY2*100}%`,right:0,bottom:0,background:"rgba(0,0,0,0.35)"}}/>
+              <div style={{position:"absolute",left:0,top:`${cropY1*100}%`,width:`${cropX1*100}%`,height:`${(cropY2-cropY1)*100}%`,background:"rgba(0,0,0,0.35)"}}/>
+              <div style={{position:"absolute",left:`${cropX2*100}%`,top:`${cropY1*100}%`,right:0,height:`${(cropY2-cropY1)*100}%`,background:"rgba(0,0,0,0.35)"}}/>
             </div>
 
             <div
@@ -3974,12 +3966,8 @@ function GuideAssistant({T, onBack}){
                 cursor:"move"
               }}
             >
-              {[1,2].map(i=>(
-                <div key={"v"+i} style={{position:"absolute",left:`${i*33.33}%`,top:0,bottom:0,width:1,background:"rgba(74,158,255,0.45)"}}/>
-              ))}
-              {[1,2].map(i=>(
-                <div key={"h"+i} style={{position:"absolute",top:`${i*33.33}%`,left:0,right:0,height:1,background:"rgba(74,158,255,0.45)"}}/>
-              ))}
+              {[1,2].map(i=><div key={"v"+i} style={{position:"absolute",left:`${i*33.33}%`,top:0,bottom:0,width:1,background:"rgba(74,158,255,0.45)"}}/>)}
+              {[1,2].map(i=><div key={"h"+i} style={{position:"absolute",top:`${i*33.33}%`,left:0,right:0,height:1,background:"rgba(74,158,255,0.45)"}}/>)}
               {[
                 {k:"TL",left:-10,top:-10,cursor:"nwse-resize"},
                 {k:"TR",right:-10,top:-10,cursor:"nesw-resize"},
@@ -3990,18 +3978,7 @@ function GuideAssistant({T, onBack}){
                 {k:"L",left:-10,top:"50%",transform:"translateY(-50%)",cursor:"ew-resize"},
                 {k:"R",right:-10,top:"50%",transform:"translateY(-50%)",cursor:"ew-resize"},
               ].map(h=>(
-                <div
-                  key={h.k}
-                  style={{
-                    position:"absolute",
-                    width:22,
-                    height:22,
-                    borderRadius:7,
-                    background:"#4a9eff",
-                    boxShadow:"0 2px 8px rgba(0,0,0,0.25)",
-                    ...h
-                  }}
-                />
+                <div key={h.k} style={{position:"absolute",width:22,height:22,borderRadius:7,background:"#4a9eff",boxShadow:"0 2px 8px rgba(0,0,0,0.25)",...h}} />
               ))}
             </div>
 
@@ -4014,7 +3991,7 @@ function GuideAssistant({T, onBack}){
 
           <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"14px 12px",flexShrink:0,maxHeight:"42vh",overflowY:"auto"}}>
             <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:2}}>步骤 2/3 · 框选主体</div>
-            <div style={{fontSize:11,color:T.textMid,marginBottom:10}}>只保留图案主体，去掉坐标轴和底部色块</div>
+            <div style={{fontSize:11,color:T.textMid,marginBottom:10}}>只保留图纸主体和底部色块，去掉多余空白</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
               {[["上",cropY1,v=>setCropY1(v),0,cropY2-0.05],["下",cropY2,v=>setCropY2(v),cropY1+0.05,1],["左",cropX1,v=>setCropX1(v),0,cropX2-0.05],["右",cropX2,v=>setCropX2(v),cropX1+0.05,1]].map(([label,val,setter,min,max])=>(
                 <div key={label} style={{background:T.bg,borderRadius:14,padding:"8px 10px",border:`1px solid ${T.border}`}}>
@@ -4039,18 +4016,38 @@ function GuideAssistant({T, onBack}){
 
       {step==="highlight"&&(
         <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 57px)"}}>
-          <div style={{flex:1,overflow:"auto",background:"#111",display:"flex",alignItems:"flex-start",justifyContent:"center"}}>
-            <canvas ref={canvasRef} style={{maxWidth:"100%",display:"block"}}/>
+          <div style={{padding:"8px 12px",background:T.card,borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+            <div style={{fontSize:11,color:T.textMid,fontWeight:800}}>图纸可放大查看具体色号</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>setHighlightZoom(v=>Math.max(0.8, Number((v-0.2).toFixed(2))))} style={{width:32,height:32,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
+              <div style={{fontSize:12,fontWeight:900,color:T.accent,minWidth:44,textAlign:"center"}}>{Math.round(highlightZoom*100)}%</div>
+              <button onClick={()=>setHighlightZoom(v=>Math.min(6, Number((v+0.2).toFixed(2))))} style={{width:32,height:32,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
+            </div>
           </div>
+
+          <div style={{flex:1,overflow:"auto",background:"#fff"}}>
+            <div style={{width:Math.max(renderSize.w*highlightZoom, window.innerWidth-24),minHeight:"100%",padding:0}}>
+              <canvas
+                ref={canvasRef}
+                style={{
+                  display:"block",
+                  width: renderSize.w ? renderSize.w*highlightZoom : "100%",
+                  height: renderSize.h ? renderSize.h*highlightZoom : "auto",
+                  background:"#fff"
+                }}
+              />
+            </div>
+          </div>
+
           <div style={{background:T.card,borderTop:`1.5px solid ${T.border}`,padding:"12px 16px",flexShrink:0}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:8}}>
               <div style={{fontSize:11,color:T.textMid,fontWeight:700}}>
-                点选色块高亮 · 剩余 {visibleColors.length} 种颜色
+                点色块高亮 · 剩余 {visibleColors.length} 种颜色
               </div>
               {activeMeta && (
                 <button
                   onClick={markCurrentDone}
-                  style={{padding:"8px 12px",borderRadius:20,border:"none",background:"#4caf50",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}
+                  style={{padding:"8px 12px",borderRadius:20,border:"none",background:"#18b63f",color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}
                 >
                   ✓ {activeMeta.code || activeMeta.id} 已完成
                 </button>
@@ -4102,6 +4099,7 @@ function GuideAssistant({T, onBack}){
     </div>
   );
 }
+
 
 
 const LOVE_WORDS=["豆豆们今天有没有乖乖待在格子里 🟡","库存充足，拼图安心 ✨","记得定期更新库存哦～","豆子虽小，作品不小 💛","认真管理的你最可爱了","今天拼了几粒？快来记录一下","库存快不足了？快补货！","每一粒豆子都有它的位置 🌟","拼豆人最有耐心了","快去拼一张吧，加油！🎨"];
