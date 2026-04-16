@@ -3703,261 +3703,135 @@ function GuideAssistant({T, onBack}){
   function onCropTouchMove(e){ if(!cropDrag.current || e.touches.length!==1) return; e.preventDefault(); updateCropDrag(e.touches[0].clientX, e.touches[0].clientY); }
   function onCropTouchEnd(){ endCropDrag(); }
 
-  function analyzeColors(){
+  async function analyzeColors(){
+    if(!imgSrc) return;
     const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img,0,0);
+    img.onload = async () => {
+      try{
+        const containerW = cropWrapRef.current?.clientWidth || img.naturalWidth;
+        const containerH = cropWrapRef.current?.clientHeight || img.naturalHeight;
+        const fitScale = Math.min(containerW / img.naturalWidth, containerH / img.naturalHeight);
+        const renderedW = img.naturalWidth * fitScale;
+        const renderedH = img.naturalHeight * fitScale;
+        const lbX = (containerW - renderedW) / 2;
+        const lbY = (containerH - renderedH) / 2;
+        const toImgRatioX = (r) => Math.max(0, Math.min(1, (r * containerW - lbX) / renderedW));
+        const toImgRatioY = (r) => Math.max(0, Math.min(1, (r * containerH - lbY) / renderedH));
+        const imgCropX1 = toImgRatioX(cropX1), imgCropY1 = toImgRatioY(cropY1);
+        const imgCropX2 = toImgRatioX(cropX2), imgCropY2 = toImgRatioY(cropY2);
 
-      const fullData = ctx.getImageData(0,0,img.naturalWidth,img.naturalHeight).data;
-      function getPixel(x,y){
-        const i = (y*img.naturalWidth+x)*4;
-        return [fullData[i], fullData[i+1], fullData[i+2]];
-      }
+        const x1 = Math.round(imgCropX1 * img.naturalWidth), y1 = Math.round(imgCropY1 * img.naturalHeight);
+        const x2 = Math.round(imgCropX2 * img.naturalWidth), y2 = Math.round(imgCropY2 * img.naturalHeight);
+        const w = Math.max(1, x2 - x1);
+        const h = Math.max(1, y2 - y1);
+        const oxGlobal = ((originX % gridPx) + gridPx) % gridPx;
+        const oyGlobal = ((originY % gridPx) + gridPx) % gridPx;
+        const localGridX = ((oxGlobal - x1) % gridPx + gridPx) % gridPx;
+        const localGridY = ((oyGlobal - y1) % gridPx + gridPx) % gridPx;
+        const cols = Math.max(1, Math.floor((w - localGridX) / gridPx));
+        const rows = Math.max(1, Math.floor((h - localGridY) / gridPx));
 
-      // ── Bug1修复：objectFit:contain会有letterbox，需把crop比例从容器坐标系转为图片坐标系 ──
-      const containerW = cropWrapRef.current?.clientWidth || img.naturalWidth;
-      const containerH = cropWrapRef.current?.clientHeight || img.naturalHeight;
-      const fitScale = Math.min(containerW / img.naturalWidth, containerH / img.naturalHeight);
-      const renderedW = img.naturalWidth * fitScale;
-      const renderedH = img.naturalHeight * fitScale;
-      const lbX = (containerW - renderedW) / 2; // letterbox水平偏移px
-      const lbY = (containerH - renderedH) / 2; // letterbox垂直偏移px
-      const toImgRatioX = (r) => Math.max(0, Math.min(1, (r * containerW - lbX) / renderedW));
-      const toImgRatioY = (r) => Math.max(0, Math.min(1, (r * containerH - lbY) / renderedH));
-      const imgCropX1 = toImgRatioX(cropX1), imgCropY1 = toImgRatioY(cropY1);
-      const imgCropX2 = toImgRatioX(cropX2), imgCropY2 = toImgRatioY(cropY2);
+        const cropCanvas = document.createElement("canvas");
+        cropCanvas.width = Math.max(1, Math.round(w * 2));
+        cropCanvas.height = Math.max(1, Math.round(h * 2));
+        const cropCtx = cropCanvas.getContext("2d");
+        cropCtx.imageSmoothingEnabled = false;
+        cropCtx.fillStyle = "#ffffff";
+        cropCtx.fillRect(0,0,cropCanvas.width,cropCanvas.height);
+        cropCtx.drawImage(img, x1, y1, w, h, 0, 0, cropCanvas.width, cropCanvas.height);
+        const cropB64 = cropCanvas.toDataURL("image/png");
 
-      const x1 = Math.round(imgCropX1*img.naturalWidth), y1 = Math.round(imgCropY1*img.naturalHeight);
-      const x2 = Math.round(imgCropX2*img.naturalWidth), y2 = Math.round(imgCropY2*img.naturalHeight);
-      const w = Math.max(1, x2 - x1);
-      const h = Math.max(1, y2 - y1);
-      const oxGlobal = ((originX%gridPx)+gridPx)%gridPx;
-      const oyGlobal = ((originY%gridPx)+gridPx)%gridPx;
-      const localGridX = ((oxGlobal - x1)%gridPx + gridPx)%gridPx;
-      const localGridY = ((oyGlobal - y1)%gridPx + gridPx)%gridPx;
-      const cols = Math.max(1, Math.floor((w - localGridX) / gridPx));
-      const rows = Math.max(1, Math.floor((h - localGridY) / gridPx));
+        const validCodes = ALL_COLORS.map(c=>c.id).join(", ");
+        const prompt = `你在做拼豆图纸单格OCR。
+这是一张已经对齐网格的拼豆图纸主体截图。
+请按网格逐格读取每个格子里印着的色号文字，不要凭颜色猜测。
 
-      // P2修复：取图纸四角均值作为背景色，用于排除空白格
-      const corners = [
-        getPixel(Math.min(x1+2,img.naturalWidth-1), Math.min(y1+2,img.naturalHeight-1)),
-        getPixel(Math.max(x2-3,0), Math.min(y1+2,img.naturalHeight-1)),
-        getPixel(Math.min(x1+2,img.naturalWidth-1), Math.max(y2-3,0)),
-        getPixel(Math.max(x2-3,0), Math.max(y2-3,0)),
-      ];
-      const bgR = Math.round(corners.reduce((s,c)=>s+c[0],0)/4);
-      const bgG = Math.round(corners.reduce((s,c)=>s+c[1],0)/4);
-      const bgB = Math.round(corners.reduce((s,c)=>s+c[2],0)/4);
+要求：
+1. 严格输出JSON，不要解释，不要Markdown代码块。
+2. JSON格式固定为：{"rows":[[...],[...]]}
+3. 一共 ${rows} 行、${cols} 列。
+4. 每个单元格只能填：合法色号字符串，或者 null。
+5. 格子为空白背景、没有属于作品内容时填 null。
+6. 遇到容易混淆的字要优先按文字判断：C3/C13、E11/E15/E16、F2/F4、B29/B32。
+7. 若单格文字有点糊，可结合相邻格子的相同重复文字修正，但最终仍必须输出合法色号。
+8. 合法色号只能从这里选：${validCodes}
+9. 不允许输出任何不在合法列表中的值。`;
 
-      function getDominantCellColor(cx, cy){
-        const offsets = [
-          [-0.24,-0.24],[0,-0.24],[0.24,-0.24],
-          [-0.24,0],[0.24,0],
-          [-0.24,0.24],[0,0.24],[0.24,0.24],
-          [-0.14,-0.14],[0.14,-0.14],[-0.14,0.14],[0.14,0.14]
-        ];
-        const groups = [];
-        for(const [ox, oy] of offsets){
-          const nx = Math.max(0, Math.min(img.naturalWidth-1, Math.round(cx + ox * gridPx)));
-          const ny = Math.max(0, Math.min(img.naturalHeight-1, Math.round(cy + oy * gridPx)));
-          const [r,g,b] = getPixel(nx,ny);
-          let hit = null;
-          for(const g0 of groups){
-            const d = Math.sqrt((r-g0.r)**2 + (g-g0.g)**2 + (b-g0.b)**2);
-            if(d < 22){ hit = g0; break; }
-          }
-          if(hit){
-            hit.rs += r; hit.gs += g; hit.bs += b; hit.n += 1;
-            hit.r = hit.rs / hit.n;
-            hit.g = hit.gs / hit.n;
-            hit.b = hit.bs / hit.n;
-          }else{
-            groups.push({r, g, b, rs:r, gs:g, bs:b, n:1});
-          }
-        }
-        groups.sort((a,b)=>b.n-a.n);
-        const best = groups[0];
-        return best ? [Math.round(best.r), Math.round(best.g), Math.round(best.b)] : null;
-      }
+        const resp = await fetch('/api/qwen',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ image: cropB64, prompt })
+        });
+        const data = await resp.json();
+        const raw = String(data?.result || "").trim();
+        const cleaned = raw
+          .replace(/^```(?:json)?/i, "")
+          .replace(/```$/i, "")
+          .trim();
 
-      const cellColors = [];
-      for(let row=0; row<rows; row++){
-        for(let col=0; col<cols; col++){
-          const cx = x1 + localGridX + col*gridPx + Math.floor(gridPx/2);
-          const cy = y1 + localGridY + row*gridPx + Math.floor(gridPx/2);
-          if(cx>=img.naturalWidth || cy>=img.naturalHeight){
-            cellColors.push(null);
-            continue;
-          }
-          const dominant = getDominantCellColor(cx, cy);
-          if(!dominant){ cellColors.push(null); continue; }
-          const [avgR, avgG, avgB] = dominant;
-          const bgDist = Math.sqrt((avgR-bgR)**2+(avgG-bgG)**2+(avgB-bgB)**2);
-          if(bgDist < 28){ cellColors.push(null); continue; }
-          cellColors.push([avgR, avgG, avgB]);
-        }
-      }
-
-      function hexToRgb(hex){
-        return [
-          parseInt(hex.slice(1,3),16),
-          parseInt(hex.slice(3,5),16),
-          parseInt(hex.slice(5,7),16)
-        ];
-      }
-
-      function rgbToLab(r,g,b){
-        let sr = r/255, sg = g/255, sb = b/255;
-        sr = sr > 0.04045 ? ((sr + 0.055) / 1.055) ** 2.4 : sr / 12.92;
-        sg = sg > 0.04045 ? ((sg + 0.055) / 1.055) ** 2.4 : sg / 12.92;
-        sb = sb > 0.04045 ? ((sb + 0.055) / 1.055) ** 2.4 : sb / 12.92;
-        const x = (sr * 0.4124 + sg * 0.3576 + sb * 0.1805) / 0.95047;
-        const y = (sr * 0.2126 + sg * 0.7152 + sb * 0.0722) / 1.00000;
-        const z = (sr * 0.0193 + sg * 0.1192 + sb * 0.9505) / 1.08883;
-        const fx = x > 0.008856 ? Math.cbrt(x) : (7.787 * x) + 16/116;
-        const fy = y > 0.008856 ? Math.cbrt(y) : (7.787 * y) + 16/116;
-        const fz = z > 0.008856 ? Math.cbrt(z) : (7.787 * z) + 16/116;
-        return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
-      }
-
-      const paletteMeta = ALL_COLORS.map(c=>{
-        const [rr,gg,bb] = hexToRgb(c.hex);
-        return { ...c, rr, gg, bb, lab: rgbToLab(rr,gg,bb) };
-      });
-
-      const ambiguousFamilies = [
-        ["E11","E15","E16","E1","E14","H1","H2","H10","H17"],
-        ["F11","G8","H16","F6","G17"],
-        ["G5","G9","A18","A11","G10","M13"],
-        ["H1","H2","H10","E16","H17"]
-      ];
-
-      function rankPaletteCodes(r,g,b){
-        const lab = rgbToLab(r,g,b);
-        let ranked = paletteMeta.map(c=>{
-          const dl = lab[0] - c.lab[0];
-          const da = lab[1] - c.lab[1];
-          const db = lab[2] - c.lab[2];
-          const rgbD = Math.sqrt((r-c.rr)**2 + (g-c.gg)**2 + (b-c.bb)**2);
-          const labD = Math.sqrt(dl*dl + da*da + db*db);
-          const brightPenalty = Math.abs((r+g+b) - (c.rr+c.gg+c.bb)) * 0.08;
-          return { id:c.id, rr:c.rr, gg:c.gg, bb:c.bb, baseScore: labD * 1.8 + rgbD * 0.35 + brightPenalty };
-        }).sort((a,b)=>a.baseScore-b.baseScore);
-
-        let top = ranked.slice(0, 8);
-        for(const family of ambiguousFamilies){
-          const familyHits = top.filter(x=>family.includes(x.id));
-          if(familyHits.length >= 2){
-            top = ranked.filter(x=>family.includes(x.id));
-            break;
-          }
+        let parsed = null;
+        try{
+          parsed = JSON.parse(cleaned);
+        }catch(e){
+          const m = cleaned.match(/\{[\s\S]*\}/);
+          if(m) parsed = JSON.parse(m[0]);
         }
 
-        top.sort((a,b)=>a.baseScore-b.baseScore);
-        return top.slice(0, 6);
-      }
-
-      const cellRankings = cellColors.map(cell=>{
-        if(!cell) return null;
-        return rankPaletteCodes(cell[0], cell[1], cell[2]);
-      });
-
-      const flatCodes = cellRankings.map(rank=>rank?.[0]?.id || null);
-
-      function idxOf(row, col){ return row * cols + col; }
-      function getNeighborIndexes(row, col){
-        const arr = [];
-        for(let dr=-1; dr<=1; dr++){
-          for(let dc=-1; dc<=1; dc++){
-            if(!dr && !dc) continue;
-            const nr = row + dr, nc = col + dc;
-            if(nr<0 || nr>=rows || nc<0 || nc>=cols) continue;
-            arr.push(idxOf(nr,nc));
-          }
-        }
-        return arr;
-      }
-
-      for(let pass=0; pass<3; pass++){
-        const nextCodes = [...flatCodes];
-        for(let row=0; row<rows; row++){
-          for(let col=0; col<cols; col++){
-            const index = idxOf(row, col);
-            const ranking = cellRankings[index];
-            if(!ranking?.length) continue;
-            const neighbors = getNeighborIndexes(row, col)
-              .map(i=>flatCodes[i])
-              .filter(Boolean);
-            if(!neighbors.length) continue;
-            const support = {};
-            neighbors.forEach(id=>{ support[id] = (support[id] || 0) + 1; });
-
-            let bestId = ranking[0].id;
-            let bestScore = ranking[0].baseScore - (support[bestId] || 0) * 8;
-
-            for(const cand of ranking){
-              const neighborBoost = (support[cand.id] || 0) * 8;
-              const score = cand.baseScore - neighborBoost;
-              const closeEnough = cand.baseScore <= ranking[0].baseScore + 22;
-              if((support[cand.id] || 0) >= 3 && closeEnough && score < bestScore){
-                bestId = cand.id;
-                bestScore = score;
-              }
+        const validSet = new Set(ALL_COLORS.map(c=>c.id));
+        let finalGrid = Array.from({length: rows}, ()=>Array.from({length: cols}, ()=>null));
+        const sourceRows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+        for(let r=0; r<rows; r++){
+          const srcRow = Array.isArray(sourceRows[r]) ? sourceRows[r] : [];
+          for(let c=0; c<cols; c++){
+            let val = srcRow[c];
+            if(typeof val === "string"){
+              val = val.toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9]/g, "");
+              if(validSet.has(val)) finalGrid[r][c] = val;
             }
-            nextCodes[index] = bestId;
           }
         }
-        for(let i=0; i<flatCodes.length; i++) flatCodes[i] = nextCodes[i];
-      }
 
-      const finalGrid = [];
-      let idx = 0;
-      const groupedByCode = {};
-      for(let row=0; row<rows; row++){
-        const rowArr = [];
-        for(let col=0; col<cols; col++){
-          const code = flatCodes[idx];
-          const cell = cellColors[idx];
-          idx++;
-          rowArr.push(code || null);
-          if(code && cell){
-            if(!groupedByCode[code]) groupedByCode[code] = {id:code, code, count:0, rs:0, gs:0, bs:0};
-            groupedByCode[code].count += 1;
-            groupedByCode[code].rs += cell[0];
-            groupedByCode[code].gs += cell[1];
-            groupedByCode[code].bs += cell[2];
-          }
+        const officialMap = Object.fromEntries(ALL_COLORS.map(c=>[c.id,c]));
+        const groupedByCode = {};
+        finalGrid.forEach(row=>row.forEach(code=>{
+          if(!code) return;
+          if(!groupedByCode[code]) groupedByCode[code] = {id: code, code, count: 0};
+          groupedByCode[code].count += 1;
+        }));
+
+        const mergedColorList = Object.values(groupedByCode)
+          .map(c=>({
+            id: c.id,
+            code: c.code,
+            count: c.count,
+            r: parseInt((officialMap[c.id]?.hex || "#cccccc").slice(1,3),16),
+            g: parseInt((officialMap[c.id]?.hex || "#cccccc").slice(3,5),16),
+            b: parseInt((officialMap[c.id]?.hex || "#cccccc").slice(5,7),16),
+          }))
+          .sort((a,b)=>b.count-a.count);
+
+        if(!mergedColorList.length){
+          alert(`这一版OCR没能成功读出格子色号，先检查网格是否对齐，再框得紧一点。
+如果还不行，把这张图单独裁成更紧的主体再试。`);
+          return;
         }
-        finalGrid.push(rowArr);
+
+        setCompletedColors([]);
+        setColorGrid(finalGrid);
+        setColorList(mergedColorList);
+        setActiveColor(mergedColorList[0]?.id || null);
+        setHighlightZoom(1);
+        setHighlightPan({x:0,y:0});
+        setRenderSize({w,h});
+        setCropRect({x1,y1,x2,y2,w,h,localGridX,localGridY,rows,cols});
+        setStep("highlight");
+      }catch(err){
+        alert(`分析失败：${err.message || err}`);
       }
-
-      const mergedColorList = Object.values(groupedByCode)
-        .map(c=>({
-          id:c.id,
-          code:c.code,
-          count:c.count,
-          r:Math.round(c.rs / c.count),
-          g:Math.round(c.gs / c.count),
-          b:Math.round(c.bs / c.count),
-        }))
-        .sort((a,b)=>b.count-a.count);
-
-      setCompletedColors([]);
-      setColorGrid(finalGrid);
-      setColorList(mergedColorList);
-      setActiveColor(mergedColorList[0]?.id || null);
-      setHighlightZoom(1);
-      setHighlightPan({x:0,y:0});
-      setRenderSize({w,h});
-      setCropRect({x1,y1,x2,y2,w,h,localGridX,localGridY,rows,cols});
-      setStep("highlight");
     };
     img.src = imgSrc;
   }
+
 
   useEffect(()=>{
     if(step!=="highlight" || !colorGrid || !canvasRef.current || !imgSrc || !cropRect) return;
