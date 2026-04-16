@@ -3444,9 +3444,11 @@ function GuideAssistant({T, onBack}){
   const [imgNaturalH, setImgNaturalH] = useState(0);
 
   const [gridPx, setGridPx] = useState(40);
+  const [gridPxInput, setGridPxInput] = useState("40");
   const [originX, setOriginX] = useState(0);
   const [originY, setOriginY] = useState(0);
   const [alignZoom, setAlignZoom] = useState(1);
+  const [alignZoomInput, setAlignZoomInput] = useState("100");
 
   const [cropX1, setCropX1] = useState(0.05);
   const [cropY1, setCropY1] = useState(0.05);
@@ -3473,6 +3475,53 @@ function GuideAssistant({T, onBack}){
   const alignTouch = useRef({ mode:null, lastX:0, lastY:0, startDist:0, startZoom:1 });
   const cropDrag = useRef(null);
   const highlightTouch = useRef({ mode:null, startDist:0, startZoom:1, startPanX:0, startPanY:0, lastX:0, lastY:0 });
+  useEffect(()=>{
+    setGridPxInput(Number(gridPx).toFixed(gridPx % 1 === 0 ? 0 : 2));
+  },[gridPx]);
+
+  useEffect(()=>{
+    setAlignZoomInput(String(Math.round(alignZoom*100)));
+  },[alignZoom]);
+
+  function updateGridPx(next){
+    const safe = Math.max(8, Math.min(120, Number(next.toFixed(2))));
+    setGridPx(safe);
+    setGridPxInput(Number(safe).toFixed(safe % 1 === 0 ? 0 : 2));
+  }
+
+  function commitGridPxInput(){
+    const raw = String(gridPxInput ?? "").trim();
+    if(!raw){
+      setGridPxInput(Number(gridPx).toFixed(gridPx % 1 === 0 ? 0 : 2));
+      return;
+    }
+    const v = Number(raw);
+    if(!Number.isFinite(v)){
+      setGridPxInput(Number(gridPx).toFixed(gridPx % 1 === 0 ? 0 : 2));
+      return;
+    }
+    updateGridPx(v);
+  }
+
+  function updateAlignZoom(next){
+    const safe = Math.max(0.6, Math.min(5, Number(next.toFixed(2))));
+    setAlignZoom(safe);
+    setAlignZoomInput(String(Math.round(safe*100)));
+  }
+
+  function commitAlignZoomInput(){
+    const raw = String(alignZoomInput ?? "").trim();
+    if(!raw){
+      setAlignZoomInput(String(Math.round(alignZoom*100)));
+      return;
+    }
+    const v = Number(raw);
+    if(!Number.isFinite(v)){
+      setAlignZoomInput(String(Math.round(alignZoom*100)));
+      return;
+    }
+    updateAlignZoom(v/100);
+  }
 
   const visibleColors = useMemo(
     ()=> colorList.filter(c=>!completedColors.includes(c.id)),
@@ -3500,7 +3549,7 @@ function GuideAssistant({T, onBack}){
       setGridPx(Math.max(10, Math.min(est, 80)));
       setOriginX(0);
       setOriginY(0);
-      setAlignZoom(1);
+      updateAlignZoom(1);
       setHighlightZoom(1);
       setHighlightPan({x:0,y:0});
       setCompletedColors([]);
@@ -3753,118 +3802,98 @@ function GuideAssistant({T, onBack}){
         }
       }
 
-      const clusters = [];
-      // P1修复：阈值从44降到28，避免不同颜色被merge进同一cluster
-      function findCluster(r,g,b){
-        let best = null, bestD = 28;
-        for(const c of clusters){
-          const d = Math.sqrt((r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2);
-          if(d<bestD){bestD=d; best=c;}
-        }
-        return best;
+      function hexToRgb(hex){
+        return [
+          parseInt(hex.slice(1,3),16),
+          parseInt(hex.slice(3,5),16),
+          parseInt(hex.slice(5,7),16)
+        ];
       }
 
-      const idList = cellColors.map(cell=>{
-        if(!cell) return null;
-        const [r,g,b] = cell;
-        let cluster = findCluster(r,g,b);
-        if(!cluster){
-          cluster = {id:`C${clusters.length+1}`, r, g, b, count:0};
-          clusters.push(cluster);
-        }
-        cluster.count++;
-        return cluster.id;
-      });
-
-      // ── Bug2修复：先做一次均值更新，让cluster中心更准确，再过滤 ──
-      const sums = {};
-      cellColors.forEach((cell,i)=>{
-        if(!cell) return;
-        const id = idList[i];
-        if(!id) return;
-        if(!sums[id]) sums[id]={r:0,g:0,b:0,n:0};
-        sums[id].r+=cell[0]; sums[id].g+=cell[1]; sums[id].b+=cell[2]; sums[id].n++;
-      });
-      clusters.forEach(c=>{
-        if(sums[c.id]){
-          c.r=Math.round(sums[c.id].r/sums[c.id].n);
-          c.g=Math.round(sums[c.id].g/sums[c.id].n);
-          c.b=Math.round(sums[c.id].b/sums[c.id].n);
-        }
-      });
-
-      const validClusters = clusters.filter(c=>c.count>=5);
-      function findValidCluster(r,g,b){
-        let best = null, bestD = 999;
-        for(const c of validClusters){
-          const d = Math.sqrt((r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2);
-          if(d<bestD){bestD=d; best=c;}
-        }
-        return best;
+      function rgbToLab(r,g,b){
+        let sr = r/255, sg = g/255, sb = b/255;
+        sr = sr > 0.04045 ? ((sr + 0.055) / 1.055) ** 2.4 : sr / 12.92;
+        sg = sg > 0.04045 ? ((sg + 0.055) / 1.055) ** 2.4 : sg / 12.92;
+        sb = sb > 0.04045 ? ((sb + 0.055) / 1.055) ** 2.4 : sb / 12.92;
+        const x = (sr * 0.4124 + sg * 0.3576 + sb * 0.1805) / 0.95047;
+        const y = (sr * 0.2126 + sg * 0.7152 + sb * 0.0722) / 1.00000;
+        const z = (sr * 0.0193 + sg * 0.1192 + sb * 0.9505) / 1.08883;
+        const fx = x > 0.008856 ? Math.cbrt(x) : (7.787 * x) + 16/116;
+        const fy = y > 0.008856 ? Math.cbrt(y) : (7.787 * y) + 16/116;
+        const fz = z > 0.008856 ? Math.cbrt(z) : (7.787 * z) + 16/116;
+        return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
       }
 
-      const idMap = {};
-      clusters.forEach(c=>{
-        if(c.count>=3) idMap[c.id]=c.id;
-        else{
-          const nearest = findValidCluster(c.r,c.g,c.b);
-          idMap[c.id] = nearest ? nearest.id : c.id;
-        }
+      const paletteMeta = ALL_COLORS.map(c=>{
+        const [rr,gg,bb] = hexToRgb(c.hex);
+        return { ...c, rr, gg, bb, lab: rgbToLab(rr,gg,bb) };
       });
 
-      validClusters.forEach(c=>c.count=0);
-      const finalIdList = idList.map(id=>id ? idMap[id] : null);
-      finalIdList.forEach(id=>{
-        if(!id) return;
-        const c = validClusters.find(x=>x.id===id);
-        if(c) c.count++;
-      });
-      validClusters.sort((a,b)=>b.count-a.count);
+      const ambiguousFamilies = [
+        ["E11","E15","E16","E1","E14","H1","H2","H10","H17"],
+        ["F11","G8","H16","F6","G17"],
+        ["G5","G9","A18","A11","G10","M13"],
+        ["H1","H2","H10","E16","H17"]
+      ];
 
       function nearestPaletteCode(r,g,b){
-        let best = null;
-        let bestD = Infinity;
-        for(const c of ALL_COLORS){
-          const rr = parseInt(c.hex.slice(1,3),16);
-          const gg = parseInt(c.hex.slice(3,5),16);
-          const bb = parseInt(c.hex.slice(5,7),16);
-          const d = Math.sqrt((r-rr)**2 + (g-gg)**2 + (b-bb)**2);
-          if(d < bestD){
-            bestD = d;
-            best = c;
+        const lab = rgbToLab(r,g,b);
+        let ranked = paletteMeta.map(c=>{
+          const dl = lab[0] - c.lab[0];
+          const da = lab[1] - c.lab[1];
+          const db = lab[2] - c.lab[2];
+          const rgbD = Math.sqrt((r-c.rr)**2 + (g-c.gg)**2 + (b-c.bb)**2);
+          const labD = Math.sqrt(dl*dl + da*da + db*db);
+          return { id:c.id, rr:c.rr, gg:c.gg, bb:c.bb, score: labD * 1.8 + rgbD * 0.35 };
+        }).sort((a,b)=>a.score-b.score);
+
+        let top = ranked.slice(0, 6);
+        for(const family of ambiguousFamilies){
+          const familyHits = top.filter(x=>family.includes(x.id));
+          if(familyHits.length >= 2){
+            top = ranked.filter(x=>family.includes(x.id));
+            break;
           }
         }
-        return best?.id || null;
+
+        top.sort((a,b)=>{
+          const aBright = a.rr + a.gg + a.bb;
+          const bBright = b.rr + b.gg + b.bb;
+          const selfBright = r + g + b;
+          const aPenalty = Math.abs(selfBright - aBright) * 0.08;
+          const bPenalty = Math.abs(selfBright - bBright) * 0.08;
+          return (a.score + aPenalty) - (b.score + bPenalty);
+        });
+
+        return top[0]?.id || null;
       }
 
-      const decoratedClusters = validClusters.map(c=>({
-        ...c,
-        code: nearestPaletteCode(c.r,c.g,c.b)
-      }));
-      const clusterToCode = Object.fromEntries(
-        decoratedClusters.filter(c=>c.code).map(c=>[c.id, c.code])
-      );
+      const flatCodes = cellColors.map(cell=>{
+        if(!cell) return null;
+        return nearestPaletteCode(cell[0], cell[1], cell[2]);
+      });
 
       const finalGrid = [];
       let idx = 0;
+      const groupedByCode = {};
       for(let row=0; row<rows; row++){
         const rowArr = [];
         for(let col=0; col<cols; col++){
-          const cid = finalIdList[idx++];
-          rowArr.push(cid ? (clusterToCode[cid] || null) : null);
+          const code = flatCodes[idx];
+          const cell = cellColors[idx];
+          idx++;
+          rowArr.push(code || null);
+          if(code && cell){
+            if(!groupedByCode[code]) groupedByCode[code] = {id:code, code, count:0, rs:0, gs:0, bs:0};
+            groupedByCode[code].count += 1;
+            groupedByCode[code].rs += cell[0];
+            groupedByCode[code].gs += cell[1];
+            groupedByCode[code].bs += cell[2];
+          }
         }
         finalGrid.push(rowArr);
       }
 
-      const groupedByCode = {};
-      decoratedClusters.forEach(c=>{
-        if(!c.code) return;
-        if(!groupedByCode[c.code]) groupedByCode[c.code] = {id:c.code, code:c.code, count:0, rs:0, gs:0, bs:0};
-        groupedByCode[c.code].count += c.count;
-        groupedByCode[c.code].rs += c.r * c.count;
-        groupedByCode[c.code].gs += c.g * c.count;
-        groupedByCode[c.code].bs += c.b * c.count;
-      });
       const mergedColorList = Object.values(groupedByCode)
         .map(c=>({
           id:c.id,
@@ -4060,45 +4089,43 @@ function GuideAssistant({T, onBack}){
 
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
               <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>格子大小</div>
-              <button onClick={()=>setGridPx(v=>Math.max(8, Number((v-1).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
-              <button onClick={()=>setGridPx(v=>Math.max(8, Number((v-0.1).toFixed(2))))} style={{padding:"0 10px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:13,cursor:"pointer"}}>-0.1</button>
+              <button onClick={()=>updateGridPx(Math.max(8, gridPx-1))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
+              <button onClick={()=>updateGridPx(Math.max(8, gridPx-0.1))} style={{padding:"0 10px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:13,cursor:"pointer"}}>-0.1</button>
               <input
                 type="number"
                 inputMode="decimal"
                 step="0.1"
                 min="8"
                 max="120"
-                value={Number(gridPx).toFixed(gridPx % 1 === 0 ? 0 : 2)}
-                onChange={e=>{
-                  const v = Number(e.target.value);
-                  if(Number.isFinite(v)) setGridPx(Math.max(8, Math.min(120, Number(v.toFixed(2)))));
-                }}
+                value={gridPxInput}
+                onChange={e=>setGridPxInput(e.target.value)}
+                onBlur={commitGridPxInput}
+                onKeyDown={e=>{ if(e.key === "Enter") { e.currentTarget.blur(); } }}
                 style={{width:78,height:36,borderRadius:12,border:`1.5px solid ${T.border}`,background:T.bg,color:T.accent,fontSize:17,fontWeight:900,textAlign:"center",outline:"none"}}
               />
-              <button onClick={()=>setGridPx(v=>Math.min(120, Number((v+0.1).toFixed(2))))} style={{padding:"0 10px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:13,cursor:"pointer"}}>+0.1</button>
-              <button onClick={()=>setGridPx(v=>Math.min(120, Number((v+1).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
+              <button onClick={()=>updateGridPx(Math.min(120, gridPx+0.1))} style={{padding:"0 10px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:13,cursor:"pointer"}}>+0.1</button>
+              <button onClick={()=>updateGridPx(Math.min(120, gridPx+1))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
               <div style={{fontSize:11,color:T.textLight}}>px/格</div>
             </div>
 
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
               <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>图纸放大</div>
-              <button onClick={()=>setAlignZoom(v=>Math.max(0.6, Number((v-0.2).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
+              <button onClick={()=>updateAlignZoom(Math.max(0.6, alignZoom-0.2))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
               <input
                 type="number"
                 inputMode="decimal"
                 step="1"
                 min="60"
                 max="500"
-                value={Math.round(alignZoom*100)}
-                onChange={e=>{
-                  const v = Number(e.target.value);
-                  if(Number.isFinite(v)) setAlignZoom(Math.max(0.6, Math.min(5, Number((v/100).toFixed(2)))));
-                }}
+                value={alignZoomInput}
+                onChange={e=>setAlignZoomInput(e.target.value)}
+                onBlur={commitAlignZoomInput}
+                onKeyDown={e=>{ if(e.key === "Enter") { e.currentTarget.blur(); } }}
                 style={{width:74,height:36,borderRadius:12,border:`1.5px solid ${T.border}`,background:T.bg,color:T.accent,fontSize:16,fontWeight:900,textAlign:"center",outline:"none"}}
               />
               <div style={{fontSize:12,fontWeight:900,color:T.accent,minWidth:20,textAlign:"center"}}>%</div>
-              <button onClick={()=>setAlignZoom(v=>Math.min(5, Number((v+0.2).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
-              <button onClick={()=>setAlignZoom(1)} style={{marginLeft:"auto",padding:"0 12px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:800,cursor:"pointer",color:T.textMid}}>重置缩放</button>
+              <button onClick={()=>updateAlignZoom(Math.min(5, alignZoom+0.2))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
+              <button onClick={()=>updateAlignZoom(1)} style={{marginLeft:"auto",padding:"0 12px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:800,cursor:"pointer",color:T.textMid}}>重置缩放</button>
             </div>
 
             <div style={{background:T.bg,border:`1px solid ${T.border}`,borderRadius:18,padding:"12px 12px",marginBottom:12}}>
