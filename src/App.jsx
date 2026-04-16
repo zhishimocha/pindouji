@@ -3693,6 +3693,17 @@ function GuideAssistant({T, onBack}){
       const cols = Math.max(1, Math.floor((w - localGridX) / gridPx));
       const rows = Math.max(1, Math.floor((h - localGridY) / gridPx));
 
+      // P2修复：取图纸四角均值作为背景色，用于排除空白格
+      const corners = [
+        getPixel(Math.min(x1+2,img.naturalWidth-1), Math.min(y1+2,img.naturalHeight-1)),
+        getPixel(Math.max(x2-3,0), Math.min(y1+2,img.naturalHeight-1)),
+        getPixel(Math.min(x1+2,img.naturalWidth-1), Math.max(y2-3,0)),
+        getPixel(Math.max(x2-3,0), Math.max(y2-3,0)),
+      ];
+      const bgR = Math.round(corners.reduce((s,c)=>s+c[0],0)/4);
+      const bgG = Math.round(corners.reduce((s,c)=>s+c[1],0)/4);
+      const bgB = Math.round(corners.reduce((s,c)=>s+c[2],0)/4);
+
       const cellColors = [];
       for(let row=0; row<rows; row++){
         for(let col=0; col<cols; col++){
@@ -3712,13 +3723,18 @@ function GuideAssistant({T, onBack}){
               rs+=pr; gs+=pg; bs+=pb; n++;
             }
           }
-          cellColors.push([Math.round(rs/n), Math.round(gs/n), Math.round(bs/n)]);
+          const avgR=Math.round(rs/n), avgG=Math.round(gs/n), avgB=Math.round(bs/n);
+          // P2修复：排除接近背景色的格子（空白格）
+          const bgDist = Math.sqrt((avgR-bgR)**2+(avgG-bgG)**2+(avgB-bgB)**2);
+          if(bgDist < 28){ cellColors.push(null); continue; }
+          cellColors.push([avgR, avgG, avgB]);
         }
       }
 
       const clusters = [];
+      // P1修复：阈值从44降到28，避免不同颜色被merge进同一cluster
       function findCluster(r,g,b){
-        let best = null, bestD = 44;
+        let best = null, bestD = 28;
         for(const c of clusters){
           const d = Math.sqrt((r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2);
           if(d<bestD){bestD=d; best=c;}
