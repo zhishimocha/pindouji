@@ -3836,7 +3836,7 @@ function GuideAssistant({T, onBack}){
         ["H1","H2","H10","E16","H17"]
       ];
 
-      function nearestPaletteCode(r,g,b){
+      function rankPaletteCodes(r,g,b){
         const lab = rgbToLab(r,g,b);
         let ranked = paletteMeta.map(c=>{
           const dl = lab[0] - c.lab[0];
@@ -3844,10 +3844,11 @@ function GuideAssistant({T, onBack}){
           const db = lab[2] - c.lab[2];
           const rgbD = Math.sqrt((r-c.rr)**2 + (g-c.gg)**2 + (b-c.bb)**2);
           const labD = Math.sqrt(dl*dl + da*da + db*db);
-          return { id:c.id, rr:c.rr, gg:c.gg, bb:c.bb, score: labD * 1.8 + rgbD * 0.35 };
-        }).sort((a,b)=>a.score-b.score);
+          const brightPenalty = Math.abs((r+g+b) - (c.rr+c.gg+c.bb)) * 0.08;
+          return { id:c.id, rr:c.rr, gg:c.gg, bb:c.bb, baseScore: labD * 1.8 + rgbD * 0.35 + brightPenalty };
+        }).sort((a,b)=>a.baseScore-b.baseScore);
 
-        let top = ranked.slice(0, 6);
+        let top = ranked.slice(0, 8);
         for(const family of ambiguousFamilies){
           const familyHits = top.filter(x=>family.includes(x.id));
           if(familyHits.length >= 2){
@@ -3856,22 +3857,62 @@ function GuideAssistant({T, onBack}){
           }
         }
 
-        top.sort((a,b)=>{
-          const aBright = a.rr + a.gg + a.bb;
-          const bBright = b.rr + b.gg + b.bb;
-          const selfBright = r + g + b;
-          const aPenalty = Math.abs(selfBright - aBright) * 0.08;
-          const bPenalty = Math.abs(selfBright - bBright) * 0.08;
-          return (a.score + aPenalty) - (b.score + bPenalty);
-        });
-
-        return top[0]?.id || null;
+        top.sort((a,b)=>a.baseScore-b.baseScore);
+        return top.slice(0, 6);
       }
 
-      const flatCodes = cellColors.map(cell=>{
+      const cellRankings = cellColors.map(cell=>{
         if(!cell) return null;
-        return nearestPaletteCode(cell[0], cell[1], cell[2]);
+        return rankPaletteCodes(cell[0], cell[1], cell[2]);
       });
+
+      const flatCodes = cellRankings.map(rank=>rank?.[0]?.id || null);
+
+      function idxOf(row, col){ return row * cols + col; }
+      function getNeighborIndexes(row, col){
+        const arr = [];
+        for(let dr=-1; dr<=1; dr++){
+          for(let dc=-1; dc<=1; dc++){
+            if(!dr && !dc) continue;
+            const nr = row + dr, nc = col + dc;
+            if(nr<0 || nr>=rows || nc<0 || nc>=cols) continue;
+            arr.push(idxOf(nr,nc));
+          }
+        }
+        return arr;
+      }
+
+      for(let pass=0; pass<3; pass++){
+        const nextCodes = [...flatCodes];
+        for(let row=0; row<rows; row++){
+          for(let col=0; col<cols; col++){
+            const index = idxOf(row, col);
+            const ranking = cellRankings[index];
+            if(!ranking?.length) continue;
+            const neighbors = getNeighborIndexes(row, col)
+              .map(i=>flatCodes[i])
+              .filter(Boolean);
+            if(!neighbors.length) continue;
+            const support = {};
+            neighbors.forEach(id=>{ support[id] = (support[id] || 0) + 1; });
+
+            let bestId = ranking[0].id;
+            let bestScore = ranking[0].baseScore - (support[bestId] || 0) * 8;
+
+            for(const cand of ranking){
+              const neighborBoost = (support[cand.id] || 0) * 8;
+              const score = cand.baseScore - neighborBoost;
+              const closeEnough = cand.baseScore <= ranking[0].baseScore + 22;
+              if((support[cand.id] || 0) >= 3 && closeEnough && score < bestScore){
+                bestId = cand.id;
+                bestScore = score;
+              }
+            }
+            nextCodes[index] = bestId;
+          }
+        }
+        for(let i=0; i<flatCodes.length; i++) flatCodes[i] = nextCodes[i];
+      }
 
       const finalGrid = [];
       let idx = 0;
