@@ -3669,8 +3669,21 @@ function GuideAssistant({T, onBack}){
         return [fullData[i], fullData[i+1], fullData[i+2]];
       }
 
-      const x1 = Math.round(cropX1*img.naturalWidth), y1 = Math.round(cropY1*img.naturalHeight);
-      const x2 = Math.round(cropX2*img.naturalWidth), y2 = Math.round(cropY2*img.naturalHeight);
+      // ── Bug1修复：objectFit:contain会有letterbox，需把crop比例从容器坐标系转为图片坐标系 ──
+      const containerW = cropWrapRef.current?.clientWidth || img.naturalWidth;
+      const containerH = cropWrapRef.current?.clientHeight || img.naturalHeight;
+      const fitScale = Math.min(containerW / img.naturalWidth, containerH / img.naturalHeight);
+      const renderedW = img.naturalWidth * fitScale;
+      const renderedH = img.naturalHeight * fitScale;
+      const lbX = (containerW - renderedW) / 2; // letterbox水平偏移px
+      const lbY = (containerH - renderedH) / 2; // letterbox垂直偏移px
+      const toImgRatioX = (r) => Math.max(0, Math.min(1, (r * containerW - lbX) / renderedW));
+      const toImgRatioY = (r) => Math.max(0, Math.min(1, (r * containerH - lbY) / renderedH));
+      const imgCropX1 = toImgRatioX(cropX1), imgCropY1 = toImgRatioY(cropY1);
+      const imgCropX2 = toImgRatioX(cropX2), imgCropY2 = toImgRatioY(cropY2);
+
+      const x1 = Math.round(imgCropX1*img.naturalWidth), y1 = Math.round(imgCropY1*img.naturalHeight);
+      const x2 = Math.round(imgCropX2*img.naturalWidth), y2 = Math.round(imgCropY2*img.naturalHeight);
       const w = Math.max(1, x2 - x1);
       const h = Math.max(1, y2 - y1);
       const oxGlobal = ((originX%gridPx)+gridPx)%gridPx;
@@ -3725,7 +3738,24 @@ function GuideAssistant({T, onBack}){
         return cluster.id;
       });
 
-      const validClusters = clusters.filter(c=>c.count>=3);
+      // ── Bug2修复：先做一次均值更新，让cluster中心更准确，再过滤 ──
+      const sums = {};
+      cellColors.forEach((cell,i)=>{
+        if(!cell) return;
+        const id = idList[i];
+        if(!id) return;
+        if(!sums[id]) sums[id]={r:0,g:0,b:0,n:0};
+        sums[id].r+=cell[0]; sums[id].g+=cell[1]; sums[id].b+=cell[2]; sums[id].n++;
+      });
+      clusters.forEach(c=>{
+        if(sums[c.id]){
+          c.r=Math.round(sums[c.id].r/sums[c.id].n);
+          c.g=Math.round(sums[c.id].g/sums[c.id].n);
+          c.b=Math.round(sums[c.id].b/sums[c.id].n);
+        }
+      });
+
+      const validClusters = clusters.filter(c=>c.count>=5);
       function findValidCluster(r,g,b){
         let best = null, bestD = 999;
         for(const c of validClusters){
