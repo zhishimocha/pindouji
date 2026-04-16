@@ -3469,8 +3469,6 @@ function GuideAssistant({T, onBack}){
   const cropWrapRef = useRef(null);
   const canvasRef = useRef(null);
   const highlightViewportRef = useRef(null);
-  const croppedBaseCanvasRef = useRef(null);
-  const highlightRenderSeqRef = useRef(0);
 
   const alignTouch = useRef({ mode:null, lastX:0, lastY:0, startDist:0, startZoom:1 });
   const cropDrag = useRef(null);
@@ -3706,6 +3704,37 @@ function GuideAssistant({T, onBack}){
       const bgG = Math.round(corners.reduce((s,c)=>s+c[1],0)/4);
       const bgB = Math.round(corners.reduce((s,c)=>s+c[2],0)/4);
 
+      function getDominantCellColor(cx, cy){
+        const offsets = [
+          [-0.24,-0.24],[0,-0.24],[0.24,-0.24],
+          [-0.24,0],[0.24,0],
+          [-0.24,0.24],[0,0.24],[0.24,0.24],
+          [-0.14,-0.14],[0.14,-0.14],[-0.14,0.14],[0.14,0.14]
+        ];
+        const groups = [];
+        for(const [ox, oy] of offsets){
+          const nx = Math.max(0, Math.min(img.naturalWidth-1, Math.round(cx + ox * gridPx)));
+          const ny = Math.max(0, Math.min(img.naturalHeight-1, Math.round(cy + oy * gridPx)));
+          const [r,g,b] = getPixel(nx,ny);
+          let hit = null;
+          for(const g0 of groups){
+            const d = Math.sqrt((r-g0.r)**2 + (g-g0.g)**2 + (b-g0.b)**2);
+            if(d < 22){ hit = g0; break; }
+          }
+          if(hit){
+            hit.rs += r; hit.gs += g; hit.bs += b; hit.n += 1;
+            hit.r = hit.rs / hit.n;
+            hit.g = hit.gs / hit.n;
+            hit.b = hit.bs / hit.n;
+          }else{
+            groups.push({r, g, b, rs:r, gs:g, bs:b, n:1});
+          }
+        }
+        groups.sort((a,b)=>b.n-a.n);
+        const best = groups[0];
+        return best ? [Math.round(best.r), Math.round(best.g), Math.round(best.b)] : null;
+      }
+
       const cellColors = [];
       for(let row=0; row<rows; row++){
         for(let col=0; col<cols; col++){
@@ -3715,18 +3744,9 @@ function GuideAssistant({T, onBack}){
             cellColors.push(null);
             continue;
           }
-          let rs=0, gs=0, bs=0, n=0;
-          const r2 = Math.max(1, Math.floor(gridPx*0.28));
-          for(let ddy=-r2; ddy<=r2; ddy++){
-            for(let ddx=-r2; ddx<=r2; ddx++){
-              const nx = Math.max(0, Math.min(img.naturalWidth-1, Math.round(cx+ddx)));
-              const ny = Math.max(0, Math.min(img.naturalHeight-1, Math.round(cy+ddy)));
-              const [pr,pg,pb] = getPixel(nx,ny);
-              rs+=pr; gs+=pg; bs+=pb; n++;
-            }
-          }
-          const avgR=Math.round(rs/n), avgG=Math.round(gs/n), avgB=Math.round(bs/n);
-          // P2修复：排除接近背景色的格子（空白格）
+          const dominant = getDominantCellColor(cx, cy);
+          if(!dominant){ cellColors.push(null); continue; }
+          const [avgR, avgG, avgB] = dominant;
           const bgDist = Math.sqrt((avgR-bgR)**2+(avgG-bgG)**2+(avgB-bgB)**2);
           if(bgDist < 28){ cellColors.push(null); continue; }
           cellColors.push([avgR, avgG, avgB]);
@@ -3821,47 +3841,40 @@ function GuideAssistant({T, onBack}){
         ...c,
         code: nearestPaletteCode(c.r,c.g,c.b)
       }));
-
-      const codeMetaMap = new Map();
-      decoratedClusters.forEach(c=>{
-        const code = c.code || c.id;
-        if(!codeMetaMap.has(code)){
-          codeMetaMap.set(code, { id: code, code, r: c.r, g: c.g, b: c.b, count: c.count });
-        }else{
-          const prev = codeMetaMap.get(code);
-          const total = prev.count + c.count;
-          prev.r = Math.round((prev.r * prev.count + c.r * c.count) / total);
-          prev.g = Math.round((prev.g * prev.count + c.g * c.count) / total);
-          prev.b = Math.round((prev.b * prev.count + c.b * c.count) / total);
-          prev.count = total;
-        }
-      });
-      const mergedColorList = Array.from(codeMetaMap.values()).sort((a,b)=>b.count-a.count);
-
-      const clusterToCode = {};
-      decoratedClusters.forEach(c=>{
-        clusterToCode[c.id] = c.code || c.id;
-      });
+      const clusterToCode = Object.fromEntries(
+        decoratedClusters.filter(c=>c.code).map(c=>[c.id, c.code])
+      );
 
       const finalGrid = [];
       let idx = 0;
       for(let row=0; row<rows; row++){
         const rowArr = [];
         for(let col=0; col<cols; col++){
-          const rawId = finalIdList[idx++];
-          rowArr.push(rawId ? (clusterToCode[rawId] || rawId) : null);
+          const cid = finalIdList[idx++];
+          rowArr.push(cid ? (clusterToCode[cid] || null) : null);
         }
         finalGrid.push(rowArr);
       }
 
-      const baseCanvas = document.createElement("canvas");
-      baseCanvas.width = w;
-      baseCanvas.height = h;
-      const baseCtx = baseCanvas.getContext("2d");
-      baseCtx.fillStyle = "#fff";
-      baseCtx.fillRect(0,0,w,h);
-      baseCtx.drawImage(img,x1,y1,w,h,0,0,w,h);
-      croppedBaseCanvasRef.current = baseCanvas;
+      const groupedByCode = {};
+      decoratedClusters.forEach(c=>{
+        if(!c.code) return;
+        if(!groupedByCode[c.code]) groupedByCode[c.code] = {id:c.code, code:c.code, count:0, rs:0, gs:0, bs:0};
+        groupedByCode[c.code].count += c.count;
+        groupedByCode[c.code].rs += c.r * c.count;
+        groupedByCode[c.code].gs += c.g * c.count;
+        groupedByCode[c.code].bs += c.b * c.count;
+      });
+      const mergedColorList = Object.values(groupedByCode)
+        .map(c=>({
+          id:c.id,
+          code:c.code,
+          count:c.count,
+          r:Math.round(c.rs / c.count),
+          g:Math.round(c.gs / c.count),
+          b:Math.round(c.bs / c.count),
+        }))
+        .sort((a,b)=>b.count-a.count);
 
       setCompletedColors([]);
       setColorGrid(finalGrid);
@@ -3877,42 +3890,35 @@ function GuideAssistant({T, onBack}){
   }
 
   useEffect(()=>{
-    if(step!=="highlight" || !colorGrid || !canvasRef.current || !cropRect) return;
+    if(step!=="highlight" || !colorGrid || !canvasRef.current || !imgSrc || !cropRect) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    const baseCanvas = croppedBaseCanvasRef.current;
-    if(!baseCanvas) return;
+    const img = new Image();
+    img.onload = ()=>{
+      const {x1,y1,w,h,localGridX,localGridY} = cropRect;
+      canvas.width = w;
+      canvas.height = h;
 
-    const seq = ++highlightRenderSeqRef.current;
-    const {w,h,localGridX,localGridY} = cropRect;
-    canvas.width = w;
-    canvas.height = h;
-
-    const draw = ()=>{
-      if(seq !== highlightRenderSeqRef.current) return;
       ctx.clearRect(0,0,w,h);
       ctx.fillStyle = "#fff";
       ctx.fillRect(0,0,w,h);
-      ctx.drawImage(baseCanvas,0,0);
+      ctx.drawImage(img,x1,y1,w,h,0,0,w,h);
 
       colorGrid.forEach((row,ri)=>row.forEach((id,ci)=>{
-        if(!id || completedColors.includes(id) || id!==activeColor) return;
+        if(!id || completedColors.includes(id)) return;
         const cx = localGridX + ci*gridPx;
         const cy = localGridY + ri*gridPx;
-        ctx.fillStyle="rgba(255,220,0,0.36)";
-        ctx.fillRect(cx,cy,gridPx,gridPx);
-        ctx.strokeStyle="rgba(255,170,0,1)";
-        ctx.lineWidth=Math.max(1.2, gridPx*0.06);
-        ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
+        if(id===activeColor){
+          ctx.fillStyle="rgba(255,220,0,0.36)";
+          ctx.fillRect(cx,cy,gridPx,gridPx);
+          ctx.strokeStyle="rgba(255,170,0,1)";
+          ctx.lineWidth=Math.max(1.2, gridPx*0.06);
+          ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
+        }
       }));
     };
-
-    if(typeof requestAnimationFrame === "function"){
-      const rafId = requestAnimationFrame(draw);
-      return ()=>cancelAnimationFrame(rafId);
-    }
-    draw();
-  },[step,colorGrid,activeColor,cropRect,gridPx,completedColors]);
+    img.src = imgSrc;
+  },[step,colorGrid,activeColor,imgSrc,cropRect,gridPx,completedColors]);
 
   function markCurrentDone(){
     if(!activeColor) return;
@@ -4056,7 +4062,19 @@ function GuideAssistant({T, onBack}){
               <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>格子大小</div>
               <button onClick={()=>setGridPx(v=>Math.max(8, Number((v-1).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
               <button onClick={()=>setGridPx(v=>Math.max(8, Number((v-0.1).toFixed(2))))} style={{padding:"0 10px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:13,cursor:"pointer"}}>-0.1</button>
-              <div style={{fontSize:17,fontWeight:900,color:T.accent,minWidth:48,textAlign:"center"}}>{Number(gridPx).toFixed(gridPx % 1 === 0 ? 0 : 2)}</div>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                min="8"
+                max="120"
+                value={Number(gridPx).toFixed(gridPx % 1 === 0 ? 0 : 2)}
+                onChange={e=>{
+                  const v = Number(e.target.value);
+                  if(Number.isFinite(v)) setGridPx(Math.max(8, Math.min(120, Number(v.toFixed(2)))));
+                }}
+                style={{width:78,height:36,borderRadius:12,border:`1.5px solid ${T.border}`,background:T.bg,color:T.accent,fontSize:17,fontWeight:900,textAlign:"center",outline:"none"}}
+              />
               <button onClick={()=>setGridPx(v=>Math.min(120, Number((v+0.1).toFixed(2))))} style={{padding:"0 10px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:13,cursor:"pointer"}}>+0.1</button>
               <button onClick={()=>setGridPx(v=>Math.min(120, Number((v+1).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
               <div style={{fontSize:11,color:T.textLight}}>px/格</div>
@@ -4065,7 +4083,20 @@ function GuideAssistant({T, onBack}){
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
               <div style={{fontSize:12,color:T.textMid,fontWeight:700,minWidth:52}}>图纸放大</div>
               <button onClick={()=>setAlignZoom(v=>Math.max(0.6, Number((v-0.2).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:`1.5px solid ${T.border}`,background:T.bg,fontSize:16,cursor:"pointer"}}>－</button>
-              <div style={{fontSize:16,fontWeight:900,color:T.accent,minWidth:52,textAlign:"center"}}>{Math.round(alignZoom*100)}%</div>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="1"
+                min="60"
+                max="500"
+                value={Math.round(alignZoom*100)}
+                onChange={e=>{
+                  const v = Number(e.target.value);
+                  if(Number.isFinite(v)) setAlignZoom(Math.max(0.6, Math.min(5, Number((v/100).toFixed(2)))));
+                }}
+                style={{width:74,height:36,borderRadius:12,border:`1.5px solid ${T.border}`,background:T.bg,color:T.accent,fontSize:16,fontWeight:900,textAlign:"center",outline:"none"}}
+              />
+              <div style={{fontSize:12,fontWeight:900,color:T.accent,minWidth:20,textAlign:"center"}}>%</div>
               <button onClick={()=>setAlignZoom(v=>Math.min(5, Number((v+0.2).toFixed(2))))} style={{width:34,height:34,borderRadius:"50%",border:"none",background:T.accent,color:"#fff",fontSize:16,cursor:"pointer"}}>＋</button>
               <button onClick={()=>setAlignZoom(1)} style={{marginLeft:"auto",padding:"0 12px",height:34,borderRadius:18,border:`1.5px solid ${T.border}`,background:T.bg,fontSize:12,fontWeight:800,cursor:"pointer",color:T.textMid}}>重置缩放</button>
             </div>
