@@ -3469,6 +3469,8 @@ function GuideAssistant({T, onBack}){
   const cropWrapRef = useRef(null);
   const canvasRef = useRef(null);
   const highlightViewportRef = useRef(null);
+  const croppedBaseCanvasRef = useRef(null);
+  const highlightRenderSeqRef = useRef(0);
 
   const alignTouch = useRef({ mode:null, lastX:0, lastY:0, startDist:0, startZoom:1 });
   const cropDrag = useRef(null);
@@ -3669,38 +3671,14 @@ function GuideAssistant({T, onBack}){
         return [fullData[i], fullData[i+1], fullData[i+2]];
       }
 
-      const PALETTE_RGB = ALL_COLORS.map(c=>({
-        ...c,
-        r: parseInt(c.hex.slice(1,3),16),
-        g: parseInt(c.hex.slice(3,5),16),
-        b: parseInt(c.hex.slice(5,7),16)
-      }));
-
-      function colorDistance(a,b){
-        return Math.sqrt((a.r-b.r)**2 + (a.g-b.g)**2 + (a.b-b.b)**2);
-      }
-
-      function nearestPaletteCode(rgb){
-        let best = null;
-        let bestD = Infinity;
-        for(const c of PALETTE_RGB){
-          const d = colorDistance(rgb, c);
-          if(d < bestD){
-            bestD = d;
-            best = c;
-          }
-        }
-        return best ? {id:best.id, dist:bestD, rgb:{r:best.r,g:best.g,b:best.b}} : null;
-      }
-
-      // crop比例从容器坐标系转为图片坐标系，避免 object-fit: contain 的留白干扰
+      // ── Bug1修复：objectFit:contain会有letterbox，需把crop比例从容器坐标系转为图片坐标系 ──
       const containerW = cropWrapRef.current?.clientWidth || img.naturalWidth;
       const containerH = cropWrapRef.current?.clientHeight || img.naturalHeight;
       const fitScale = Math.min(containerW / img.naturalWidth, containerH / img.naturalHeight);
       const renderedW = img.naturalWidth * fitScale;
       const renderedH = img.naturalHeight * fitScale;
-      const lbX = (containerW - renderedW) / 2;
-      const lbY = (containerH - renderedH) / 2;
+      const lbX = (containerW - renderedW) / 2; // letterbox水平偏移px
+      const lbY = (containerH - renderedH) / 2; // letterbox垂直偏移px
       const toImgRatioX = (r) => Math.max(0, Math.min(1, (r * containerW - lbX) / renderedW));
       const toImgRatioY = (r) => Math.max(0, Math.min(1, (r * containerH - lbY) / renderedH));
       const imgCropX1 = toImgRatioX(cropX1), imgCropY1 = toImgRatioY(cropY1);
@@ -3717,223 +3695,224 @@ function GuideAssistant({T, onBack}){
       const cols = Math.max(1, Math.floor((w - localGridX) / gridPx));
       const rows = Math.max(1, Math.floor((h - localGridY) / gridPx));
 
-      const cornerPixels = [
+      // P2修复：取图纸四角均值作为背景色，用于排除空白格
+      const corners = [
         getPixel(Math.min(x1+2,img.naturalWidth-1), Math.min(y1+2,img.naturalHeight-1)),
         getPixel(Math.max(x2-3,0), Math.min(y1+2,img.naturalHeight-1)),
         getPixel(Math.min(x1+2,img.naturalWidth-1), Math.max(y2-3,0)),
         getPixel(Math.max(x2-3,0), Math.max(y2-3,0)),
       ];
-      const bgRgb = {
-        r: Math.round(cornerPixels.reduce((s,c)=>s+c[0],0)/4),
-        g: Math.round(cornerPixels.reduce((s,c)=>s+c[1],0)/4),
-        b: Math.round(cornerPixels.reduce((s,c)=>s+c[2],0)/4),
-      };
+      const bgR = Math.round(corners.reduce((s,c)=>s+c[0],0)/4);
+      const bgG = Math.round(corners.reduce((s,c)=>s+c[1],0)/4);
+      const bgB = Math.round(corners.reduce((s,c)=>s+c[2],0)/4);
 
-      function sampleCell(row, col){
-        const left = x1 + localGridX + col*gridPx;
-        const top = y1 + localGridY + row*gridPx;
-        const right = left + gridPx;
-        const bottom = top + gridPx;
-        if(right<=0 || bottom<=0 || left>=img.naturalWidth || top>=img.naturalHeight) return null;
-
-        const sampleOffsets = [0.2,0.35,0.5,0.65,0.8];
-        const votes = {};
-        const votePixels = {};
-        const rawPixels = [];
-
-        for(const fy of sampleOffsets){
-          for(const fx of sampleOffsets){
-            const px = Math.max(0, Math.min(img.naturalWidth-1, Math.round(left + gridPx*fx)));
-            const py = Math.max(0, Math.min(img.naturalHeight-1, Math.round(top + gridPx*fy)));
-            const [r,g,b] = getPixel(px,py);
-            const rgb = {r,g,b};
-            rawPixels.push(rgb);
-            const nearest = nearestPaletteCode(rgb);
-            if(!nearest) continue;
-            votes[nearest.id] = (votes[nearest.id] || 0) + 1;
-            if(!votePixels[nearest.id]) votePixels[nearest.id] = [];
-            votePixels[nearest.id].push(rgb);
+      const cellColors = [];
+      for(let row=0; row<rows; row++){
+        for(let col=0; col<cols; col++){
+          const cx = x1 + localGridX + col*gridPx + Math.floor(gridPx/2);
+          const cy = y1 + localGridY + row*gridPx + Math.floor(gridPx/2);
+          if(cx>=img.naturalWidth || cy>=img.naturalHeight){
+            cellColors.push(null);
+            continue;
           }
+          let rs=0, gs=0, bs=0, n=0;
+          const r2 = Math.max(1, Math.floor(gridPx*0.28));
+          for(let ddy=-r2; ddy<=r2; ddy++){
+            for(let ddx=-r2; ddx<=r2; ddx++){
+              const nx = Math.max(0, Math.min(img.naturalWidth-1, Math.round(cx+ddx)));
+              const ny = Math.max(0, Math.min(img.naturalHeight-1, Math.round(cy+ddy)));
+              const [pr,pg,pb] = getPixel(nx,ny);
+              rs+=pr; gs+=pg; bs+=pb; n++;
+            }
+          }
+          const avgR=Math.round(rs/n), avgG=Math.round(gs/n), avgB=Math.round(bs/n);
+          // P2修复：排除接近背景色的格子（空白格）
+          const bgDist = Math.sqrt((avgR-bgR)**2+(avgG-bgG)**2+(avgB-bgB)**2);
+          if(bgDist < 28){ cellColors.push(null); continue; }
+          cellColors.push([avgR, avgG, avgB]);
         }
-
-        const pixelCount = rawPixels.length || 1;
-        const avgRgb = rawPixels.reduce((acc,p)=>({r:acc.r+p.r,g:acc.g+p.g,b:acc.b+p.b}), {r:0,g:0,b:0});
-        avgRgb.r = Math.round(avgRgb.r / pixelCount);
-        avgRgb.g = Math.round(avgRgb.g / pixelCount);
-        avgRgb.b = Math.round(avgRgb.b / pixelCount);
-
-        const bgDist = colorDistance(avgRgb, bgRgb);
-        if(bgDist < 18) return null;
-
-        let bestId = null;
-        let bestVotes = -1;
-        let bestAvgDist = Infinity;
-        Object.keys(votes).forEach(id=>{
-          const pixels = votePixels[id] || [];
-          const palette = PALETTE_RGB.find(c=>c.id===id);
-          const avgDist = pixels.length
-            ? pixels.reduce((s,p)=>s+colorDistance(p, palette), 0) / pixels.length
-            : Infinity;
-          if(votes[id] > bestVotes || (votes[id]===bestVotes && avgDist < bestAvgDist)){
-            bestId = id;
-            bestVotes = votes[id];
-            bestAvgDist = avgDist;
-          }
-        });
-
-        if(!bestId) return null;
-        const bestPixels = votePixels[bestId] || rawPixels;
-        const avg = bestPixels.reduce((acc,p)=>({r:acc.r+p.r,g:acc.g+p.g,b:acc.b+p.b}), {r:0,g:0,b:0});
-        avg.r = Math.round(avg.r / (bestPixels.length || 1));
-        avg.g = Math.round(avg.g / (bestPixels.length || 1));
-        avg.b = Math.round(avg.b / (bestPixels.length || 1));
-
-        return {
-          code: bestId,
-          rgb: avg,
-          confidence: bestVotes / rawPixels.length,
-        };
       }
 
-      let finalGrid = [];
-      const statsMap = {};
+      const clusters = [];
+      // P1修复：阈值从44降到28，避免不同颜色被merge进同一cluster
+      function findCluster(r,g,b){
+        let best = null, bestD = 28;
+        for(const c of clusters){
+          const d = Math.sqrt((r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2);
+          if(d<bestD){bestD=d; best=c;}
+        }
+        return best;
+      }
+
+      const idList = cellColors.map(cell=>{
+        if(!cell) return null;
+        const [r,g,b] = cell;
+        let cluster = findCluster(r,g,b);
+        if(!cluster){
+          cluster = {id:`C${clusters.length+1}`, r, g, b, count:0};
+          clusters.push(cluster);
+        }
+        cluster.count++;
+        return cluster.id;
+      });
+
+      // ── Bug2修复：先做一次均值更新，让cluster中心更准确，再过滤 ──
+      const sums = {};
+      cellColors.forEach((cell,i)=>{
+        if(!cell) return;
+        const id = idList[i];
+        if(!id) return;
+        if(!sums[id]) sums[id]={r:0,g:0,b:0,n:0};
+        sums[id].r+=cell[0]; sums[id].g+=cell[1]; sums[id].b+=cell[2]; sums[id].n++;
+      });
+      clusters.forEach(c=>{
+        if(sums[c.id]){
+          c.r=Math.round(sums[c.id].r/sums[c.id].n);
+          c.g=Math.round(sums[c.id].g/sums[c.id].n);
+          c.b=Math.round(sums[c.id].b/sums[c.id].n);
+        }
+      });
+
+      const validClusters = clusters.filter(c=>c.count>=5);
+      function findValidCluster(r,g,b){
+        let best = null, bestD = 999;
+        for(const c of validClusters){
+          const d = Math.sqrt((r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2);
+          if(d<bestD){bestD=d; best=c;}
+        }
+        return best;
+      }
+
+      const idMap = {};
+      clusters.forEach(c=>{
+        if(c.count>=3) idMap[c.id]=c.id;
+        else{
+          const nearest = findValidCluster(c.r,c.g,c.b);
+          idMap[c.id] = nearest ? nearest.id : c.id;
+        }
+      });
+
+      validClusters.forEach(c=>c.count=0);
+      const finalIdList = idList.map(id=>id ? idMap[id] : null);
+      finalIdList.forEach(id=>{
+        if(!id) return;
+        const c = validClusters.find(x=>x.id===id);
+        if(c) c.count++;
+      });
+      validClusters.sort((a,b)=>b.count-a.count);
+
+      function nearestPaletteCode(r,g,b){
+        let best = null;
+        let bestD = Infinity;
+        for(const c of ALL_COLORS){
+          const rr = parseInt(c.hex.slice(1,3),16);
+          const gg = parseInt(c.hex.slice(3,5),16);
+          const bb = parseInt(c.hex.slice(5,7),16);
+          const d = Math.sqrt((r-rr)**2 + (g-gg)**2 + (b-bb)**2);
+          if(d < bestD){
+            bestD = d;
+            best = c;
+          }
+        }
+        return best?.id || null;
+      }
+
+      const decoratedClusters = validClusters.map(c=>({
+        ...c,
+        code: nearestPaletteCode(c.r,c.g,c.b)
+      }));
+
+      const codeMetaMap = new Map();
+      decoratedClusters.forEach(c=>{
+        const code = c.code || c.id;
+        if(!codeMetaMap.has(code)){
+          codeMetaMap.set(code, { id: code, code, r: c.r, g: c.g, b: c.b, count: c.count });
+        }else{
+          const prev = codeMetaMap.get(code);
+          const total = prev.count + c.count;
+          prev.r = Math.round((prev.r * prev.count + c.r * c.count) / total);
+          prev.g = Math.round((prev.g * prev.count + c.g * c.count) / total);
+          prev.b = Math.round((prev.b * prev.count + c.b * c.count) / total);
+          prev.count = total;
+        }
+      });
+      const mergedColorList = Array.from(codeMetaMap.values()).sort((a,b)=>b.count-a.count);
+
+      const clusterToCode = {};
+      decoratedClusters.forEach(c=>{
+        clusterToCode[c.id] = c.code || c.id;
+      });
+
+      const finalGrid = [];
+      let idx = 0;
       for(let row=0; row<rows; row++){
         const rowArr = [];
         for(let col=0; col<cols; col++){
-          const cell = sampleCell(row, col);
-          const code = cell?.code || null;
-          rowArr.push(code);
-          if(code){
-            if(!statsMap[code]) statsMap[code] = {id:code, code, count:0, r:0, g:0, b:0};
-            statsMap[code].count += 1;
-            statsMap[code].r += cell.rgb.r;
-            statsMap[code].g += cell.rgb.g;
-            statsMap[code].b += cell.rgb.b;
-          }
+          const rawId = finalIdList[idx++];
+          rowArr.push(rawId ? (clusterToCode[rawId] || rawId) : null);
         }
         finalGrid.push(rowArr);
       }
 
-      let dominantCode = null;
-      let dominantCount = -1;
-      Object.values(statsMap).forEach(item=>{
-        if(item.count > dominantCount){
-          dominantCode = item.code;
-          dominantCount = item.count;
-        }
-      });
-
-      function rowShouldTrim(rowArr){
-        const nonNull = rowArr.filter(Boolean);
-        if(!nonNull.length || !dominantCode) return false;
-        const dominantHits = nonNull.filter(v=>v===dominantCode).length;
-        return nonNull.length / rowArr.length >= 0.88 && dominantHits / nonNull.length >= 0.94;
-      }
-      function colShouldTrim(grid, colIndex){
-        const colArr = grid.map(r=>r[colIndex]);
-        const nonNull = colArr.filter(Boolean);
-        if(!nonNull.length || !dominantCode) return false;
-        const dominantHits = nonNull.filter(v=>v===dominantCode).length;
-        return nonNull.length / colArr.length >= 0.88 && dominantHits / nonNull.length >= 0.94;
-      }
-
-      let trimTop = 0, trimBottom = 0, trimLeft = 0, trimRight = 0;
-      while(finalGrid.length - trimTop - trimBottom > 8 && rowShouldTrim(finalGrid[trimTop])) trimTop++;
-      while(finalGrid.length - trimTop - trimBottom > 8 && rowShouldTrim(finalGrid[finalGrid.length - 1 - trimBottom])) trimBottom++;
-      while(finalGrid[0]?.length - trimLeft - trimRight > 8 && colShouldTrim(finalGrid.slice(trimTop, finalGrid.length - trimBottom), trimLeft)) trimLeft++;
-      while(finalGrid[0]?.length - trimLeft - trimRight > 8 && colShouldTrim(finalGrid.slice(trimTop, finalGrid.length - trimBottom), finalGrid[0].length - 1 - trimRight)) trimRight++;
-
-      if(trimTop || trimBottom || trimLeft || trimRight){
-        finalGrid = finalGrid
-          .slice(trimTop, finalGrid.length - trimBottom)
-          .map(row=>row.slice(trimLeft, row.length - trimRight));
-      }
-
-      const trimmedStats = {};
-      finalGrid.forEach((row, ri)=>row.forEach((code, ci)=>{
-        if(!code) return;
-        const sample = sampleCell(ri + trimTop, ci + trimLeft);
-        if(!trimmedStats[code]) trimmedStats[code] = {id:code, code, count:0, r:0, g:0, b:0};
-        trimmedStats[code].count += 1;
-        trimmedStats[code].r += sample?.rgb?.r || 0;
-        trimmedStats[code].g += sample?.rgb?.g || 0;
-        trimmedStats[code].b += sample?.rgb?.b || 0;
-      }));
-
-      const finalColorList = Object.values(trimmedStats)
-        .map(item=>({
-          ...item,
-          r: Math.round(item.r / item.count),
-          g: Math.round(item.g / item.count),
-          b: Math.round(item.b / item.count),
-        }))
-        .sort((a,b)=>b.count-a.count);
-
-      const trimmedRows = finalGrid.length;
-      const trimmedCols = finalGrid[0]?.length || 0;
-      const trimmedW = trimmedCols > 0 ? Math.max(1, Math.round(trimmedCols * gridPx)) : w;
-      const trimmedH = trimmedRows > 0 ? Math.max(1, Math.round(trimmedRows * gridPx)) : h;
-      const trimmedX1 = x1 + localGridX + trimLeft * gridPx;
-      const trimmedY1 = y1 + localGridY + trimTop * gridPx;
+      const baseCanvas = document.createElement("canvas");
+      baseCanvas.width = w;
+      baseCanvas.height = h;
+      const baseCtx = baseCanvas.getContext("2d");
+      baseCtx.fillStyle = "#fff";
+      baseCtx.fillRect(0,0,w,h);
+      baseCtx.drawImage(img,x1,y1,w,h,0,0,w,h);
+      croppedBaseCanvasRef.current = baseCanvas;
 
       setCompletedColors([]);
       setColorGrid(finalGrid);
-      setColorList(finalColorList);
-      setActiveColor(finalColorList[0]?.id || null);
+      setColorList(mergedColorList);
+      setActiveColor(mergedColorList[0]?.id || null);
       setHighlightZoom(1);
       setHighlightPan({x:0,y:0});
-      setRenderSize({w:trimmedW,h:trimmedH});
-      setCropRect({
-        x1: trimmedX1,
-        y1: trimmedY1,
-        x2: trimmedX1 + trimmedW,
-        y2: trimmedY1 + trimmedH,
-        w: trimmedW,
-        h: trimmedH,
-        localGridX: 0,
-        localGridY: 0,
-        rows: trimmedRows,
-        cols: trimmedCols,
-        trimTop,
-        trimBottom,
-        trimLeft,
-        trimRight,
-      });
+      setRenderSize({w,h});
+      setCropRect({x1,y1,x2,y2,w,h,localGridX,localGridY,rows,cols});
       setStep("highlight");
     };
     img.src = imgSrc;
   }
 
   useEffect(()=>{
-    if(step!=="highlight" || !colorGrid || !canvasRef.current || !imgSrc || !cropRect) return;
+    if(step!=="highlight" || !colorGrid || !canvasRef.current || !cropRect) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    const img = new Image();
-    img.onload = ()=>{
-      const {x1,y1,w,h,localGridX,localGridY} = cropRect;
-      canvas.width = w;
-      canvas.height = h;
+    const baseCanvas = croppedBaseCanvasRef.current;
+    if(!baseCanvas) return;
 
+    const seq = ++highlightRenderSeqRef.current;
+    const {w,h,localGridX,localGridY} = cropRect;
+    canvas.width = w;
+    canvas.height = h;
+
+    const draw = ()=>{
+      if(seq !== highlightRenderSeqRef.current) return;
       ctx.clearRect(0,0,w,h);
       ctx.fillStyle = "#fff";
       ctx.fillRect(0,0,w,h);
-      ctx.drawImage(img,x1,y1,w,h,0,0,w,h);
+      ctx.drawImage(baseCanvas,0,0);
 
       colorGrid.forEach((row,ri)=>row.forEach((id,ci)=>{
-        if(!id || completedColors.includes(id)) return;
+        if(!id || completedColors.includes(id) || id!==activeColor) return;
         const cx = localGridX + ci*gridPx;
         const cy = localGridY + ri*gridPx;
-        if(id===activeColor){
-          ctx.fillStyle="rgba(255,220,0,0.36)";
-          ctx.fillRect(cx,cy,gridPx,gridPx);
-          ctx.strokeStyle="rgba(255,170,0,1)";
-          ctx.lineWidth=Math.max(1.2, gridPx*0.06);
-          ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
-        }
+        ctx.fillStyle="rgba(255,220,0,0.36)";
+        ctx.fillRect(cx,cy,gridPx,gridPx);
+        ctx.strokeStyle="rgba(255,170,0,1)";
+        ctx.lineWidth=Math.max(1.2, gridPx*0.06);
+        ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
       }));
     };
-    img.src = imgSrc;
-  },[step,colorGrid,activeColor,imgSrc,cropRect,gridPx,completedColors]);
+
+    if(typeof requestAnimationFrame === "function"){
+      const rafId = requestAnimationFrame(draw);
+      return ()=>cancelAnimationFrame(rafId);
+    }
+    draw();
+  },[step,colorGrid,activeColor,cropRect,gridPx,completedColors]);
 
   function markCurrentDone(){
     if(!activeColor) return;
