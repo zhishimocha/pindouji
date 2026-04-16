@@ -20,7 +20,8 @@ export async function onRequest(context) {
   }
 
   try {
-    const { image } = await context.request.json();
+    const body = await context.request.json();
+    const { image, prompt, systemPrompt, model } = body || {};
 
     if (!image) {
       return new Response(
@@ -43,24 +44,7 @@ export async function onRequest(context) {
       );
     }
 
-    const response = await fetch(
-      "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "qwen-vl-max",
-          input: {
-            messages: [
-              {
-                role: "user",
-                content: [
-                  { image: image },
-                  {
-                    text: `这是一张拼豆图纸的色号统计表。请仔细读取统计表中每个色号和对应的粒数。
+    const defaultPrompt = `这是一张拼豆图纸的色号统计表。请仔细读取统计表中每个色号和对应的粒数。
 
 规则：
 1. 色号格式为"字母前缀+数字"，字母前缀只能是以下之一：A、B、C、D、E、F、G、H、M。例如：A7、B14、G18、H2、M3。
@@ -69,11 +53,42 @@ export async function onRequest(context) {
 4. 统计表中色号和粒数是配对出现的，一一对应。
 
 输出格式：色号-粒数，多个用逗号分隔。例如：A7-24,B14-93,G18-9,H2-156
-只输出数据，不要任何解释。找不到统计表就回复：无法识别`
-                  }
-                ]
-              }
-            ]
+只输出数据，不要任何解释。找不到统计表就回复：无法识别`;
+
+    const messages = [];
+
+    if (systemPrompt && typeof systemPrompt === "string" && systemPrompt.trim()) {
+      messages.push({
+        role: "system",
+        content: [{ text: systemPrompt.trim() }]
+      });
+    }
+
+    messages.push({
+      role: "user",
+      content: [
+        { image },
+        {
+          text:
+            typeof prompt === "string" && prompt.trim()
+              ? prompt.trim()
+              : defaultPrompt
+        }
+      ]
+    });
+
+    const response = await fetch(
+      "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: model || "qwen-vl-max",
+          input: {
+            messages
           }
         })
       }
@@ -121,7 +136,7 @@ export async function onRequest(context) {
       data?.output?.choices?.[0]?.message?.content?.[0]?.text || "无法识别";
 
     return new Response(
-      JSON.stringify({ result }),
+      JSON.stringify({ result, raw: data }),
       {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -136,4 +151,4 @@ export async function onRequest(context) {
       }
     );
   }
-}
+  }
