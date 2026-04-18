@@ -460,6 +460,8 @@ export default function App(){
 
   const [wL,setWL]=useState(()=>{try{const v=localStorage.getItem('pindou_warn_low');return v?Number(v):500}catch{return 500}});
   const [wC,setWC]=useState(()=>{try{const v=localStorage.getItem('pindou_warn_crit');return v?Number(v):200}catch{return 200}});
+  const [showRestockReminder,setShowRestockReminder]=useState(false);
+  const restockReminderThreshold = 10;
   useEffect(()=>{
     try{
       localStorage.setItem('pindou_warn_low',String(wL));
@@ -486,6 +488,19 @@ export default function App(){
 
   const critC=ALL_COLORS.filter(c=>Math.round(stock[c.id])<wC);
   const lowC=ALL_COLORS.filter(c=>Math.round(stock[c.id])>=wC&&Math.round(stock[c.id])<wL);
+  const restockNeedColors = useMemo(()=>ALL_COLORS.filter(c=>Math.round(stock[c.id])<wL),[stock,wL]);
+  const restockNeedCount = restockNeedColors.length;
+  useEffect(()=>{
+    if(page!=="home") return;
+    if(restockNeedCount<restockReminderThreshold) return;
+    try{
+      const todayKey=new Date().toISOString().slice(0,10);
+      const dismissedAt=localStorage.getItem('pindou_restock_reminder_dismissed_at');
+      if(dismissedAt===todayKey) return;
+    }catch{}
+    const timer=setTimeout(()=>setShowRestockReminder(true),650);
+    return ()=>clearTimeout(timer);
+  },[page,restockNeedCount,restockReminderThreshold]);
   const sUsed=useMemo(()=>SERIES.map(s=>({s,total:ALL_COLORS.filter(c=>c.id.startsWith(s)).reduce((sum,c)=>sum+used[c.id],0)})).sort((a,b)=>b.total-a.total),[used]);
   const top5=sUsed.filter(x=>x.total>0).slice(0,5);
   const maxU=top5[0]?.total||1;
@@ -515,6 +530,11 @@ export default function App(){
     setStock(ns);setUsed(nu);setSel(new Set());setBAmt("");setBatch(false);
   }
   function exitBatch(){setBatch(false);setSel(new Set());setBAmt("");setCmdText("");setCmdErr("");setCmdTags([]);}
+
+  function dismissRestockReminderForToday(){
+    try{localStorage.setItem('pindou_restock_reminder_dismissed_at',new Date().toISOString().slice(0,10));}catch{}
+    setShowRestockReminder(false);
+  }
 
   function applyTags(){
     if(cmdTags.length===0)return;
@@ -1144,6 +1164,20 @@ export default function App(){
               )}
             </div>
           </div>
+        )}
+
+        {showRestockReminder&&(
+          <RestockReminderModal
+            T={T}
+            count={restockNeedCount}
+            threshold={restockReminderThreshold}
+            topIds={restockNeedColors.slice(0,3).map(c=>c.id)}
+            onClose={dismissRestockReminderForToday}
+            onView={()=>{
+              setShowRestockReminder(false);
+              setShowRestock(true);
+            }}
+          />
         )}
 
         {showRestock&&<RestockModal T={T} stock={stock} wL={wL} onClose={()=>setShowRestock(false)}
@@ -2253,9 +2287,11 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                       <button
                         onClick={()=>setDoneSortOrder(v=>v==="desc"?"asc":"desc")}
                         title={doneSortOrder==="desc"?"当前：新到旧":"当前：旧到新"}
-                        style={{width:38,height:38,borderRadius:14,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:16,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.cardShadow,flexShrink:0}}
+                        style={{width:38,height:38,borderRadius:14,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:15,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.cardShadow,flexShrink:0}}
                       >
-                        {doneSortOrder==="desc"?"↓↑":"↑↓"}
+                        <span style={{display:"inline-flex",alignItems:"center",gap:1,letterSpacing:"-1px",transform:"scale(0.94)"}}>
+                          {doneSortOrder==="desc"?(<><span>↓</span><span style={{opacity:0.58}}>↑</span></>):(<><span style={{opacity:0.58}}>↑</span><span>↓</span></>)}
+                        </span>
                       </button>
                       <button
                         onClick={()=>{
@@ -3078,6 +3114,31 @@ function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,resetData,resetConfi
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ══════════════ 补货提醒弹窗 ══════════════
+function RestockReminderModal({T,count,threshold,topIds,onClose,onView}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.28)",zIndex:1190,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
+      onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:360,background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"20px 18px",boxShadow:T.cardShadow}}>
+        <div style={{fontSize:26,marginBottom:8,textAlign:"center"}}>📦</div>
+        <div style={{fontSize:17,fontWeight:900,color:T.text,textAlign:"center",marginBottom:8}}>有一批色号该补货啦</div>
+        <div style={{fontSize:12,color:T.textMid,lineHeight:1.8,textAlign:"center",marginBottom:14}}>
+          当前共有 <b style={{color:T.accent}}>{count}</b> 个色号低于补货阈值，达到提醒条件（≥ {threshold} 个）。
+        </div>
+        {topIds?.length>0&&(
+          <div style={{background:T.accentSoft,borderRadius:14,padding:"10px 12px",fontSize:12,color:T.textMid,textAlign:"center",marginBottom:16}}>
+            优先看看：<b style={{color:T.accent}}>{topIds.join("、")}</b>
+          </div>
+        )}
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onClose} style={{flex:1,padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>今天不再提醒</button>
+          <button onClick={onView} style={{flex:1,padding:"11px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>现在查看</button>
+        </div>
+      </div>
     </div>
   );
 }
