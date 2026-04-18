@@ -1769,6 +1769,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const [batchTagSel,setBatchTagSel]=useState(new Set()); // 批量选中的作品id
   const [showBatchTagPicker,setShowBatchTagPicker]=useState(false); // 标签选择弹窗
   const [showBatchMovePicker,setShowBatchMovePicker]=useState(false); // 移动分类弹窗
+  const [doneSortOrder,setDoneSortOrder]=useState("desc"); // 已完成排序：按名称前缀日期，无前缀则按录入时间
   const [pickerOpen,setPickerOpen]=useState(false);
   const [pickedId,setPickedId]=useState(null);
   const [flipAnimating,setFlipAnimating]=useState(false);
@@ -1788,6 +1789,37 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const doneThisMonth=tasks.filter(t=>t.doneDate?.startsWith(thisMonth));
   const doneTasks=tasks.filter(t=>t.status==="done");
   const progress=monthGoal>0?Math.min(doneThisMonth.length/monthGoal,1):0;
+
+  const getTaskCreatedTime = useCallback((task)=>{
+    const raw = task?.createdAt || task?.doneDate;
+    const ts = raw ? new Date(raw).getTime() : NaN;
+    if(Number.isFinite(ts)) return ts;
+    const idNum = Number(task?.id);
+    return Number.isFinite(idNum) ? idNum : 0;
+  },[]);
+
+  const getTaskSortTime = useCallback((task)=>{
+    const name = String(task?.name || "").trim();
+    const m = name.match(/^(\d{1,2})\/(\d{1,2})(?=\s|$)/);
+    if(m){
+      const month = Number(m[1]);
+      const day = Number(m[2]);
+      if(month>=1 && month<=12 && day>=1 && day<=31){
+        const year = new Date().getFullYear();
+        return new Date(year, month - 1, day).getTime();
+      }
+    }
+    return getTaskCreatedTime(task);
+  },[getTaskCreatedTime]);
+
+  const sortedDoneTasks = useMemo(()=>{
+    const factor = doneSortOrder === "asc" ? 1 : -1;
+    return [...doneTasks].sort((a,b)=>{
+      const diff = (getTaskSortTime(a) - getTaskSortTime(b)) * factor;
+      if(diff!==0) return diff;
+      return (getTaskCreatedTime(a) - getTaskCreatedTime(b)) * factor;
+    });
+  },[doneTasks,doneSortOrder,getTaskSortTime,getTaskCreatedTime]);
   useEffect(()=>{
     try{localStorage.setItem('pindou_toolbox',JSON.stringify(toolbox));}catch{}
   },[toolbox]);
@@ -2065,14 +2097,6 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
             <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>图纸识别·找替代色</div>
           </div>
         </div>
-        <div className="cc" onClick={()=>setView("guide")}
-          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center",gridColumn:"1/-1"}}>
-          <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#fff3e0,#ffe0b2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🗺️</div>
-          <div>
-            <div style={{fontSize:13,fontWeight:900,color:T.text}}>图纸助手</div>
-            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>上传图纸·高亮单色·辅助拼豆</div>
-          </div>
-        </div>
       </div>
 
       {/* 即将出炉 */}
@@ -2227,6 +2251,13 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                     <div style={{fontSize:12,fontWeight:800,color:T.textMid}}>✅ 已完成</div>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <button
+                        onClick={()=>setDoneSortOrder(v=>v==="desc"?"asc":"desc")}
+                        title={doneSortOrder==="desc"?"当前：新到旧":"当前：旧到新"}
+                        style={{width:38,height:38,borderRadius:14,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontSize:16,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.cardShadow,flexShrink:0}}
+                      >
+                        {doneSortOrder==="desc"?"↓↑":"↑↓"}
+                      </button>
+                      <button
                         onClick={()=>{
                           if(batchTagMode&&batchModeType==="tag"){
                             setBatchTagMode(false);setBatchModeType(null);setBatchTagSel(new Set());
@@ -2303,7 +2334,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
             {/* 已完成作品列表 */}
             {(()=>{
-              const filtered=doneTagFilter==="全部"?doneTasks:doneTasks.filter(t=>t.tags&&t.tags.includes(doneTagFilter));
+              const filtered=doneTagFilter==="全部"?sortedDoneTasks:sortedDoneTasks.filter(t=>t.tags&&t.tags.includes(doneTagFilter));
               return filtered.map(task=>{
               const elapsed=formatElapsed(task.elapsedMs||0);
               return(
