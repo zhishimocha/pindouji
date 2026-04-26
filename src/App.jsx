@@ -386,6 +386,24 @@ export default function App(){
   const [page,setPage]=useState("home");
   useEffect(()=>{try{localStorage.setItem('pindou_free_ai_used',String(freeAiUsed));}catch{}},[freeAiUsed]);
 
+  // 库存提醒
+  const [showStockAlert,setShowStockAlert]=useState(false);
+  const [alertThreshold,setAlertThreshold]=useState(()=>{
+    try{const v=localStorage.getItem('pindou_alert_threshold');return v?Number(v):50}catch{return 50}
+  });
+  const [hasCheckedStock,setHasCheckedStock]=useState(false);
+
+  // 进入首页时检测库存并弹出提醒
+  useEffect(()=>{
+    if(page==="home"&&!hasCheckedStock&&!authLoading){
+      const lowStockCount=ALL_COLORS.filter(c=>Math.round(stock[c.id])<alertThreshold).length;
+      if(lowStockCount>0){
+        setShowStockAlert(true);
+      }
+      setHasCheckedStock(true);
+    }
+  },[page,hasCheckedStock,stock,alertThreshold,authLoading]);
+
   // 专注模式
   const [focusMode,setFocusMode]=useState(false);
   const [focusColor,setFocusColor]=useState(null);
@@ -854,6 +872,7 @@ export default function App(){
     <>
       <style>{G}</style>
       {showUpgrade&&<UpgradeModal T={T} onClose={()=>setShowUpgrade(false)}/>}
+      {showStockAlert&&<StockAlertModal T={T} stock={stock} alertThreshold={alertThreshold} setAlertThreshold={setAlertThreshold} onClose={()=>setShowStockAlert(false)}/>}
       <div className="tt" style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
 
         {/* 裁剪弹窗 */}
@@ -3143,6 +3162,81 @@ function RestockReminderModal({T,count,threshold,topIds,onClose,onView}){
   );
 }
 
+// ══════════════ 库存提醒弹窗 ══════════════
+function StockAlertModal({T,stock,alertThreshold,setAlertThreshold,onClose}){
+  const [customThreshold,setCustomThreshold]=React.useState(alertThreshold);
+  const lowStockColors=ALL_COLORS.filter(c=>Math.round(stock[c.id])<alertThreshold);
+  const lowCount=lowStockColors.length;
+  
+  function saveThreshold(){
+    const val=Math.max(0,parseInt(customThreshold)||0);
+    setAlertThreshold(val);
+    try{localStorage.setItem('pindou_alert_threshold',String(val));}catch{}
+  }
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
+      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:T.card,borderRadius:24,padding:"20px 18px",width:"100%",maxWidth:380,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+        <div style={{textAlign:"center",marginBottom:16}}>
+          <div style={{fontSize:32,marginBottom:8}}>⚠️</div>
+          <div style={{fontSize:17,fontWeight:900,color:T.text,marginBottom:6}}>库存提醒</div>
+          <div style={{fontSize:13,color:T.textMid,lineHeight:1.6}}>
+            {lowCount>0
+              ?`检测到 ${lowCount} 种颜色库存不足`
+              :"库存充足，暂无需补货"}
+          </div>
+        </div>
+
+        {lowCount>0&&(
+          <div style={{background:T.bg,borderRadius:14,padding:"12px",marginBottom:14,maxHeight:180,overflowY:"auto"}}>
+            {SERIES.map(s=>{
+              const items=lowStockColors.filter(c=>c.id.startsWith(s));
+              if(items.length===0)return null;
+              return(
+                <div key={s} style={{marginBottom:10}}>
+                  <div style={{fontSize:11,fontWeight:900,color:T.textMid,marginBottom:6}}>{s} 系列</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {items.map(c=>(
+                      <div key={c.id} style={{display:"flex",alignItems:"center",gap:4,background:T.card,borderRadius:8,padding:"4px 8px",border:`1px solid ${T.border}`}}>
+                        <div style={{width:16,height:16,borderRadius:4,background:c.hex,border:"1px solid rgba(0,0,0,0.1)"}}/>
+                        <div style={{fontSize:10,fontWeight:800,color:T.text}}>{c.id}</div>
+                        <div style={{fontSize:9,color:T.textLight}}>({Math.round(stock[c.id])})</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{background:T.bg,borderRadius:14,padding:"12px",marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:8}}>设置提醒阈值</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{fontSize:11,color:T.textMid}}>当库存低于</div>
+            <input type="number" min="0" value={customThreshold}
+              onChange={e=>setCustomThreshold(e.target.value)}
+              style={{width:60,padding:"5px 8px",borderRadius:8,border:`1.5px solid ${T.border}`,background:T.card,color:T.text,fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:12,textAlign:"center",outline:"none"}}/>
+            <div style={{fontSize:11,color:T.textMid}}>粒时提醒</div>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>{saveThreshold();onClose();}}
+            style={{flex:1,padding:"11px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+            保存设置
+          </button>
+          <button onClick={onClose}
+            style={{flex:1,padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ══════════════ 补货清单弹窗 ══════════════
 function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
   const initialRestock=React.useMemo(()=>ALL_COLORS.filter(c=>Math.round(stock[c.id])<wL).map(c=>c.id),[]);
@@ -3277,8 +3371,10 @@ function RestockModal({T,stock,wL,onClose,onRestockConfirm}){
                             style={{width:36,height:36,borderRadius:10,background:c.hex,
                               border:isSel?`2.5px solid ${T.accent}`:`1.5px solid rgba(0,0,0,0.08)`,
                               boxShadow:isSel?`0 0 0 3px ${T.accentSoft}`:"0 1px 4px rgba(0,0,0,0.1)",
-                              transition:"all 0.15s",position:"relative",cursor:batchMode?"pointer":"default"}}>
+                              transition:"all 0.15s",position:"relative",cursor:batchMode?"pointer":"default",
+                              display:"flex",alignItems:"center",justifyContent:"center"}}>
                             {isSel&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,background:"rgba(255,255,255,0.25)",borderRadius:8}}>✓</div>}
+                            {!isSel&&<div style={{fontSize:9,fontWeight:900,color:"rgba(0,0,0,0.4)",textShadow:"0 0 2px rgba(255,255,255,0.8)"}}>{Math.round(stock[c.id])}</div>}
                           </div>
                           <div style={{fontSize:10,fontWeight:800,color:isSel?T.accent:T.text}}>{c.id}</div>
                           {/* 勾选后显示数量，可单独覆盖 */}
