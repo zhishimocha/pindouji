@@ -140,6 +140,61 @@ function genInviteCode(uid) {
   return code;
 }
 
+
+// ══════════════ 云同步安全工具：单作品表 + 扣豆流水 ══════════════
+function taskIdOf(task){
+  return String(task?.id || task?.task_id || task?.taskId || `task_${Date.now()}_${Math.random().toString(36).slice(2,8)}`);
+}
+function taskNameOf(task){
+  return String(task?.name || task?.title || "未命名");
+}
+function taskCreatedAtOf(task){
+  return task?.createdAt || task?.doneDate || new Date().toISOString();
+}
+function taskDoneDateOf(task){
+  return task?.doneDate || null;
+}
+function buildTaskRow(userId, task){
+  const id = taskIdOf(task);
+  const data = {...task, id};
+  return {
+    user_id: userId,
+    task_id: id,
+    name: taskNameOf(data),
+    status: data.status || "todo",
+    img: data.img || null,
+    color_data: Array.isArray(data.colorData) ? data.colorData : [],
+    data,
+    created_at: taskCreatedAtOf(data),
+    done_date: taskDoneDateOf(data),
+    updated_at: new Date().toISOString(),
+    deleted_at: data.deletedAt || null,
+    stock_deducted: !!data.stockDeducted,
+    deducted_at: data.deductedAt || null,
+  };
+}
+function taskFromRow(row){
+  const data = row?.data && typeof row.data === "object" ? row.data : {};
+  return {
+    ...data,
+    id: data.id || row.task_id,
+    name: data.name || row.name || "未命名",
+    status: data.status || row.status || "todo",
+    img: data.img ?? row.img ?? null,
+    colorData: Array.isArray(data.colorData) ? data.colorData : (Array.isArray(row.color_data) ? row.color_data : []),
+    createdAt: data.createdAt || row.created_at || null,
+    doneDate: data.doneDate || row.done_date || null,
+    deletedAt: data.deletedAt || row.deleted_at || null,
+    stockDeducted: data.stockDeducted ?? row.stock_deducted ?? false,
+    deductedAt: data.deductedAt || row.deducted_at || null,
+  };
+}
+function normalizeColorEntries(entries){
+  return (Array.isArray(entries)?entries:[])
+    .map(x=>({id:String(x?.id||x?.color||"").trim().toUpperCase(),count:Number(x?.count||x?.amount||0)}))
+    .filter(x=>x.id && Number.isFinite(x.count) && x.count>0);
+}
+
 function AuthPage({ T, tn, onLogin }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -479,13 +534,18 @@ export default function App(){
   const [wL,setWL]=useState(()=>{try{const v=localStorage.getItem('pindou_warn_low');return v?Number(v):500}catch{return 500}});
   const [wC,setWC]=useState(()=>{try{const v=localStorage.getItem('pindou_warn_crit');return v?Number(v):200}catch{return 200}});
   const [showRestockReminder,setShowRestockReminder]=useState(false);
-  const restockReminderThreshold = 10;
+  const [restockReminderThreshold,setRestockReminderThreshold]=useState(()=>{
+    try{const v=localStorage.getItem('pindou_restock_reminder_threshold');return v?Number(v):10}catch{return 10}
+  });
   useEffect(()=>{
     try{
       localStorage.setItem('pindou_warn_low',String(wL));
       localStorage.setItem('pindou_warn_crit',String(wC));
     }catch{}
   },[wL,wC]);
+  useEffect(()=>{
+    try{localStorage.setItem('pindou_restock_reminder_threshold',String(restockReminderThreshold));}catch{}
+  },[restockReminderThreshold]);
   const [history,setHistory]=useState([]); // [{stock,used,tasks?}]
   const MAX_HISTORY=20;
   const [batch,setBatch]=useState(false);
@@ -594,6 +654,14 @@ export default function App(){
       .map(t=>({id:t.id,count:parseFloat(t.amt)||0}))
       .filter(t=>t.id&&t.count>0&&t.id!=="全部");
 
+    if(mode==="link"&&linkedTaskId){
+      const target=tasks.find(t=>String(t.id)===String(linkedTaskId));
+      if(target?.stockDeducted){
+        alert("这张作品已经标记为已扣豆，不能重复扣。需要改库存的话，请去库存页手动调整。");
+        return;
+      }
+    }
+
     const ns={...stock},nu={...used};
     colorData.forEach(({id,count})=>{
       const d=Math.min(ns[id]||0,count);
@@ -614,25 +682,33 @@ export default function App(){
         startedAt:null,
         colorData,
         tags:quickDoneTags,
-        sourceType:"quick_done"
+        sourceType:"quick_done",
+        stockDeducted: colorData.length>0,
+        deductedAt: colorData.length>0 ? new Date().toISOString() : null
       };
       pushHistory(stock,used,tasks);
       setStock(ns);setUsed(nu);
       setTasks(prev=>[newTask,...prev]);
+      writeStockLogs(colorData,{taskId:createdId,source:"quick_done_new",action:"deduct",meta:{taskName:name}});
     }else if(mode==="link"&&linkedTaskId){
       pushHistory(stock,used,tasks);
       setStock(ns);setUsed(nu);
+      const deductedAt=new Date().toISOString();
       setTasks(prev=>prev.map(t=>t.id===linkedTaskId?{
         ...t,
         status:"done",
-        doneDate:new Date().toISOString(),
+        doneDate:deductedAt,
         startedAt:null,
-        colorData: colorData.length>0 ? colorData : (t.colorData||[])
+        colorData: colorData.length>0 ? colorData : (t.colorData||[]),
+        stockDeducted: colorData.length>0 ? true : !!t.stockDeducted,
+        deductedAt: colorData.length>0 ? deductedAt : (t.deductedAt||null)
       }:t));
+      writeStockLogs(colorData,{taskId:linkedTaskId,source:"quick_done_link",action:"deduct"});
     }else{
       // 纯扣豆不关联作品
       pushHistory(stock,used);
       setStock(ns);setUsed(nu);
+      writeStockLogs(colorData,{source:"quick_done_manual",action:"deduct"});
     }
 
     setCmdTags([]);
@@ -753,6 +829,11 @@ export default function App(){
     setStock(s=>({...s,[id]:Math.max(0,(s[id]||0)-beads)}));
     setUsed(u=>({...u,[id]:(u[id]||0)+beads}));
   },[stock,used]);
+  const restoreStock=useCallback((id,beads)=>{
+    pushHistory(stock,used);
+    setStock(s=>({...s,[id]:(s[id]||0)+beads}));
+    setUsed(u=>({...u,[id]:Math.max(0,(u[id]||0)-beads)}));
+  },[stock,used]);
   function undoLast(){
     setHistory(h=>{
       if(h.length===0)return h;
@@ -776,43 +857,82 @@ export default function App(){
   const [tasksLoaded,setTasksLoaded]=useState(false);
   const tasksTimerRef=useRef(null);
 
-  function getTaskStampForSync(task){
-    const times=[task?.updatedAt,task?.doneDate,task?.startedAt,task?.createdAt]
-      .map(v=>v?new Date(v).getTime():NaN)
-      .filter(Number.isFinite);
-    const idNum=Number(task?.id);
-    if(Number.isFinite(idNum)&&idNum>1000000000000)times.push(idNum);
-    return times.length?Math.max(...times):0;
+  async function migrateTasksToCloudTable(list, reason="bootstrap"){
+    if(!user||!isPro||!Array.isArray(list)||list.length===0)return;
+    const rows=list.filter(t=>!t?.deletedAt).map(t=>buildTaskRow(user.id,t));
+    if(rows.length===0)return;
+    const {error}=await supabase.from("pindou_tasks").upsert(rows,{onConflict:"user_id,task_id"});
+    if(error){console.warn("pindou_tasks migrate skipped:",error.message);return;}
+    console.log("pindou_tasks migrated",rows.length,reason);
   }
 
-  function pickSaferTasksForSync(localTasks,cloudTasks){
-    const localList=Array.isArray(localTasks)?localTasks:[];
-    const cloudList=Array.isArray(cloudTasks)?cloudTasks:[];
-    if(localList.length===0)return cloudList;
-    if(cloudList.length===0)return localList;
+  async function writeStockLogs(entries,{taskId=null,source="manual",action="deduct",meta={}}={}){
+    if(!user||!isPro)return;
+    const clean=normalizeColorEntries(entries);
+    if(clean.length===0)return;
+    const rows=clean.map(x=>({
+      user_id:user.id,
+      task_id:taskId?String(taskId):null,
+      color:x.id,
+      count:x.count,
+      action,
+      source,
+      meta
+    }));
+    const {error}=await supabase.from("stock_logs").insert(rows);
+    if(error)console.warn("stock_logs insert skipped:",error.message);
+  }
 
-    const localStamp=Math.max(0,...localList.map(getTaskStampForSync));
-    const cloudStamp=Math.max(0,...cloudList.map(getTaskStampForSync));
-
-    // 重点修复：云端偶尔还是旧的40条时，不能再用旧云端覆盖本地更多作品
-    if(localList.length>cloudList.length)return localList;
-    if(cloudList.length>localList.length)return cloudList;
-
-    return localStamp>=cloudStamp?localList:cloudList;
+  async function deleteTaskFromCloud(taskOrId,{mode="soft",meta={}}={}){
+    if(!user||!isPro||!taskOrId)return;
+    const taskId=String(typeof taskOrId==="object" ? (taskOrId.id||taskOrId.task_id||taskOrId.taskId) : taskOrId);
+    if(!taskId)return;
+    const now=new Date().toISOString();
+    if(mode==="permanent"){
+      const {error}=await supabase.from("pindou_tasks")
+        .delete()
+        .eq("user_id",user.id)
+        .eq("task_id",taskId);
+      if(error)console.warn("cloud task permanent delete skipped:",error.message);
+      return;
+    }
+    const {error}=await supabase.from("pindou_tasks")
+      .update({deleted_at:now,updated_at:now,data:{...(typeof taskOrId==="object"?taskOrId:{}),deletedAt:now,deleteMeta:meta}})
+      .eq("user_id",user.id)
+      .eq("task_id",taskId);
+    if(error)console.warn("cloud task soft delete skipped:",error.message);
   }
 
   useEffect(()=>{async function lt(){
+    setTasksLoaded(false);
     try{
       const localTasks=(()=>{try{const s=localStorage.getItem('pindou_tasks');return s?JSON.parse(s):[]}catch{return []}})();
       if(user&&isPro){
-        const {data,error}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
-        if(error)console.warn("读取云端作品失败，先使用本地作品：",error);
-        const cloudTasks=Array.isArray(data?.tasks)?data.tasks:[];
-        const safeTasks=pickSaferTasksForSync(localTasks,cloudTasks);
-        setTasks(safeTasks);
-        try{localStorage.setItem('pindou_tasks',JSON.stringify(safeTasks));}catch(e){console.warn("本地作品保存失败：",e);}
-        if(safeTasks.length!==cloudTasks.length){
-          await supabase.from("profiles").update({tasks:safeTasks}).eq("user_id",user.id);
+        const {data:taskRows,error:taskErr}=await supabase.from("pindou_tasks")
+          .select("*")
+          .eq("user_id",user.id)
+          .is("deleted_at",null)
+          .order("done_date",{ascending:false,nullsFirst:false})
+          .order("created_at",{ascending:false,nullsFirst:false});
+
+        if(!taskErr && Array.isArray(taskRows) && taskRows.length>0){
+          const cloudTasks=taskRows.map(taskFromRow).filter(t=>!t.deletedAt);
+          setTasks(cloudTasks);
+          try{localStorage.setItem('pindou_tasks',JSON.stringify(cloudTasks));}catch{}
+        }else{
+          // 兜底兼容旧版 profiles.tasks：只作为迁移来源，不再作为长期主同步表
+          const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
+          const legacyTasks=Array.isArray(data?.tasks)?data.tasks:[];
+          if(legacyTasks.length>0){
+            setTasks(legacyTasks);
+            try{localStorage.setItem('pindou_tasks',JSON.stringify(legacyTasks));}catch{}
+            await migrateTasksToCloudTable(legacyTasks,"from_profiles_tasks");
+          }else if(localTasks.length>0){
+            setTasks(localTasks);
+            await migrateTasksToCloudTable(localTasks,"from_local_cache");
+          }else{
+            setTasks([]);
+          }
         }
       }else{
         setTasks(localTasks);
@@ -821,7 +941,23 @@ export default function App(){
       setTasksLoaded(true);
     }
   }lt();},[user,isPro]);
-  useEffect(()=>{if(!tasksLoaded)return;try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch(e){console.warn("本地作品保存失败：",e);}if(!user||!isPro)return;clearTimeout(tasksTimerRef.current);tasksTimerRef.current=setTimeout(async()=>{const {error}=await supabase.from("profiles").update({tasks}).eq("user_id",user.id);if(error)console.warn("云端作品同步失败：",error);},1500);},[tasks,tasksLoaded,user,isPro]);
+
+  useEffect(()=>{
+    if(!tasksLoaded)return;
+    try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch{}
+    if(!user||!isPro)return;
+    clearTimeout(tasksTimerRef.current);
+    tasksTimerRef.current=setTimeout(async()=>{
+      const activeTasks=tasks.filter(t=>!t?.deletedAt);
+      const rows=activeTasks.map(t=>buildTaskRow(user.id,t));
+      if(rows.length>0){
+        const {error}=await supabase.from("pindou_tasks").upsert(rows,{onConflict:"user_id,task_id"});
+        if(error)console.warn("pindou_tasks sync error:",error.message);
+      }
+      // 旧 profiles.tasks 只保留镜像，方便你手机后台查看；真正主库是 pindou_tasks
+      await supabase.from("profiles").update({tasks:activeTasks}).eq("user_id",user.id);
+    },1500);
+  },[tasks,tasksLoaded,user,isPro]);
   async function resetData(){
     if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
     setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
@@ -829,6 +965,8 @@ export default function App(){
     localStorage.removeItem('pindou_tasks');
     if(user){
       await supabase.from('stock').delete().eq('user_id',user.id);
+      await supabase.from('pindou_tasks').delete().eq('user_id',user.id);
+      await supabase.from('stock_logs').delete().eq('user_id',user.id);
       await supabase.from('profiles').update({tasks:[]}).eq('user_id',user.id);
     }
     setResetConfirm(false);
@@ -836,7 +974,7 @@ export default function App(){
   }
 
   function exportData(){
-    const data={stock,used,exportedAt:new Date().toISOString()};
+    const data={stock,used,tasks,exportedAt:new Date().toISOString()};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
@@ -853,6 +991,7 @@ export default function App(){
         const d=JSON.parse(ev.target.result);
         if(d.stock)setStock(d.stock);
         if(d.used)setUsed(d.used);
+        if(Array.isArray(d.tasks))setTasks(d.tasks);
         alert('导入成功！数据已恢复～');
       }catch{alert('文件格式有误，请使用导出的备份文件～');}
     };
@@ -1010,7 +1149,7 @@ export default function App(){
             <div style={{maxWidth:640,margin:"0 auto",padding:"14px 14px 0",width:"100%",boxSizing:"border-box"}}>
 
               {page==="home"&&<div className="fade">
-                <HomeStats T={T} tn={tn} tasks={tasks} used={used} stock={stock} wL={wL} wC={wC} setWL={setWL} setWC={setWC} resetData={resetData} resetConfirm={resetConfirm} setShowRestock={setShowRestock} inp={inp} goS={goS}/>
+                <HomeStats T={T} tn={tn} tasks={tasks} used={used} stock={stock} wL={wL} wC={wC} setWL={setWL} setWC={setWC} restockReminderThreshold={restockReminderThreshold} setRestockReminderThreshold={setRestockReminderThreshold} resetData={resetData} resetConfirm={resetConfirm} setShowRestock={setShowRestock} inp={inp} goS={goS}/>
               </div>}
 
               {page==="stock"&&<div className="fade">
@@ -1050,7 +1189,7 @@ export default function App(){
           </>}
 
           {/* 作品页 */}
-          {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
+          {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} onRestoreStock={restoreStock} onLogStockDeduction={writeStockLogs} onCloudDeleteTask={deleteTaskFromCloud} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
 
           {/* 我的页 */}
           {page==="mine"&&<MinePage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} inviteInfo={inviteInfo}/>}
@@ -1832,7 +1971,7 @@ function MissingColorPage({T,stock,onBack}){
 // ══════════════════════════════════
 //  FocusMode（专注模式全屏）
 // ══════════════════════════════════
-function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,tasks,setTasks,tasksLoaded,onPushHistory}){
+function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,onRestoreStock,onLogStockDeduction,onCloudDeleteTask,tasks,setTasks,tasksLoaded,onPushHistory}){
   const [view,setView]=useState("home");
   const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
   const [showGoalEdit,setShowGoalEdit]=useState(false);
@@ -1860,6 +1999,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   });
   const newImgRef=useRef(null);
   const [longPressId,setLongPressId]=useState(null);
+  const [deletePlan,setDeletePlan]=useState(null);
   const longPressTimer=useRef(null);
 
   const now=new Date();
@@ -1920,7 +2060,35 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     e.target.value="";
   }
 
-  function deleteTask(id){setTasks(prev=>prev.filter(t=>t.id!==id));setLongPressId(null);}
+  function requestDeleteTask(id){
+    const task=tasks.find(t=>String(t.id)===String(id));
+    if(!task)return;
+    setLongPressId(null);
+    setDeletePlan({id:String(id),step:"method"});
+  }
+  async function applyDeleteTask({mode="soft",restoreInventory=false}={}){
+    const task=tasks.find(t=>String(t.id)===String(deletePlan?.id));
+    if(!task)return setDeletePlan(null);
+    const entries=normalizeColorEntries(task.colorData);
+    const now=new Date().toISOString();
+    if(restoreInventory&&entries.length>0){
+      entries.forEach(c=>onRestoreStock&&onRestoreStock(c.id,c.count));
+      if(onLogStockDeduction){
+        await onLogStockDeduction(entries,{taskId:task.id,source:mode==="permanent"?"permanent_delete_restore":"delete_restore",action:"restore",meta:{taskName:task.name||"",reason:"delete_task_restore_inventory",deletedAt:now}});
+      }
+    }
+    if(onCloudDeleteTask){
+      await onCloudDeleteTask(task,{mode,meta:{taskName:task.name||"",restoreInventory,deletedAt:now}});
+    }
+    setTasks(prev=>prev.filter(t=>String(t.id)!==String(task.id)));
+    setDeletePlan(null);
+  }
+  function choosePermanentDelete(){
+    const task=tasks.find(t=>String(t.id)===String(deletePlan?.id));
+    const hasDeducted=!!task?.stockDeducted && normalizeColorEntries(task?.colorData).length>0;
+    if(hasDeducted){setDeletePlan(p=>({...p,step:"inventory"}));return;}
+    applyDeleteTask({mode:"permanent",restoreInventory:false});
+  }
   function startTask(id){
     setTasks(prev=>prev.map(t=>{
       if(t.id!==id)return t;
@@ -1964,13 +2132,27 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     // 存快照（含tasks），撤销时一键还原库存+作品
     onPushHistory(tasks);
 
-    if(deduct&&task.colorData&&task.colorData.length>0){
+    const shouldDeduct=!!(deduct&&task.colorData&&task.colorData.length>0&&!task.stockDeducted);
+    if(deduct&&task.stockDeducted){
+      alert("这张作品已经标记为已扣豆，本次只改为完成，不重复扣库存。");
+    }
+    if(shouldDeduct){
       task.colorData.forEach(c=>{
         if(c?.id&&c?.count>0)onDeductStock(c.id,c.count);
       });
+      if(onLogStockDeduction)onLogStockDeduction(task.colorData,{taskId:id,source:"finish_task",action:"deduct",meta:{taskName:task.name||""}});
     }
 
-    setTasks(prev=>prev.map(t=>t.id===id?{...t,status:"done",doneDate:new Date().toISOString(),elapsedMs:total,startedAt:null}:t));
+    const finishedAt=new Date().toISOString();
+    setTasks(prev=>prev.map(t=>t.id===id?{
+      ...t,
+      status:"done",
+      doneDate:finishedAt,
+      elapsedMs:total,
+      startedAt:null,
+      stockDeducted: shouldDeduct ? true : !!t.stockDeducted,
+      deductedAt: shouldDeduct ? finishedAt : (t.deductedAt||null)
+    }:t));
     setPendingFinishId(null);
   }
 
@@ -2107,15 +2289,62 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
             <div style={{textAlign:"center",marginBottom:16}}>
               <div style={{fontSize:32,marginBottom:8}}>🗑️</div>
               <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:6}}>删除这个图纸？</div>
-              <div style={{fontSize:12,color:T.textMid}}>「{tasks.find(t=>t.id===longPressId)?.name}」删除后无法恢复</div>
+              <div style={{fontSize:12,color:T.textMid}}>「{tasks.find(t=>t.id===longPressId)?.name}」先选择移出作品页或彻底删除</div>
             </div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setLongPressId(null)} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer"}}>取消</button>
-              <button onClick={()=>deleteTask(longPressId)} style={{flex:1,padding:"12px 0",borderRadius:50,border:"none",background:T.danger,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>删除</button>
+              <button onClick={()=>requestDeleteTask(longPressId)} style={{flex:1,padding:"12px 0",borderRadius:50,border:"none",background:T.danger,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,cursor:"pointer"}}>删除</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* 删除方式选择 */}
+      {deletePlan&&(()=>{
+        const task=tasks.find(t=>String(t.id)===String(deletePlan.id));
+        const hasDeducted=!!task?.stockDeducted && normalizeColorEntries(task?.colorData).length>0;
+        return (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.42)",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 22px"}} onClick={()=>setDeletePlan(null)}>
+            <div style={{background:T.card,borderRadius:24,padding:"22px 18px",width:"100%",maxWidth:350,boxShadow:T.floatShadow}} onClick={e=>e.stopPropagation()}>
+              {deletePlan.step==="method"?(<>
+                <div style={{textAlign:"center",marginBottom:16}}>
+                  <div style={{fontSize:32,marginBottom:8}}>🗑️</div>
+                  <div style={{fontSize:16,fontWeight:900,color:T.text,marginBottom:6}}>选择删除方式</div>
+                  <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>「{task?.name||"未命名"}」要怎么删？</div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <button onClick={()=>applyDeleteTask({mode:"soft",restoreInventory:false})} style={{padding:"12px 14px",borderRadius:16,border:`1.5px solid ${T.border}`,background:T.card,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer",textAlign:"left"}}>
+                    移出作品页，可恢复
+                    <div style={{fontSize:11,color:T.textLight,fontWeight:700,marginTop:4}}>云端保留记录，不改库存</div>
+                  </button>
+                  <button onClick={choosePermanentDelete} style={{padding:"12px 14px",borderRadius:16,border:`1.5px solid ${T.dangerBg}`,background:T.dangerBg,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer",textAlign:"left"}}>
+                    彻底删除，不可恢复
+                    <div style={{fontSize:11,color:T.textLight,fontWeight:700,marginTop:4}}>从作品表删除；如果已扣豆，会再问你库存怎么处理</div>
+                  </button>
+                  <button onClick={()=>setDeletePlan(null)} style={{padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>取消</button>
+                </div>
+              </>):(<>
+                <div style={{textAlign:"center",marginBottom:16}}>
+                  <div style={{fontSize:32,marginBottom:8}}>📦</div>
+                  <div style={{fontSize:16,fontWeight:900,color:T.text,marginBottom:6}}>这张已经扣过库存</div>
+                  <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>「{task?.name||"未命名"}」彻底删除时，要不要把扣掉的豆子加回来？</div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <button onClick={()=>applyDeleteTask({mode:"permanent",restoreInventory:false})} style={{padding:"12px 14px",borderRadius:16,border:`1.5px solid ${T.border}`,background:T.card,color:T.text,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer",textAlign:"left"}}>
+                    只删作品，不恢复库存
+                    <div style={{fontSize:11,color:T.textLight,fontWeight:700,marginTop:4}}>适合：这张确实拼过，只是不想留作品卡</div>
+                  </button>
+                  <button onClick={()=>applyDeleteTask({mode:"permanent",restoreInventory:true})} style={{padding:"12px 14px",borderRadius:16,border:`1.5px solid ${T.dangerBg}`,background:T.dangerBg,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer",textAlign:"left"}}>
+                    删作品，并恢复库存
+                    <div style={{fontSize:11,color:T.textLight,fontWeight:700,marginTop:4}}>适合：重复扣、误扣、根本不该扣</div>
+                  </button>
+                  <button onClick={()=>setDeletePlan(p=>({...p,step:"method"}))} style={{padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>返回</button>
+                </div>
+              </>)}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 进度区 */}
       <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 18px 16px",borderBottom:`1px solid ${T.border}`}}>
@@ -2472,7 +2701,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                   </div>
                   {!batchTagMode&&<div style={{display:"flex",gap:8,marginTop:10}}>
                     <button onClick={()=>restoreTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:800,cursor:"pointer"}}>↩ 恢复</button>
-                    <button onClick={()=>deleteTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:"none",background:T.dangerBg,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>删除</button>
+                    <button onClick={()=>requestDeleteTask(task.id)} style={{flex:1,padding:"9px 0",borderRadius:50,border:"none",background:T.dangerBg,color:T.danger,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>删除</button>
                   </div>}
                 </div>
               </div>
@@ -2936,7 +3165,7 @@ function BatchMovePicker({T,tasks,onConfirm,onClose}){
 }
 
 // ══════════════ 首页统计组件 ══════════════
-function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,resetData,resetConfirm,setShowRestock,inp,goS}){
+function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,restockReminderThreshold,setRestockReminderThreshold,resetData,resetConfirm,setShowRestock,inp,goS}){
   const now=new Date();
   const [calYear,setCalYear]=React.useState(now.getFullYear());
   const [calMonth,setCalMonth]=React.useState(now.getMonth());
@@ -3089,14 +3318,19 @@ function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,resetData,resetConfi
             </button>
           </div>
         </div>
-        <div style={{display:"flex",gap:10}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           {[["🟡 即将不足",wL,setWL,T.warn,T.warnBg,T.warnBorder],[" 🔴 不足",wC,setWC,T.danger,T.dangerBg,T.dangerBorder]].map(([lbl,val,set,col,bg,bd])=>(
-            <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:1,background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
+            <label key={lbl} style={{display:"flex",alignItems:"center",gap:4,flex:"1 1 130px",background:bg,border:`1.5px solid ${bd}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:700,color:col}}>
               {lbl}
               <input type="number" value={val} onChange={e=>set(Number(e.target.value))} style={{...inp({width:48,padding:"3px 5px",fontSize:12,textAlign:"center",borderRadius:8}),marginLeft:"auto"}}/>
               <span style={{fontSize:11}}>粒</span>
             </label>
           ))}
+          <label style={{display:"flex",alignItems:"center",gap:6,flex:"1 1 100%",background:T.accentSoft,border:`1.5px solid ${T.border}`,borderRadius:16,padding:"9px 12px",fontSize:12,fontWeight:800,color:T.accent}}>
+            📦 首页弹窗：待补色号 ≥
+            <input type="number" min="1" value={restockReminderThreshold} onChange={e=>setRestockReminderThreshold(Math.max(1,Number(e.target.value)||1))} style={{...inp({width:56,padding:"3px 5px",fontSize:12,textAlign:"center",borderRadius:8}),marginLeft:"auto"}}/>
+            <span style={{fontSize:11}}>个时提醒</span>
+          </label>
         </div>
       </div>
 
