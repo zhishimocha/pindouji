@@ -775,19 +775,44 @@ export default function App(){
   },[tasks]);
   const [tasksLoaded,setTasksLoaded]=useState(false);
   const tasksTimerRef=useRef(null);
+
+  function getTaskStampForSync(task){
+    const times=[task?.updatedAt,task?.doneDate,task?.startedAt,task?.createdAt]
+      .map(v=>v?new Date(v).getTime():NaN)
+      .filter(Number.isFinite);
+    const idNum=Number(task?.id);
+    if(Number.isFinite(idNum)&&idNum>1000000000000)times.push(idNum);
+    return times.length?Math.max(...times):0;
+  }
+
+  function pickSaferTasksForSync(localTasks,cloudTasks){
+    const localList=Array.isArray(localTasks)?localTasks:[];
+    const cloudList=Array.isArray(cloudTasks)?cloudTasks:[];
+    if(localList.length===0)return cloudList;
+    if(cloudList.length===0)return localList;
+
+    const localStamp=Math.max(0,...localList.map(getTaskStampForSync));
+    const cloudStamp=Math.max(0,...cloudList.map(getTaskStampForSync));
+
+    // 重点修复：云端偶尔还是旧的40条时，不能再用旧云端覆盖本地更多作品
+    if(localList.length>cloudList.length)return localList;
+    if(cloudList.length>localList.length)return cloudList;
+
+    return localStamp>=cloudStamp?localList:cloudList;
+  }
+
   useEffect(()=>{async function lt(){
     try{
       const localTasks=(()=>{try{const s=localStorage.getItem('pindou_tasks');return s?JSON.parse(s):[]}catch{return []}})();
       if(user&&isPro){
-        const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
+        const {data,error}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
+        if(error)console.warn("读取云端作品失败，先使用本地作品：",error);
         const cloudTasks=Array.isArray(data?.tasks)?data.tasks:[];
-        if(localTasks.length>0 && cloudTasks.length===0){
-          setTasks(localTasks);
-        }else if(cloudTasks.length>0){
-          setTasks(cloudTasks);
-          try{localStorage.setItem('pindou_tasks',JSON.stringify(cloudTasks));}catch{}
-        }else{
-          setTasks(localTasks);
+        const safeTasks=pickSaferTasksForSync(localTasks,cloudTasks);
+        setTasks(safeTasks);
+        try{localStorage.setItem('pindou_tasks',JSON.stringify(safeTasks));}catch(e){console.warn("本地作品保存失败：",e);}
+        if(safeTasks.length!==cloudTasks.length){
+          await supabase.from("profiles").update({tasks:safeTasks}).eq("user_id",user.id);
         }
       }else{
         setTasks(localTasks);
@@ -796,7 +821,7 @@ export default function App(){
       setTasksLoaded(true);
     }
   }lt();},[user,isPro]);
-  useEffect(()=>{if(!tasksLoaded)return;try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch{}if(!user||!isPro)return;clearTimeout(tasksTimerRef.current);tasksTimerRef.current=setTimeout(async()=>{await supabase.from("profiles").update({tasks}).eq("user_id",user.id);},1500);},[tasks,tasksLoaded]);
+  useEffect(()=>{if(!tasksLoaded)return;try{localStorage.setItem('pindou_tasks',JSON.stringify(tasks));}catch(e){console.warn("本地作品保存失败：",e);}if(!user||!isPro)return;clearTimeout(tasksTimerRef.current);tasksTimerRef.current=setTimeout(async()=>{const {error}=await supabase.from("profiles").update({tasks}).eq("user_id",user.id);if(error)console.warn("云端作品同步失败：",error);},1500);},[tasks,tasksLoaded,user,isPro]);
   async function resetData(){
     if(!resetConfirm){setResetConfirm(true);setTimeout(()=>setResetConfirm(false),3000);return;}
     setStock(INIT_STOCK);setUsed(INIT_USED);setHistory([]);
