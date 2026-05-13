@@ -1,4 +1,4 @@
-// VERSION: helper-grid-extend-from-5x5-calibration-2026-05-13
+// VERSION: helper-grid-five-block-size-control-2026-05-13
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -2119,44 +2119,44 @@ function HelperToolPage({T,onBack}){
       });
     }
   }
-  function ensureGridCell(){
-    setGridCell(prev=>prev||{...cell});
-  }
-  function enterGridMode(){
-    // 第三步的网格原点，必须取第二步 5×5 校准框的左上角，
-    // 不能再取中间亮格的左上角。否则 5/10 线会从中间格往外算，
-    // 视觉上就会出现“中间空一大块”的错位。
-    setGridCell({
+  function makeGridFromCalibration(){
+    return {
+      // 第三步回到原来的逻辑：从第二步 5×5 校准框的左上角开始延伸。
+      // 这里的 w / h 不再表示单格，而是“一组 5 格”的宽高；
+      // 调它就等于整体缩放 5格、10格、15格……直到全图。
       x:Number((cell.x-cell.w*calibrationOffset).toFixed(3)),
       y:Number((cell.y-cell.h*calibrationOffset).toFixed(3)),
-      w:cell.w,
-      h:cell.h
-    });
+      w:Number((cell.w*CALIBRATION_COUNT).toFixed(3)),
+      h:Number((cell.h*CALIBRATION_COUNT).toFixed(3))
+    };
+  }
+  function ensureGridCell(){
+    setGridCell(prev=>prev||makeGridFromCalibration());
+  }
+  function enterGridMode(){
+    setGridCell(makeGridFromCalibration());
     setMode("grid");
   }
   function nudgeGrid(dx=0,dy=0){
-    // 第三步只移动最终网格的原点，用百分比数值移动；
-    // 不再按“单格的 1/5”去折算，避免按够 5 下后视觉上又被周期网格吞回原位。
     setGridCell(prev=>{
-      const base=prev||cell;
+      const base=prev||makeGridFromCalibration();
       return {...base,x:Number((base.x+dx).toFixed(3)),y:Number((base.y+dy).toFixed(3))};
     });
   }
   function resizeGrid(dw=0,dh=0){
-    // 第三步改格宽/格高时固定当前网格锚点，只改单格尺寸，不做 5×5 校准框边界夹取。
     setGridCell(prev=>{
-      const base=prev||cell;
-      return {...base,w:clamp(Number((base.w+dw).toFixed(3)),.25,20),h:clamp(Number((base.h+dh).toFixed(3)),.25,20)};
+      const base=prev||makeGridFromCalibration();
+      return {...base,w:clamp(Number((base.w+dw).toFixed(3)),1,100),h:clamp(Number((base.h+dh).toFixed(3)),1,100)};
     });
   }
   function setGridNumber(key,value){
     const num=Number(value);
     if(!Number.isFinite(num))return;
     setGridCell(prev=>{
-      const base=prev||cell;
+      const base=prev||makeGridFromCalibration();
       const next={...base,[key]:num};
-      next.w=clamp(next.w,.25,20);
-      next.h=clamp(next.h,.25,20);
+      next.w=clamp(next.w,1,100);
+      next.h=clamp(next.h,1,100);
       return next;
     });
   }
@@ -2215,34 +2215,52 @@ function HelperToolPage({T,onBack}){
 
   function buildLines(){
     const lines=[];
-    const baseCell=(mode==="grid"&&gridCell)?gridCell:cell;
-    const cw=Math.max(baseCell.w,.1),ch=Math.max(baseCell.h,.1);
-    const originLeft=baseCell.x;
-    const originTop=baseCell.y;
     const xEnd=area.x+area.w,yEnd=area.y+area.h;
 
-    // 第三步只用第二步校准出来的“单格宽高”去延伸。
-    // gridCell.x/y 是 5×5 校准框左上角，也就是第 0 格边界。
-    // 为了删掉外面的 L 型额外行，这里不画第 0 条边界，只画第 5/10/15... 条辅助线。
-    // 同时不再从可视区域重新编号，避免移动或调格宽后 5/10 线看起来跳回去。
+    if(mode==="grid"){
+      const base=gridCell||makeGridFromCalibration();
+      const blockW=Math.max(base.w,.1),blockH=Math.max(base.h,.1);
+      const originLeft=base.x;
+      const originTop=base.y;
+
+      // 第三步按“5格为一组”延伸：第1组=5格，第2组=10格，第3组=15格……
+      // 不画第0条边界，所以不会再有外面的 L 型额外线。
+      const firstBlockX=Math.max(1,Math.ceil((area.x-originLeft)/blockW));
+      const lastBlockX=Math.floor((xEnd-originLeft)/blockW);
+      const firstBlockY=Math.max(1,Math.ceil((area.y-originTop)/blockH));
+      const lastBlockY=Math.floor((yEnd-originTop)/blockH);
+
+      for(let b=firstBlockX;b<=lastBlockX;b++){
+        const x=originLeft+b*blockW;
+        if(x<area.x-.01||x>xEnd+.01)continue;
+        lines.push({dir:"v",pos:x,type:b%2===0?"ten":"five",k:b*5});
+      }
+      for(let b=firstBlockY;b<=lastBlockY;b++){
+        const y=originTop+b*blockH;
+        if(y<area.y-.01||y>yEnd+.01)continue;
+        lines.push({dir:"h",pos:y,type:b%2===0?"ten":"five",k:b*5});
+      }
+      return {lines,left:originLeft,top:originTop,cw:blockW/5,ch:blockH/5};
+    }
+
+    const originLeft=cell.x;
+    const originTop=cell.y;
+    const cw=Math.max(cell.w,.1),ch=Math.max(cell.h,.1);
     const firstX=Math.max(5,Math.ceil((area.x-originLeft)/cw));
     const lastX=Math.floor((xEnd-originLeft)/cw);
     const firstY=Math.max(5,Math.ceil((area.y-originTop)/ch));
     const lastY=Math.floor((yEnd-originTop)/ch);
     const startX=Math.ceil(firstX/5)*5;
     const startY=Math.ceil(firstY/5)*5;
-
     for(let n=startX;n<=lastX;n+=5){
       const x=originLeft+n*cw;
       if(x<area.x-.01||x>xEnd+.01)continue;
-      const type=n%10===0?"ten":"five";
-      lines.push({dir:"v",pos:x,type,k:n});
+      lines.push({dir:"v",pos:x,type:n%10===0?"ten":"five",k:n});
     }
     for(let n=startY;n<=lastY;n+=5){
       const y=originTop+n*ch;
       if(y<area.y-.01||y>yEnd+.01)continue;
-      const type=n%10===0?"ten":"five";
-      lines.push({dir:"h",pos:y,type,k:n});
+      lines.push({dir:"h",pos:y,type:n%10===0?"ten":"five",k:n});
     }
     return {lines,left:originLeft,top:originTop,cw,ch};
   }
@@ -2315,6 +2333,7 @@ function HelperToolPage({T,onBack}){
   const areaMoveStep=.5;
   const gridMoveStep=.12;
   const cellSizeStep=.08;
+  const gridSizeStep=.25;
   const areaSizeStep=.5;
   const currentGrid=gridCell||cell;
   const numberInput={width:"100%",boxSizing:"border-box",border:`1px solid ${T.border}`,background:T.bg,color:T.text,borderRadius:12,padding:"8px 9px",fontSize:12,fontWeight:800,fontFamily:"'Nunito',sans-serif",outline:"none"};
@@ -2412,7 +2431,7 @@ function HelperToolPage({T,onBack}){
                 </>
               ):(
                 <>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>第三步会先按第二步 5×5 校准出的单格尺寸，从校准框左上角开始延伸；如果位置还差一点，再用下面的移动按钮微调。上下左右支持长按连续移动。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>第三步会按第二步的 5×5 校准框往外延伸；这里调的是“一组 5 格”的大小，5格变准以后，10格、15格和整张图都会跟着变。上下左右支持长按连续移动。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12,alignItems:"center"}}>
                     <div/>
                     <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,-gridMoveStep))}>↑</button>
@@ -2424,7 +2443,7 @@ function HelperToolPage({T,onBack}){
                     <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,gridMoveStep))}>↓</button>
                     <div/>
                   </div>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>也可以直接填数值：X/Y 是校准框左上角，也就是第 0 格边界；格宽/格高是第二步校准出来的单格大小。数值单位都是百分比。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>也可以直接填数值：X/Y 是 5×5 校准框左上角；5格宽/5格高就是这一组 5 个小格的整体大小。数值单位都是百分比。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12}}>
                     <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>X
                       <input type="number" step="0.1" value={Number(currentGrid.x.toFixed(2))} onChange={e=>setGridNumber("x",e.target.value)} style={numberInput}/>
@@ -2432,19 +2451,19 @@ function HelperToolPage({T,onBack}){
                     <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>Y
                       <input type="number" step="0.1" value={Number(currentGrid.y.toFixed(2))} onChange={e=>setGridNumber("y",e.target.value)} style={numberInput}/>
                     </label>
-                    <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>格宽
-                      <input type="number" step="0.01" value={Number(currentGrid.w.toFixed(2))} onChange={e=>setGridNumber("w",e.target.value)} style={numberInput}/>
+                    <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>5格宽
+                      <input type="number" step="0.1" value={Number(currentGrid.w.toFixed(2))} onChange={e=>setGridNumber("w",e.target.value)} style={numberInput}/>
                     </label>
-                    <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>格高
-                      <input type="number" step="0.01" value={Number(currentGrid.h.toFixed(2))} onChange={e=>setGridNumber("h",e.target.value)} style={numberInput}/>
+                    <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>5格高
+                      <input type="number" step="0.1" value={Number(currentGrid.h.toFixed(2))} onChange={e=>setGridNumber("h",e.target.value)} style={numberInput}/>
                     </label>
                   </div>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>网格大小也可以用按钮调，宽和高支持长按连续增加/减少。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>5格大小也可以用按钮调，宽和高支持长按连续增加/减少。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
-                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(-cellSizeStep,0))}>格宽 -</button>
-                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(cellSizeStep,0))}>格宽 +</button>
-                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(0,-cellSizeStep))}>格高 -</button>
-                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(0,cellSizeStep))}>格高 +</button>
+                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(-gridSizeStep,0))}>5格宽 -</button>
+                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(gridSizeStep,0))}>5格宽 +</button>
+                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(0,-gridSizeStep))}>5格高 -</button>
+                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(0,gridSizeStep))}>5格高 +</button>
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
                     {[["#4a9eff","蓝"],["#ffffff","白"],["#222222","黑"],["#ff5c8a","粉"],["#ffbf3f","黄"],["custom","自定义"]].map(([c,n])=>(
