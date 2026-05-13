@@ -2584,6 +2584,36 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     }
   }
 
+  async function saveTaskCover(taskId,file){
+    if(!file)return;
+    let compressed=null;
+    try{
+      compressed=await compressImageFileToDataUrl(file,{max:420,quality:0.76});
+    }catch(err){
+      console.warn("task cover compress failed:",err);
+      compressed=await new Promise((resolve,reject)=>{
+        const r=new FileReader();
+        r.onload=ev=>resolve(ev.target.result);
+        r.onerror=reject;
+        r.readAsDataURL(file);
+      });
+    }
+    const now=new Date().toISOString();
+    const nextTasks=tasks.map(t=>String(t.id)===String(taskId)?{...t,img:compressed,coverUpdatedAt:now,updatedAt:now}:t);
+    const nextTask=nextTasks.find(t=>String(t.id)===String(taskId));
+    setTasks(nextTasks);
+    try{localStorage.setItem("pindou_tasks",JSON.stringify(nextTasks));}catch{}
+    if(user&&isPro&&nextTask){
+      try{
+        const {error}=await supabase.from("pindou_tasks").upsert([buildTaskRow(user.id,nextTask)],{onConflict:"user_id,task_id"});
+        if(error)console.warn("task cover sync error:",error.message);
+        await supabase.from("profiles").update({tasks:nextTasks.filter(t=>!t?.deletedAt)}).eq("user_id",user.id);
+      }catch(err){
+        console.warn("task cover immediate sync skipped:",err);
+      }
+    }
+  }
+
   function requestDeleteTask(id){
     const task=tasks.find(t=>String(t.id)===String(id));
     if(!task)return;
@@ -2914,22 +2944,25 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       </div>
 
       {/* 工具入口 */}
-      <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:9}}>
+      <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10}}>
         <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
-          style={{background:T.card,borderRadius:20,padding:"12px 6px",minHeight:88,boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box"}}>
-          {!isPro&&<span style={{position:"absolute",top:7,right:7,fontSize:8,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 5px",fontWeight:900,lineHeight:1.2}}>Pro</span>}
-          <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#eaf7ff,#fff2cf)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.75), 0 4px 10px rgba(74,158,255,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>🧰</div>
-          <div style={{fontSize:13,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap"}}>工具箱</div>
+          style={{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(239,248,255,.72))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(75,155,215,.15), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(178,221,255,.88)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
+          <div style={{position:"absolute",inset:"-28px -18px auto auto",width:76,height:76,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,214,143,.42),rgba(122,203,255,.08) 62%,transparent 72%)",filter:"blur(2px)"}}/>
+          {!isPro&&<span style={{position:"absolute",top:7,right:7,fontSize:8,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 5px",fontWeight:900,lineHeight:1.2,zIndex:2}}>Pro</span>}
+          <div style={{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.96),rgba(232,247,255,.72) 48%,rgba(255,242,207,.5))",boxShadow:"0 12px 28px rgba(74,158,255,.18), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🧰</div>
+          <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>工具箱</div>
         </div>
         <div className="cc" onClick={()=>setView("missing")}
-          style={{background:T.card,borderRadius:20,padding:"12px 6px",minHeight:88,boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8,alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
-          <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#eaf7ff,#e8dcff)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.75), 0 4px 10px rgba(154,123,220,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>🔍</div>
-          <div style={{fontSize:13,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap"}}>缺色替换</div>
+          style={{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(244,240,255,.74))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(139,115,216,.13), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(205,193,255,.8)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
+          <div style={{position:"absolute",inset:"-30px auto auto -16px",width:82,height:82,borderRadius:"50%",background:"radial-gradient(circle,rgba(186,213,255,.38),rgba(255,220,238,.12) 62%,transparent 72%)",filter:"blur(2px)"}}/>
+          <div style={{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(235,244,255,.72) 48%,rgba(232,220,255,.5))",boxShadow:"0 12px 28px rgba(154,123,220,.16), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🔍</div>
+          <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>缺色替换</div>
         </div>
         <div className="cc" onClick={()=>setView("helper")}
-          style={{background:T.card,borderRadius:20,padding:"12px 6px",minHeight:88,boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8,alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
-          <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#fff3d9,#dff4ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>📏</div>
-          <div style={{fontSize:13,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap"}}>辅助工具</div>
+          style={{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(238,249,255,.72))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(74,158,255,.14), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(178,221,255,.88)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
+          <div style={{position:"absolute",inset:"auto -22px -30px auto",width:86,height:86,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,232,173,.36),rgba(126,210,255,.12) 62%,transparent 72%)",filter:"blur(2px)"}}/>
+          <div style={{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(232,247,255,.72) 48%,rgba(255,243,217,.5))",boxShadow:"0 12px 28px rgba(74,158,255,.17), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>📏</div>
+          <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>辅助工具</div>
         </div>
       </div>
 
@@ -3186,24 +3219,8 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
                     const inp=document.createElement('input');
                     inp.type='file';inp.accept='image/*';
                     inp.onchange=e=>{
-                      const f=e.target.files[0];if(!f)return;
-                      const r=new FileReader();
-                      r.onload=ev=>{
-                        const img=new Image();
-                        img.onload=()=>{
-                          const canvas=document.createElement('canvas');
-                          const max=300;
-                          let w=img.width,h=img.height;
-                          if(w>h){if(w>max){h=Math.round(h*max/w);w=max;}}
-                          else{if(h>max){w=Math.round(w*max/h);h=max;}}
-                          canvas.width=w;canvas.height=h;
-                          canvas.getContext('2d').drawImage(img,0,0,w,h);
-                          const compressed=canvas.toDataURL('image/jpeg',0.7);
-                          setTasks(prev=>prev.map(t=>t.id===task.id?{...t,img:compressed}:t));
-                        };
-                        img.src=ev.target.result;
-                      };
-                      r.readAsDataURL(f);
+                      const f=e.target.files[0];
+                      if(f)saveTaskCover(task.id,f);
                     };
                     inp.click();
                   }}
