@@ -67,7 +67,7 @@ function UpgradeModal({T,onClose}){
 
         <div style={{fontSize:11,color:T.textMid,textAlign:"center",marginBottom:12}}>拼豆本来就很快乐，记录它也应该轻松一点</div>
 
-        <div style={{background:`linear-gradient(135deg,#ff8fa3,#ffd166,#4a9eff)`,borderRadius:50,padding:"13px 0",textAlign:"center",marginBottom:10,cursor:"pointer"}}
+        <div style={{background:`linear-gradient(135deg,#ff8fa3,#ffd166,#4a9eff)`,borderRadius:50,padding:"13px 0",textAlign:"center",marginBottom:10,cursor:"pointer"}} className={`fur-btn`}
           onClick={()=>alert("联系大橘：v：daju_laila 开通Pro～")}>
           <div style={{fontSize:14,fontWeight:900,color:"#fff"}}>立即开通 Pro</div>
         </div>
@@ -277,6 +277,7 @@ function AuthPage({ T, tn, onLogin }) {
           {err && <div style={{ marginTop: 10, fontSize: 12, color: T.danger, fontWeight: 600 }}>{err}</div>}
           {msg && <div style={{ marginTop: 10, fontSize: 12, color: "#4caf50", fontWeight: 600 }}>{msg}</div>}
           <button onClick={handleSubmit} disabled={loading}
+            className={tn==="fluffy"?"fur-btn":""}
             style={{ marginTop: 16, width: "100%", padding: "12px 0", borderRadius: 50, border: "none", cursor: "pointer", fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 800, background: T.accent, color: "#fff", opacity: loading ? 0.7 : 1 }}>
             {loading ? "处理中…" : mode === "login" ? "登录" : "注册"}
           </button>
@@ -307,7 +308,7 @@ function fmtG(g){const n=Math.round(g*100)/100;return Number.isInteger(n)?String
 
 const THEMES={
   sky:{name:"晴空蓝",icon:"☁️",bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"夜空 🌙",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff",toolboxPanelBg:"linear-gradient(180deg,#f8fcff 0%,#eef8ff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
-  fluffy:{name:"毛绒甜莓",icon:"🐑",bg:"linear-gradient(180deg,#fff8fb 0%,#fff1f6 40%,#eef8ff 100%)",card:"linear-gradient(145deg,#fffdfa 0%,#fff5f7 54%,#f6fbff 100%)",border:"#f1d8e0",accent:"#d78398",accentLight:"linear-gradient(145deg,#fff9fb 0%,#fff1f6 56%,#f7fbff 100%)",accentSoft:"linear-gradient(145deg,#fff9fb 0%,#fff1f6 56%,#f7fbff 100%)",warn:"#e8b47f",warnBg:"linear-gradient(145deg,#fff8ef 0%,#fff2e6 100%)",warnBorder:"#f1d8bf",danger:"#e58da3",dangerBg:"linear-gradient(145deg,#fff6f8 0%,#ffeef3 100%)",dangerBorder:"#f3cfda",text:"#6b4c56",textMid:"#ad8794",textLight:"#d2b1bb",nav:"linear-gradient(180deg,rgba(255,255,255,0.94) 0%,rgba(255,245,248,0.96) 100%)",navBorder:"#f1d8e0",barBg:"#f7e1e7",bars:["#df8fa4","#f0b8c7","#f7dbe2","#cfe3ef","#f5e2cf"],switchBtn:"晴空 ☁️",cardShadow:"0 12px 28px rgba(214,143,166,0.16), inset 0 2px 0 rgba(255,255,255,0.95), inset 0 -14px 20px rgba(255,255,255,0.48), inset 0 0 0 1px rgba(255,247,249,0.9)",floatShadow:"0 18px 42px rgba(214,143,166,0.18), inset 0 1px 0 rgba(255,255,255,0.95)",headerBg:"linear-gradient(135deg,#fffafc 0%,#fff0f6 58%,#eef8ff 100%)",navActiveDot:"#d78398",toolboxPanelBg:"linear-gradient(180deg,#fff9fb 0%,#fff0f5 46%,#f6fbff 100%)",toolboxCatBg:"linear-gradient(145deg,rgba(255,255,255,0.92) 0%,rgba(255,245,248,0.88) 100%)",plush:true,plushCard:"linear-gradient(145deg,#fffdfa 0%,#fff3f7 56%,#f5fbff 100%)",plushChip:"linear-gradient(145deg,#fff7fa 0%,#fff0f5 58%,#f8fbff 100%)",plushIcon:"linear-gradient(145deg,#fffdfb 0%,#fff1f6 58%,#edf8ff 100%)",plushShadow:"0 14px 30px rgba(214,143,166,0.16), inset 0 2px 0 rgba(255,255,255,0.95), inset 0 -16px 22px rgba(255,255,255,0.48)",plushBorder:"#f3d7e0"},
+  fluffy:{name:"毛绒甜莓",icon:"🐑",bg:"linear-gradient(180deg,#fff6fa 0%,#ffeff5 40%,#edf6ff 100%)",card:"linear-gradient(145deg,#fffcfa 0%,#fff3f7 54%,#f4faff 100%)",border:"#f0d4de",accent:"#d07a94",accentLight:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",accentSoft:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",warn:"#e8b47f",warnBg:"linear-gradient(145deg,#fff8ef 0%,#fff2e6 100%)",warnBorder:"#f1d8bf",danger:"#e08a9e",dangerBg:"linear-gradient(145deg,#fff5f7 0%,#ffedf1 100%)",dangerBorder:"#f2cdd6",text:"#5e4250",textMid:"#aa8494",textLight:"#cfadb8",nav:"linear-gradient(180deg,rgba(255,252,253,0.96) 0%,rgba(255,243,248,0.98) 100%)",navBorder:"#f0d4de",barBg:"#f5dde4",bars:["#df8fa4","#f0b8c7","#f7dbe2","#cfe3ef","#f5e2cf"],switchBtn:"晴空 ☁️",cardShadow:"0 14px 32px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -16px 24px rgba(255,255,255,0.52), inset 0 0 0 1px rgba(255,246,250,0.92)",floatShadow:"0 20px 48px rgba(200,130,155,0.20), inset 0 1px 0 rgba(255,255,255,0.96)",headerBg:"linear-gradient(135deg,#fffafc 0%,#ffeff6 58%,#edf6ff 100%)",navActiveDot:"#d07a94",toolboxPanelBg:"linear-gradient(180deg,#fff8fb 0%,#ffeff5 46%,#f4faff 100%)",toolboxCatBg:"linear-gradient(145deg,rgba(255,255,255,0.94) 0%,rgba(255,244,249,0.90) 100%)",plush:true,plushCard:"linear-gradient(145deg,#fffcfa 0%,#fff2f6 56%,#f3faff 100%)",plushChip:"linear-gradient(145deg,#fff7fa 0%,#ffeff5 58%,#f7faff 100%)",plushIcon:"linear-gradient(145deg,#fffdfb 0%,#fff0f6 58%,#ecf7ff 100%)",plushShadow:"0 16px 36px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -18px 26px rgba(255,255,255,0.52)",plushBorder:"#f2d4dd"},
   night:{name:"夜空黄",icon:"🌙",bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"毛绒 🐑",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166",toolboxPanelBg:"#152236",toolboxCatBg:"#0d1b2e"}
 };
 const THEME_ORDER=["sky","fluffy","night"];
@@ -322,20 +323,118 @@ const G=`
 .cc{transition:transform 0.15s,box-shadow 0.15s,border 0.15s,opacity 0.15s;}
 .cc:active{transform:scale(0.93)!important;opacity:0.8;}
 
+/* ═══ 毛绒卡片 — 蓬松长毛，像P1锁屏的粉毛垫 ═══ */
 .fur-card{position:relative!important;isolation:isolate;overflow:visible!important;background-clip:padding-box!important;}
 .fur-card>*{position:relative;z-index:2;}
-.fur-card::before{content:"";position:absolute;inset:-18px;border-radius:inherit;z-index:0;pointer-events:none;background:repeating-conic-gradient(from -12deg,rgba(255,190,207,.80) 0deg,rgba(255,190,207,.80) .9deg,rgba(255,232,238,.78) .9deg,rgba(255,232,238,.78) 1.8deg,rgba(244,214,220,.62) 1.8deg,rgba(244,214,220,.62) 2.6deg,transparent 2.6deg,transparent 5.4deg);filter:blur(.85px);opacity:.92;transform:scale(1.018);}
-.fur-card::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;background:repeating-linear-gradient(82deg,rgba(255,255,255,.30) 0 1px,rgba(255,255,255,0) 1px 5px),repeating-linear-gradient(102deg,rgba(210,105,132,.12) 0 1px,rgba(255,255,255,0) 1px 7px),radial-gradient(ellipse at 24% 22%,rgba(255,255,255,.82),transparent 36%),radial-gradient(ellipse at 76% 78%,rgba(255,208,224,.45),transparent 48%);box-shadow:inset 0 3px 0 rgba(255,255,255,.82),inset 0 -18px 26px rgba(255,255,255,.40),0 14px 28px rgba(214,143,166,.12);opacity:.92;mix-blend-mode:soft-light;}
+.fur-card::before{
+  content:"";position:absolute;inset:-22px;border-radius:inherit;z-index:0;pointer-events:none;
+  background:
+    repeating-conic-gradient(from -15deg,
+      rgba(255,182,203,.88) 0deg,rgba(255,182,203,.88) .7deg,
+      rgba(255,218,230,.82) .7deg,rgba(255,218,230,.82) 1.5deg,
+      rgba(255,200,218,.70) 1.5deg,rgba(255,200,218,.70) 2.3deg,
+      rgba(255,240,245,.60) 2.3deg,rgba(255,240,245,.60) 3.1deg,
+      transparent 3.1deg,transparent 6.2deg),
+    repeating-conic-gradient(from 28deg,
+      rgba(220,200,230,.45) 0deg,rgba(220,200,230,.45) .8deg,
+      transparent .8deg,transparent 5deg);
+  filter:blur(1.1px);opacity:.95;transform:scale(1.022);}
+.fur-card::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;
+  background:
+    repeating-linear-gradient(78deg,rgba(255,255,255,.36) 0 1px,rgba(255,255,255,0) 1px 4px),
+    repeating-linear-gradient(96deg,rgba(255,200,220,.14) 0 1px,rgba(255,255,255,0) 1px 6px),
+    radial-gradient(ellipse at 20% 18%,rgba(255,255,255,.90),transparent 32%),
+    radial-gradient(ellipse at 78% 80%,rgba(255,210,228,.55),transparent 44%),
+    radial-gradient(ellipse at 50% 50%,rgba(255,240,248,.20),transparent 70%);
+  box-shadow:
+    inset 0 3px 0 rgba(255,255,255,.88),
+    inset 0 -20px 30px rgba(255,255,255,.50),
+    inset 2px 0 0 rgba(255,255,255,.40),
+    0 16px 32px rgba(210,130,160,.14);
+  opacity:.95;mix-blend-mode:soft-light;}
+
+/* ═══ 毛绒标签/按钮 — 短绒，像P2布艺小熊的表面 ═══ */
 .fur-chip{position:relative!important;isolation:isolate;overflow:visible!important;}
 .fur-chip>*{position:relative;z-index:2;}
-.fur-chip::before{content:"";position:absolute;inset:-10px;border-radius:inherit;z-index:0;pointer-events:none;background:repeating-conic-gradient(from 12deg,rgba(255,196,213,.78) 0deg,rgba(255,196,213,.78) 1deg,rgba(255,235,240,.72) 1deg,rgba(255,235,240,.72) 2deg,transparent 2deg,transparent 5.8deg);filter:blur(.65px);opacity:.85;}
-.fur-chip::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;background:repeating-linear-gradient(86deg,rgba(255,255,255,.26) 0 1px,transparent 1px 5px),repeating-linear-gradient(104deg,rgba(215,131,152,.10) 0 1px,transparent 1px 7px);opacity:.9;mix-blend-mode:soft-light;}
+.fur-chip::before{
+  content:"";position:absolute;inset:-12px;border-radius:inherit;z-index:0;pointer-events:none;
+  background:
+    repeating-conic-gradient(from 8deg,
+      rgba(255,192,210,.82) 0deg,rgba(255,192,210,.82) .9deg,
+      rgba(255,230,240,.76) .9deg,rgba(255,230,240,.76) 1.8deg,
+      rgba(240,215,225,.55) 1.8deg,rgba(240,215,225,.55) 2.6deg,
+      transparent 2.6deg,transparent 5.8deg);
+  filter:blur(.7px);opacity:.88;}
+.fur-chip::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;
+  background:
+    repeating-linear-gradient(84deg,rgba(255,255,255,.30) 0 1px,transparent 1px 4px),
+    repeating-linear-gradient(102deg,rgba(215,131,152,.12) 0 1px,transparent 1px 6px),
+    radial-gradient(ellipse at 22% 24%,rgba(255,255,255,.75),transparent 38%);
+  opacity:.92;mix-blend-mode:soft-light;}
+
+/* ═══ 毛绒图标框 ═══ */
 .fur-icon{position:relative!important;isolation:isolate;overflow:visible!important;}
-.fur-icon::before{content:"";position:absolute;inset:-11px;border-radius:inherit;z-index:-1;pointer-events:none;background:repeating-conic-gradient(from 5deg,rgba(255,191,209,.82) 0deg,rgba(255,191,209,.82) 1deg,rgba(255,238,242,.76) 1deg,rgba(255,238,242,.76) 2.2deg,rgba(226,242,255,.50) 2.2deg,rgba(226,242,255,.50) 3deg,transparent 3deg,transparent 6deg);filter:blur(.75px);opacity:.9;}
-.fur-icon::after{content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;background:repeating-linear-gradient(92deg,rgba(255,255,255,.26) 0 1px,transparent 1px 5px),radial-gradient(ellipse at 26% 20%,rgba(255,255,255,.88),transparent 42%);opacity:.9;mix-blend-mode:soft-light;}
+.fur-icon::before{
+  content:"";position:absolute;inset:-13px;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:
+    repeating-conic-gradient(from 3deg,
+      rgba(255,186,208,.86) 0deg,rgba(255,186,208,.86) .9deg,
+      rgba(255,232,242,.78) .9deg,rgba(255,232,242,.78) 2deg,
+      rgba(225,240,255,.52) 2deg,rgba(225,240,255,.52) 2.8deg,
+      transparent 2.8deg,transparent 6deg);
+  filter:blur(.8px);opacity:.92;}
+.fur-icon::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.28) 0 1px,transparent 1px 4px),
+    radial-gradient(ellipse at 24% 20%,rgba(255,255,255,.90),transparent 40%);
+  opacity:.92;mix-blend-mode:soft-light;}
 .fur-icon>*{position:relative;z-index:2;}
+
+/* ═══ 主要按钮毛绒感 — 布艺压纹，像P2的草莓/熊熊刺绣 ═══ */
+.fur-btn{position:relative!important;isolation:isolate;overflow:hidden!important;}
+.fur-btn::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;
+  background:
+    repeating-linear-gradient(76deg,rgba(255,255,255,.18) 0 1px,transparent 1px 3px),
+    repeating-linear-gradient(166deg,rgba(255,255,255,.12) 0 1px,transparent 1px 4px),
+    radial-gradient(ellipse at 20% 30%,rgba(255,255,255,.45),transparent 50%),
+    radial-gradient(ellipse at 80% 70%,rgba(255,255,255,.18),transparent 50%);
+  opacity:1;}
+.fur-btn>*{position:relative;z-index:1;}
+.fur-btn:active{transform:scale(0.96)!important;filter:brightness(0.97);}
+
+/* ═══ 底部导航毛绒背景纹 ═══ */
+.fur-nav{position:relative!important;isolation:isolate;}
+.fur-nav::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    repeating-conic-gradient(from -8deg,
+      rgba(255,190,210,.30) 0deg,rgba(255,190,210,.30) .6deg,
+      rgba(255,225,235,.25) .6deg,rgba(255,225,235,.25) 1.3deg,
+      transparent 1.3deg,transparent 4deg),
+    repeating-linear-gradient(82deg,rgba(255,255,255,.22) 0 1px,transparent 1px 5px);
+  filter:blur(.5px);opacity:.9;}
+.fur-nav>*{position:relative;z-index:1;}
+
 .btn{transition:all 0.18s;}
 .btn:active{transform:scale(0.95);}
+
+/* ═══ 毛绒背景页面纹理（仅fluffy主题生效）═══ */
+@keyframes fluffyFloat{
+  0%,100%{transform:translateY(0) rotate(0deg);}
+  33%{transform:translateY(-3px) rotate(0.5deg);}
+  66%{transform:translateY(2px) rotate(-0.3deg);}
+}
+.fur-page-bg::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse at 15% 20%,rgba(255,210,225,.28),transparent 40%),
+    radial-gradient(ellipse at 85% 75%,rgba(210,230,255,.22),transparent 45%),
+    radial-gradient(ellipse at 50% 50%,rgba(255,230,240,.12),transparent 60%);
+  animation:fluffyFloat 8s ease-in-out infinite;}
 `;
 
 // ── 色卡组件（点击弹菜单：改库存 / 扣用量）──
@@ -1072,7 +1171,7 @@ export default function App(){
       <style>{G}</style>
       {showUpgrade&&<UpgradeModal T={T} onClose={()=>setShowUpgrade(false)}/>}
       {showStockAlert&&<StockAlertModal T={T} stock={stock} alertThreshold={alertThreshold} setAlertThreshold={setAlertThreshold} onClose={()=>setShowStockAlert(false)}/>}
-      <div className="tt" style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
+      <div className={`tt${safeTn==="fluffy"?" fur-page-bg":""}`} style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
 
         {/* 裁剪弹窗 */}
         {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -1303,7 +1402,7 @@ export default function App(){
 
             <div style={{display:"flex",gap:8,marginTop:2}}>
               <button className="btn" onClick={exitBatch} style={{...inp({flex:1,padding:"10px 0",borderRadius:50,cursor:"pointer",fontSize:13,color:T.textMid,fontWeight:700})}}>取消</button>
-              <button className="btn" onClick={cmdTags.length>0?openTagLinkFlow:applyCmd}
+              <button className={`btn${safeTn==="fluffy"?" fur-btn":""}`} onClick={cmdTags.length>0?openTagLinkFlow:applyCmd}
                 style={{flex:3,padding:"10px 0",borderRadius:50,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:14,fontWeight:800,background:T.accent,color:"#fff"}}>
                 {cmdTags.length>0?"确认并继续":"执行"}
               </button>
@@ -1435,7 +1534,7 @@ export default function App(){
         )}
 
         {/* 底部导航栏 */}
-        <div className="tt" style={{flexShrink:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
+        <div className={`tt${safeTn==="fluffy"?" fur-nav":""}`} style={{flexShrink:0,background:T.nav,borderTop:`1.5px solid ${T.navBorder}`,display:"flex",justifyContent:"space-around",padding:"10px 0 20px",zIndex:200}}>
           {[{key:"home",label:"首页",iconA:"🏡",iconI:"🏠"},{key:"stock",label:"库存",iconA:"🫘",iconI:"🫙"},{key:"works",label:"作品",iconA:"🎨",iconI:"🖼️"},{key:"mine",label:"我的",iconA:"👤",iconI:"👤"}].map(n=>{
             const active=page===n.key;
             return(
@@ -3822,6 +3921,14 @@ function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,restockReminderThres
   },[tasks]);
 
   function heatColor(count){
+    if(tn==="fluffy"){
+      if(!count||count===0) return "rgba(240,180,200,.10)";
+      if(count===1) return "rgba(215,122,148,.28)";
+      if(count<=3) return "rgba(215,122,148,.50)";
+      if(count<=5) return "rgba(215,122,148,.70)";
+      if(count<=7) return "rgba(215,122,148,.86)";
+      return "#d07a94";
+    }
     if(!count||count===0) return tn==="night"?"rgba(255,255,255,0.06)":"rgba(74,158,255,0.08)";
     if(count===1) return "rgba(74,158,255,0.25)";
     if(count<=3) return "rgba(74,158,255,0.45)";
