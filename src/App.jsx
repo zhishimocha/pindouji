@@ -1,4 +1,4 @@
-// VERSION: helper-grid-direct-fix-2026-05-13
+// VERSION: helper-grid-extend-from-5x5-calibration-2026-05-13
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -2123,7 +2123,15 @@ function HelperToolPage({T,onBack}){
     setGridCell(prev=>prev||{...cell});
   }
   function enterGridMode(){
-    setGridCell({...cell});
+    // 第三步的网格原点，必须取第二步 5×5 校准框的左上角，
+    // 不能再取中间亮格的左上角。否则 5/10 线会从中间格往外算，
+    // 视觉上就会出现“中间空一大块”的错位。
+    setGridCell({
+      x:Number((cell.x-cell.w*calibrationOffset).toFixed(3)),
+      y:Number((cell.y-cell.h*calibrationOffset).toFixed(3)),
+      w:cell.w,
+      h:cell.h
+    });
     setMode("grid");
   }
   function nudgeGrid(dx=0,dy=0){
@@ -2213,27 +2221,28 @@ function HelperToolPage({T,onBack}){
     const originTop=baseCell.y;
     const xEnd=area.x+area.w,yEnd=area.y+area.h;
 
-    // 这里不能再从“第一条可见线”重新计数。
-    // 否则网格每移动 1 个小格，也就是按 5 次 0.2 格后，5/10 辅助线会重新归零，视觉上就像弹回原位。
-    // 现在固定使用 gridCell.x / gridCell.y 作为网格原点，所有 5/10 线都按这个原点计算。
-    const startX=Math.ceil((area.x-originLeft)/cw)-1;
-    const endX=Math.floor((xEnd-originLeft)/cw)+1;
-    const startY=Math.ceil((area.y-originTop)/ch)-1;
-    const endY=Math.floor((yEnd-originTop)/ch)+1;
+    // 第三步只用第二步校准出来的“单格宽高”去延伸。
+    // gridCell.x/y 是 5×5 校准框左上角，也就是第 0 格边界。
+    // 为了删掉外面的 L 型额外行，这里不画第 0 条边界，只画第 5/10/15... 条辅助线。
+    // 同时不再从可视区域重新编号，避免移动或调格宽后 5/10 线看起来跳回去。
+    const firstX=Math.max(5,Math.ceil((area.x-originLeft)/cw));
+    const lastX=Math.floor((xEnd-originLeft)/cw);
+    const firstY=Math.max(5,Math.ceil((area.y-originTop)/ch));
+    const lastY=Math.floor((yEnd-originTop)/ch);
+    const startX=Math.ceil(firstX/5)*5;
+    const startY=Math.ceil(firstY/5)*5;
 
-    for(let n=startX;n<=endX;n++){
-      if(n===0)continue;
+    for(let n=startX;n<=lastX;n+=5){
       const x=originLeft+n*cw;
       if(x<area.x-.01||x>xEnd+.01)continue;
-      const type=n%10===0?"ten":(n%5===0?"five":null);
-      if(type)lines.push({dir:"v",pos:x,type,k:Math.abs(n)});
+      const type=n%10===0?"ten":"five";
+      lines.push({dir:"v",pos:x,type,k:n});
     }
-    for(let n=startY;n<=endY;n++){
-      if(n===0)continue;
+    for(let n=startY;n<=lastY;n+=5){
       const y=originTop+n*ch;
       if(y<area.y-.01||y>yEnd+.01)continue;
-      const type=n%10===0?"ten":(n%5===0?"five":null);
-      if(type)lines.push({dir:"h",pos:y,type,k:Math.abs(n)});
+      const type=n%10===0?"ten":"five";
+      lines.push({dir:"h",pos:y,type,k:n});
     }
     return {lines,left:originLeft,top:originTop,cw,ch};
   }
@@ -2403,7 +2412,7 @@ function HelperToolPage({T,onBack}){
                 </>
               ):(
                 <>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>先把整体网格位置挪准，再按需要调整颜色和清晰度。上下左右支持长按连续移动。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>第三步会先按第二步 5×5 校准出的单格尺寸，从校准框左上角开始延伸；如果位置还差一点，再用下面的移动按钮微调。上下左右支持长按连续移动。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12,alignItems:"center"}}>
                     <div/>
                     <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,-gridMoveStep))}>↑</button>
@@ -2415,7 +2424,7 @@ function HelperToolPage({T,onBack}){
                     <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,gridMoveStep))}>↓</button>
                     <div/>
                   </div>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>也可以直接填数值：X/Y 控制网格位置，格宽/格高控制单格大小。数值单位都是百分比。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>也可以直接填数值：X/Y 是校准框左上角，也就是第 0 格边界；格宽/格高是第二步校准出来的单格大小。数值单位都是百分比。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12}}>
                     <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>X
                       <input type="number" step="0.1" value={Number(currentGrid.x.toFixed(2))} onChange={e=>setGridNumber("x",e.target.value)} style={numberInput}/>
