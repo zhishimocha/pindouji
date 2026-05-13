@@ -2260,6 +2260,23 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   // 图纸助手页
   if(view==="guide")return <GuideAssistant T={T} onBack={()=>setView("home")}/> ;
 
+  // 辅助工具页（先放入口占位，后面接网格功能）
+  if(view==="helper")return(
+    <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg}}>
+      <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${T.border}`,background:T.card}}>
+        <button onClick={()=>setView("home")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer",lineHeight:1}}>←</button>
+        <div style={{fontSize:15,fontWeight:900,color:T.text}}>辅助工具</div>
+      </div>
+      <div style={{padding:"20px 16px"}}>
+        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"24px 18px",boxShadow:T.cardShadow,textAlign:"center"}}>
+          <div style={{width:54,height:54,borderRadius:18,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 14px"}}>📏</div>
+          <div style={{fontSize:16,fontWeight:900,color:T.text,marginBottom:8}}>辅助工具</div>
+          <div style={{fontSize:12,color:T.textMid,lineHeight:1.8}}>入口已经放好啦，下一步再接“上传图纸、校准小格、生成网格”的功能。</div>
+        </div>
+      </div>
+    </div>
+  );
+
   // 日记页
   if(view==="diary")return(
     <div style={{fontFamily:"'Nunito',sans-serif"}}>
@@ -2441,22 +2458,22 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       </div>
 
       {/* 工具入口 */}
-      <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:9}}>
         <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
-          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
-          <div style={{width:40,height:40,borderRadius:12,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🧰</div>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontSize:13,fontWeight:900,color:T.text}}>工具箱</div>{!isPro&&<span style={{fontSize:9,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 6px",fontWeight:900}}>Pro</span>}</div>
-            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>豆板豆针豆铲</div>
-          </div>
+          style={{background:T.card,borderRadius:20,padding:"12px 6px",minHeight:88,boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box"}}>
+          {!isPro&&<span style={{position:"absolute",top:7,right:7,fontSize:8,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 5px",fontWeight:900,lineHeight:1.2}}>Pro</span>}
+          <div style={{width:40,height:40,borderRadius:14,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>🧰</div>
+          <div style={{fontSize:13,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap"}}>工具箱</div>
         </div>
         <div className="cc" onClick={()=>setView("missing")}
-          style={{background:T.card,borderRadius:20,padding:"16px 14px",boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",gap:12,alignItems:"center"}}>
-          <div style={{width:40,height:40,borderRadius:12,background:"linear-gradient(135deg,#e8f4ff,#c8e6ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔍</div>
-          <div>
-            <div style={{fontSize:13,fontWeight:900,color:T.text}}>缺色替换</div>
-            <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.4}}>图纸识别·找替代色</div>
-          </div>
+          style={{background:T.card,borderRadius:20,padding:"12px 6px",minHeight:88,boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8,alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
+          <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#e8f4ff,#c8e6ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>🔍</div>
+          <div style={{fontSize:13,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap"}}>缺色替换</div>
+        </div>
+        <div className="cc" onClick={()=>setView("helper")}
+          style={{background:T.card,borderRadius:20,padding:"12px 6px",minHeight:88,boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8,alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
+          <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#fff3d9,#dff4ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>📏</div>
+          <div style={{fontSize:13,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap"}}>辅助工具</div>
         </div>
       </div>
 
