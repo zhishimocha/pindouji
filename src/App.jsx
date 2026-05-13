@@ -2089,7 +2089,9 @@ function HelperToolPage({T,onBack}){
     else updateCell({x:cell.x+dx,y:cell.y+dy,w:cell.w+dw,h:cell.h+dh});
   }
   function nudgeGrid(dxCells,dyCells){
-    updateCell({x:cell.x+cell.w*dxCells,y:cell.y+cell.h*dyCells});
+    // 不能按“一整格”移动：整格移动后网格视觉上会落在同一组线位，看起来像没动。
+    // 这里按 1/5 格微调，第三步的上下左右才会明显推进网格位置。
+    updateCell({x:cell.x+(cell.w/5)*dxCells,y:cell.y+(cell.h/5)*dyCells});
   }
   function zoomBy(delta){
     setZoom(z=>clamp(Number((z+delta).toFixed(2)),1,5));
