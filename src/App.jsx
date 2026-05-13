@@ -324,52 +324,51 @@ const G=`
 .cc:active{transform:scale(0.93)!important;opacity:0.8;}
 
 /* ═══ 毛绒卡片 ═══ */
-.fur-card{position:relative!important;isolation:isolate;overflow:visible!important;background-clip:padding-box!important;}
+.fur-card{position:relative!important;isolation:isolate;overflow:hidden!important;background-clip:padding-box!important;}
 .fur-card>*{position:relative;z-index:2;}
 .fur-card::before{
-  content:"";position:absolute;inset:-16px;border-radius:inherit;z-index:0;pointer-events:none;
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;
   background:
-    repeating-linear-gradient(8deg,rgba(255,182,203,.55) 0 1.2px,transparent 1.2px 5px),
-    repeating-linear-gradient(172deg,rgba(255,218,230,.45) 0 1px,transparent 1px 5px),
-    repeating-linear-gradient(90deg,rgba(255,200,218,.30) 0 1px,transparent 1px 7px);
-  filter:blur(1px);opacity:.90;transform:scale(1.018);}
+    repeating-linear-gradient(8deg,rgba(255,182,203,.22) 0 1.2px,transparent 1.2px 5px),
+    repeating-linear-gradient(172deg,rgba(255,218,230,.18) 0 1px,transparent 1px 6px);
+  filter:blur(.8px);opacity:.85;}
 .fur-card::after{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;
   background:
-    radial-gradient(ellipse at 20% 18%,rgba(255,255,255,.88),transparent 34%),
-    radial-gradient(ellipse at 78% 80%,rgba(255,210,228,.50),transparent 44%);
+    radial-gradient(ellipse at 20% 18%,rgba(255,255,255,.80),transparent 38%),
+    radial-gradient(ellipse at 78% 80%,rgba(255,210,228,.40),transparent 48%);
   box-shadow:
-    inset 0 3px 0 rgba(255,255,255,.88),
-    inset 0 -18px 26px rgba(255,255,255,.48),
+    inset 0 3px 0 rgba(255,255,255,.85),
+    inset 0 -16px 24px rgba(255,255,255,.45),
     0 14px 28px rgba(210,130,160,.13);
-  opacity:.94;mix-blend-mode:soft-light;}
+  opacity:.92;mix-blend-mode:soft-light;}
 
 /* ═══ 毛绒标签/按钮 ═══ */
-.fur-chip{position:relative!important;isolation:isolate;overflow:visible!important;}
+.fur-chip{position:relative!important;isolation:isolate;overflow:hidden!important;}
 .fur-chip>*{position:relative;z-index:2;}
 .fur-chip::before{
-  content:"";position:absolute;inset:-9px;border-radius:inherit;z-index:0;pointer-events:none;
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;
   background:
-    repeating-linear-gradient(10deg,rgba(255,192,210,.65) 0 1px,transparent 1px 4px),
-    repeating-linear-gradient(170deg,rgba(255,230,240,.55) 0 1px,transparent 1px 4px);
-  filter:blur(.6px);opacity:.85;}
+    repeating-linear-gradient(10deg,rgba(255,192,210,.28) 0 1px,transparent 1px 4px),
+    repeating-linear-gradient(170deg,rgba(255,230,240,.22) 0 1px,transparent 1px 4px);
+  filter:blur(.5px);opacity:.80;}
 .fur-chip::after{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:1;pointer-events:none;
-  background:radial-gradient(ellipse at 22% 24%,rgba(255,255,255,.70),transparent 40%);
-  opacity:.90;mix-blend-mode:soft-light;}
+  background:radial-gradient(ellipse at 22% 24%,rgba(255,255,255,.65),transparent 44%);
+  opacity:.88;mix-blend-mode:soft-light;}
 
 /* ═══ 毛绒图标框 ═══ */
-.fur-icon{position:relative!important;isolation:isolate;overflow:visible!important;}
+.fur-icon{position:relative!important;isolation:isolate;overflow:hidden!important;}
 .fur-icon::before{
-  content:"";position:absolute;inset:-10px;border-radius:inherit;z-index:-1;pointer-events:none;
+  content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;
   background:
-    repeating-linear-gradient(12deg,rgba(255,186,208,.70) 0 1px,transparent 1px 4px),
-    repeating-linear-gradient(168deg,rgba(255,232,242,.60) 0 1px,transparent 1px 5px);
-  filter:blur(.7px);opacity:.88;}
+    repeating-linear-gradient(12deg,rgba(255,186,208,.28) 0 1px,transparent 1px 4px),
+    repeating-linear-gradient(168deg,rgba(255,232,242,.22) 0 1px,transparent 1px 5px);
+  filter:blur(.6px);opacity:.85;}
 .fur-icon::after{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse at 24% 20%,rgba(255,255,255,.88),transparent 42%);
-  opacity:.90;mix-blend-mode:soft-light;}
+  background:radial-gradient(ellipse at 24% 20%,rgba(255,255,255,.82),transparent 44%);
+  opacity:.88;mix-blend-mode:soft-light;}
 .fur-icon>*{position:relative;z-index:2;}
 
 /* ═══ 主要按钮布艺光泽 ═══ */
@@ -377,9 +376,8 @@ const G=`
 .fur-btn::before{
   content:"";position:absolute;inset:0;border-radius:inherit;z-index:0;pointer-events:none;
   background:
-    repeating-linear-gradient(76deg,rgba(255,255,255,.18) 0 1px,transparent 1px 3px),
-    repeating-linear-gradient(166deg,rgba(255,255,255,.11) 0 1px,transparent 1px 4px),
-    radial-gradient(ellipse at 22% 30%,rgba(255,255,255,.42),transparent 52%);
+    repeating-linear-gradient(76deg,rgba(255,255,255,.16) 0 1px,transparent 1px 3px),
+    radial-gradient(ellipse at 22% 30%,rgba(255,255,255,.38),transparent 55%);
   opacity:1;}
 .fur-btn>*{position:relative;z-index:1;}
 .fur-btn:active{transform:scale(0.96)!important;filter:brightness(0.97);}
@@ -389,9 +387,9 @@ const G=`
 .fur-nav::before{
   content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
   background:
-    repeating-linear-gradient(8deg,rgba(255,190,210,.18) 0 1px,transparent 1px 6px),
-    repeating-linear-gradient(172deg,rgba(255,225,235,.14) 0 1px,transparent 1px 6px);
-  filter:blur(.4px);opacity:.85;}
+    repeating-linear-gradient(8deg,rgba(255,190,210,.12) 0 1px,transparent 1px 6px),
+    repeating-linear-gradient(172deg,rgba(255,225,235,.10) 0 1px,transparent 1px 6px);
+  filter:blur(.3px);opacity:.80;}
 .fur-nav>*{position:relative;z-index:1;}
 
 .btn{transition:all 0.18s;}
