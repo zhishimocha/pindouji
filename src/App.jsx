@@ -3414,7 +3414,7 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,in
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",padding:"0 0 20px"}}>
       {/* 头部 */}
-      <div style={{background:T.headerBg,padding:"16px 20px 14px",display:"flex",flexDirection:"column",alignItems:"center"}}>
+      <div style={{background:tn==="fluffy"?T.card:T.headerBg,padding:"16px 20px 14px",display:"flex",flexDirection:"column",alignItems:"center",borderBottom:`1.5px solid ${T.border}`}}>
         {/* 头像 */}
         <div onClick={()=>avatarRef.current?.click()} style={{position:"relative",marginBottom:12,cursor:"pointer"}}>
           <div style={{width:76,height:76,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,overflow:"hidden",boxShadow:`0 4px 16px ${T.accent}44`}}>
