@@ -1,4 +1,4 @@
-// VERSION: helper-grid-five-block-from-step2-bidirectional-precision-2026-05-13
+// VERSION: helper-grid-five-ten-block-size-mode-2026-05-13
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -2038,7 +2038,7 @@ function HelperToolPage({T,onBack}){
 
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const activeColor=lineColor==="custom"?customColor:lineColor;
-  const strengthMap={soft:{five:.42,ten:.72},normal:{five:.58,ten:.9},strong:{five:.74,ten:1}};
+  const strengthMap={soft:{minor:.16,five:.42,ten:.72},normal:{minor:.22,five:.58,ten:.9},strong:{minor:.30,five:.74,ten:1}};
   const alpha=strengthMap[strength]||strengthMap.normal;
   const pct=(n)=>`${n}%`;
   const fmt2=(n)=>{
@@ -2232,30 +2232,35 @@ function HelperToolPage({T,onBack}){
       const originLeft=base.x;
       const originTop=base.y;
 
-      // 第三步只继承第二步算出来的 5×5 校准框位置；
-      // 这里调的是“这一整组 5 格”的宽高，不再调 X/Y。
-      // 网格要从这个 5×5 框向左右、上下双向延伸，否则校准框左边会永远调不到。
-      // 第 0 条边界不画，所以不会出现外面的 L 型额外边。
+      // 第三步的输入值表示“一整组 5 格”的宽高，不再拆成 5 条小格线。
+      // 也就是说：5格宽 / 5格高 控制的是 5 虚线之间的距离；
+      // 两组 5 格就是 10 实线，三组就是 15 虚线，以此带动整张图缩放。
+      // 第 0 条原点边界跳过，所以不会出现外面的 L 型额外边线。
       const firstBlockX=Math.ceil((area.x-originLeft)/blockW);
       const lastBlockX=Math.floor((xEnd-originLeft)/blockW);
       const firstBlockY=Math.ceil((area.y-originTop)/blockH);
       const lastBlockY=Math.floor((yEnd-originTop)/blockH);
 
-      for(let b=firstBlockX;b<=lastBlockX;b++){
-        if(b===0)continue;
-        const x=originLeft+b*blockW;
+      for(let n=firstBlockX;n<=lastBlockX;n++){
+        if(n===0)continue;
+        const x=originLeft+n*blockW;
         if(x<area.x-.01||x>xEnd+.01)continue;
-        const n=Math.abs(b);
-        lines.push({dir:"v",pos:x,type:n%2===0?"ten":"five",k:n*5});
+        const abs=Math.abs(n);
+        lines.push({dir:"v",pos:x,type:abs%2===0?"ten":"five",k:0,raw:n});
       }
-      for(let b=firstBlockY;b<=lastBlockY;b++){
-        if(b===0)continue;
-        const y=originTop+b*blockH;
+      for(let n=firstBlockY;n<=lastBlockY;n++){
+        if(n===0)continue;
+        const y=originTop+n*blockH;
         if(y<area.y-.01||y>yEnd+.01)continue;
-        const n=Math.abs(b);
-        lines.push({dir:"h",pos:y,type:n%2===0?"ten":"five",k:n*5});
+        const abs=Math.abs(n);
+        lines.push({dir:"h",pos:y,type:abs%2===0?"ten":"five",k:0,raw:n});
       }
-      return {lines,left:originLeft,top:originTop,cw:blockW/5,ch:blockH/5};
+
+      const vMajors=lines.filter(l=>l.dir==="v").sort((a,b)=>a.pos-b.pos);
+      const hMajors=lines.filter(l=>l.dir==="h").sort((a,b)=>a.pos-b.pos);
+      vMajors.forEach((l,i)=>{l.k=(i+1)*5; l.type=l.k%10===0?"ten":"five";});
+      hMajors.forEach((l,i)=>{l.k=(i+1)*5; l.type=l.k%10===0?"ten":"five";});
+      return {lines,left:originLeft,top:originTop,cw:blockW,ch:blockH};
     }
 
     const originLeft=cell.x;
@@ -2297,8 +2302,8 @@ function HelperToolPage({T,onBack}){
       function drawLine(x1,y1,x2,y2,type){
         ctx.beginPath();
         ctx.setLineDash(type==="five"?[8,6]:[]);
-        ctx.strokeStyle=hexToRgba(activeColor,alpha[type]);
-        ctx.lineWidth=type==="ten"?Math.max(2.2,canvas.width/420):Math.max(1.4,canvas.width/700);
+        ctx.strokeStyle=hexToRgba(activeColor,alpha[type] ?? .22);
+        ctx.lineWidth=type==="ten"?Math.max(2.2,canvas.width/420):type==="five"?Math.max(1.4,canvas.width/700):Math.max(.7,canvas.width/1300);
         ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
       }
       grid.lines.forEach(l=>{
@@ -2395,12 +2400,12 @@ function HelperToolPage({T,onBack}){
                     <g clipPath="url(#helperGridClip)">
                       {grid.lines.map((l,i)=>{
                         const stroke=hexToRgba(activeColor,alpha[l.type]);
-                        const sw=l.type==="ten"?2.2:1.6;
+                        const sw=l.type==="ten"?2.2:l.type==="five"?1.6:.75;
                         const dash=l.type==="five"?"7 5":"";
                         if(l.dir==="v")return <line key={i} x1={pct(l.pos)} y1={pct(area.y)} x2={pct(l.pos)} y2={pct(area.y+area.h)} stroke={stroke} strokeWidth={sw} strokeDasharray={dash}/>;
                         return <line key={i} x1={pct(area.x)} y1={pct(l.pos)} x2={pct(area.x+area.w)} y2={pct(l.pos)} stroke={stroke} strokeWidth={sw} strokeDasharray={dash}/>;
                       })}
-                      {showNumbers&&grid.lines.filter(l=>l.k>0&&l.k%5===0).map((l,i)=> l.dir==="v"?
+                      {showNumbers&&grid.lines.filter(l=>l.type!=="minor"&&l.k>0&&l.k%5===0).map((l,i)=> l.dir==="v"?
                         <text key={'vx'+i} x={pct(l.pos)} y={pct(area.y+1.8)} textAnchor="middle" fontSize="10" fontWeight="900" fill={hexToRgba(activeColor,.95)}>{l.k}</text>:
                         <text key={'hy'+i} x={pct(area.x+1)} y={pct(l.pos)} dominantBaseline="middle" fontSize="10" fontWeight="900" fill={hexToRgba(activeColor,.95)}>{l.k}</text>
                       )}
@@ -2445,7 +2450,7 @@ function HelperToolPage({T,onBack}){
                 </>
               ):(
                 <>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>第三步只接第二步校准出来的 5×5 结果：第二步调成多少，这里初始就显示多少；这里再调 5格宽 / 5格高，10格、15格和整张图会一起按比例延伸。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>第三步只接第二步校准出来的 5×5 结果：这里调的是整组 5 格的总宽/总高；5 虚线、10 实线都会跟着这组 5 格的尺寸一起缩放延伸。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
                     <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>5格宽
                       <input type="number" step="0.01" value={fmt2(currentGrid.w)} onChange={e=>setGridNumber("w",e.target.value)} style={numberInput}/>
@@ -2454,7 +2459,7 @@ function HelperToolPage({T,onBack}){
                       <input type="number" step="0.01" value={fmt2(currentGrid.h)} onChange={e=>setGridNumber("h",e.target.value)} style={numberInput}/>
                     </label>
                   </div>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>也可以用按钮调，宽和高支持长按连续增加/减少；数值最多显示到小数点后两位。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>也可以用按钮调，宽和高支持长按连续增加/减少；这里不会再画每个小格，只保留 5 虚线 / 10 实线。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
                     <button style={smallBtn} {...repeatProps(()=>resizeGrid(-gridSizeStep,0))}>5格宽 -</button>
                     <button style={smallBtn} {...repeatProps(()=>resizeGrid(gridSizeStep,0))}>5格宽 +</button>
