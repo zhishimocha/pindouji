@@ -917,8 +917,24 @@ export default function App(){
 
         if(!taskErr && Array.isArray(taskRows) && taskRows.length>0){
           const cloudTasks=taskRows.map(taskFromRow).filter(t=>!t.deletedAt);
-          setTasks(cloudTasks);
-          try{localStorage.setItem('pindou_tasks',JSON.stringify(cloudTasks));}catch{}
+
+          // 重要：云端有记录时，不要直接把本地覆盖掉。
+          // 新建作品的封面如果还没来得及同步到云端，或旧云端记录没有 img，
+          // 这里用本地缓存里的 img 补回来，避免刷新后又变成“要重新加封面”。
+          const localById=new Map(localTasks.filter(t=>t&&!t.deletedAt).map(t=>[String(t.id),t]));
+          const cloudIds=new Set(cloudTasks.map(t=>String(t.id)));
+          const mergedCloudTasks=cloudTasks.map(t=>{
+            const local=localById.get(String(t.id));
+            return (!t.img&&local?.img)?{...t,img:local.img}:t;
+          });
+          const localOnlyTasks=localTasks.filter(t=>t&&!t.deletedAt&&!cloudIds.has(String(t.id)));
+          const mergedTasks=[...mergedCloudTasks,...localOnlyTasks];
+
+          setTasks(mergedTasks);
+          try{localStorage.setItem('pindou_tasks',JSON.stringify(mergedTasks));}catch{}
+          if(localOnlyTasks.length>0 || mergedTasks.some(t=>t.img && !cloudTasks.find(c=>String(c.id)===String(t.id))?.img)){
+            await migrateTasksToCloudTable(mergedTasks,"merge_local_covers");
+          }
         }else{
           // 兜底兼容旧版 profiles.tasks：只作为迁移来源，不再作为长期主同步表
           const {data}=await supabase.from("profiles").select("tasks").eq("user_id",user.id).single();
@@ -1969,6 +1985,35 @@ function MissingColorPage({T,stock,onBack}){
 
 
 // ══════════════════════════════════
+//  作品封面压缩：避免 base64 太大导致 localStorage / Supabase 同步失败
+// ══════════════════════════════════
+function compressImageFileToDataUrl(file,{max=300,quality=0.7}={}){
+  return new Promise((resolve,reject)=>{
+    if(!file){resolve(null);return;}
+    const reader=new FileReader();
+    reader.onerror=()=>reject(reader.error||new Error("图片读取失败"));
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error("图片加载失败"));
+      img.onload=()=>{
+        try{
+          let w=img.width,h=img.height;
+          if(w>h){if(w>max){h=Math.round(h*max/w);w=max;}}
+          else{if(h>max){w=Math.round(w*max/h);h=max;}}
+          const canvas=document.createElement('canvas');
+          canvas.width=w;canvas.height=h;
+          const ctx=canvas.getContext('2d');
+          ctx.drawImage(img,0,0,w,h);
+          resolve(canvas.toDataURL('image/jpeg',quality));
+        }catch(err){reject(err);}
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ══════════════════════════════════
 //  FocusMode（专注模式全屏）
 // ══════════════════════════════════
 function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,onRestoreStock,onLogStockDeduction,onCloudDeleteTask,tasks,setTasks,tasksLoaded,onPushHistory}){
@@ -2054,10 +2099,19 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     closeAddModal();
   }
 
-  function handleNewImg(e){
+  async function handleNewImg(e){
     const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();r.onload=ev=>setNewImg(ev.target.result);r.readAsDataURL(f);
-    e.target.value="";
+    try{
+      const compressed=await compressImageFileToDataUrl(f,{max:300,quality:0.7});
+      setNewImg(compressed);
+    }catch(err){
+      console.warn("new task cover compress failed:",err);
+      const r=new FileReader();
+      r.onload=ev=>setNewImg(ev.target.result);
+      r.readAsDataURL(f);
+    }finally{
+      e.target.value="";
+    }
   }
 
   function requestDeleteTask(id){
