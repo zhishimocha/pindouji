@@ -1,4 +1,4 @@
-// VERSION: fluffy-theme-default-skin-toolbox-bg-2026-05-13
+// VERSION: fluffy-fur-long-hair-css-2026-05-14
 // VERSION: helper-grid-p2-five-ten-block-mode-2026-05-13
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -321,6 +321,14 @@ const G=`
 @keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .cc{transition:transform 0.15s,box-shadow 0.15s,border 0.15s,opacity 0.15s;}
 .cc:active{transform:scale(0.93)!important;opacity:0.8;}
+
+.fur-card{position:relative!important;isolation:isolate;overflow:visible!important;}
+.fur-card::before{content:"";position:absolute;inset:-10px;border-radius:inherit;z-index:-2;pointer-events:none;background:repeating-conic-gradient(from -8deg,rgba(255,219,229,.72) 0deg,rgba(255,219,229,.72) 1.2deg,rgba(246,232,224,.56) 1.2deg,rgba(246,232,224,.56) 2.4deg,transparent 2.4deg,transparent 5.8deg);filter:blur(.45px);opacity:.88;transform:scale(1.012);}
+.fur-card::after{content:"";position:absolute;inset:-4px;border-radius:inherit;z-index:-1;pointer-events:none;background:radial-gradient(circle at 20% 18%,rgba(255,255,255,.95),transparent 26%),linear-gradient(145deg,rgba(255,250,252,.96),rgba(255,233,240,.72) 55%,rgba(240,249,255,.66));box-shadow:inset 0 2px 0 rgba(255,255,255,.96),inset 0 -14px 22px rgba(255,255,255,.52),0 10px 24px rgba(214,143,166,.13);opacity:.96;}
+.fur-chip{position:relative!important;isolation:isolate;overflow:visible!important;}
+.fur-chip::before{content:"";position:absolute;inset:-6px;border-radius:inherit;z-index:-1;pointer-events:none;background:repeating-conic-gradient(from 12deg,rgba(255,224,233,.72) 0deg,rgba(255,224,233,.72) 1.5deg,transparent 1.5deg,transparent 5deg);filter:blur(.35px);opacity:.75;}
+.fur-icon{position:relative!important;isolation:isolate;overflow:visible!important;}
+.fur-icon::before{content:"";position:absolute;inset:-7px;border-radius:inherit;z-index:-1;pointer-events:none;background:repeating-conic-gradient(from 5deg,rgba(255,227,235,.72) 0deg,rgba(255,227,235,.72) 1.4deg,rgba(238,247,255,.54) 1.4deg,rgba(238,247,255,.54) 2.8deg,transparent 2.8deg,transparent 6deg);filter:blur(.5px);opacity:.72;}
 .btn{transition:all 0.18s;}
 .btn:active{transform:scale(0.95);}
 `;
@@ -2535,7 +2543,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       missing:{bg:"linear-gradient(145deg,#fffdfb 0%,#fff6f8 52%,#f3fbff 100%)",border:"1px solid #efd9e8",shadow:"0 16px 34px rgba(194,154,199,.15), inset 0 2px 0 rgba(255,255,255,.96), inset 0 -16px 22px rgba(255,255,255,.46)"},
       helper:{bg:"linear-gradient(145deg,#fffdfa 0%,#fff4f8 48%,#effbff 100%)",border:"1px solid #dfe8f5",shadow:"0 16px 34px rgba(163,184,214,.15), inset 0 2px 0 rgba(255,255,255,.96), inset 0 -16px 22px rgba(255,255,255,.46)"},
     };
-    return {background:maps[variant].bg,borderRadius:28,padding:"13px 6px 11px",minHeight:92,boxShadow:maps[variant].shadow,cursor:"pointer",border:maps[variant].border,display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"};
+    return {background:maps[variant].bg,borderRadius:28,padding:"13px 6px 11px",minHeight:92,boxShadow:maps[variant].shadow,cursor:"pointer",border:maps[variant].border,display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"visible",isolation:"isolate"};
   };
   const plushToolGlowStyle=(variant)=>{
     if(!isFluffyUi) return null;
@@ -2978,23 +2986,23 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
       {/* 工具入口 */}
       <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10}}>
-        <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
+        <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
           style={isFluffyUi?plushToolCardStyle("toolbox"):{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(239,248,255,.72))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(75,155,215,.15), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(178,221,255,.88)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
           <div style={isFluffyUi?plushToolGlowStyle("toolbox"):{position:"absolute",inset:"-28px -18px auto auto",width:76,height:76,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,214,143,.42),rgba(122,203,255,.08) 62%,transparent 72%)",filter:"blur(2px)"}}/>
           {!isPro&&<span style={{position:"absolute",top:7,right:7,fontSize:8,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 5px",fontWeight:900,lineHeight:1.2,zIndex:2}}>Pro</span>}
-          <div style={isFluffyUi?plushToolIconStyle("toolbox"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.96),rgba(232,247,255,.72) 48%,rgba(255,242,207,.5))",boxShadow:"0 12px 28px rgba(74,158,255,.18), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🧰</div>
+          <div className={isFluffyUi?"fur-icon":""} style={isFluffyUi?plushToolIconStyle("toolbox"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.96),rgba(232,247,255,.72) 48%,rgba(255,242,207,.5))",boxShadow:"0 12px 28px rgba(74,158,255,.18), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🧰</div>
           <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>工具箱</div>
         </div>
-        <div className="cc" onClick={()=>setView("missing")}
+        <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("missing")}
           style={isFluffyUi?plushToolCardStyle("missing"):{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(244,240,255,.74))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(139,115,216,.13), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(205,193,255,.8)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
           <div style={isFluffyUi?plushToolGlowStyle("missing"):{position:"absolute",inset:"-30px auto auto -16px",width:82,height:82,borderRadius:"50%",background:"radial-gradient(circle,rgba(186,213,255,.38),rgba(255,220,238,.12) 62%,transparent 72%)",filter:"blur(2px)"}}/>
-          <div style={isFluffyUi?plushToolIconStyle("missing"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(235,244,255,.72) 48%,rgba(232,220,255,.5))",boxShadow:"0 12px 28px rgba(154,123,220,.16), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🔍</div>
+          <div className={isFluffyUi?"fur-icon":""} style={isFluffyUi?plushToolIconStyle("missing"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(235,244,255,.72) 48%,rgba(232,220,255,.5))",boxShadow:"0 12px 28px rgba(154,123,220,.16), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🔍</div>
           <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>缺色替换</div>
         </div>
-        <div className="cc" onClick={()=>setView("helper")}
+        <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("helper")}
           style={isFluffyUi?plushToolCardStyle("helper"):{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(238,249,255,.72))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(74,158,255,.14), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(178,221,255,.88)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
           <div style={isFluffyUi?plushToolGlowStyle("helper"):{position:"absolute",inset:"auto -22px -30px auto",width:86,height:86,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,232,173,.36),rgba(126,210,255,.12) 62%,transparent 72%)",filter:"blur(2px)"}}/>
-          <div style={isFluffyUi?plushToolIconStyle("helper"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(232,247,255,.72) 48%,rgba(255,243,217,.5))",boxShadow:"0 12px 28px rgba(74,158,255,.17), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>📏</div>
+          <div className={isFluffyUi?"fur-icon":""} style={isFluffyUi?plushToolIconStyle("helper"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(232,247,255,.72) 48%,rgba(255,243,217,.5))",boxShadow:"0 12px 28px rgba(74,158,255,.17), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>📏</div>
           <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>辅助工具</div>
         </div>
       </div>
@@ -3375,7 +3383,7 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,in
 
       <div style={{padding:"8px 16px 0"}}>
         {/* 邀请好友 */}
-        <div style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12}}>
+        <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
           <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🎁 邀请好友</div>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
             <div style={{flex:1,background:T.accentSoft,borderRadius:12,padding:"10px 14px",fontSize:16,fontWeight:900,color:T.accent,letterSpacing:2,textAlign:"center"}}>{inviteInfo.code||"加载中…"}</div>
@@ -3395,7 +3403,7 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,in
         </div>
 
         {/* 皮肤设置 */}
-        <div style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12}}>
+        <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
           <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🎨 皮肤设置</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {THEME_ORDER.map(key=>{
@@ -3403,9 +3411,9 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,in
               const active=tn===key;
               const isDefault=defaultTheme===key;
               return (
-                <div key={key} className="cc" onClick={()=>chooseTheme(key)}
+                <div key={key} className={key==="fluffy"?"cc fur-chip":"cc"} onClick={()=>chooseTheme(key)}
                   style={fluffyPreviewRow(key,active)}>
-                  <div style={fluffyPreviewIcon(key)}>{theme.icon}</div>
+                  <div className={key==="fluffy"?"fur-icon":""} style={fluffyPreviewIcon(key)}>{theme.icon}</div>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13,fontWeight:900,color:T.text}}>{theme.name}</div>
                     <div style={{fontSize:10,color:T.textMid,marginTop:2}}>{key==="fluffy"?"毛绒玩具感小框框，粉蓝奶油配色":"点击立即切换"}</div>
@@ -3422,7 +3430,7 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,in
         </div>
 
         {/* 数据管理 */}
-        <div style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12}}>
+        <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
           <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>📦 数据管理</div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <div className="cc" onClick={onExport} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:14,background:T.accentSoft,cursor:"pointer"}}>
