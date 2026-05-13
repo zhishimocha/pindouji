@@ -2030,6 +2030,7 @@ function HelperToolPage({T,onBack}){
   const [showNumbers,setShowNumbers]=useState(true);
   const [msg,setMsg]=useState("");
   const dragRef=useRef(null);
+  const repeatRef=useRef({delay:null,timer:null});
   const viewportRef=useRef(null);
   const imageLayerRef=useRef(null);
 
@@ -2079,8 +2080,14 @@ function HelperToolPage({T,onBack}){
       const merged={...prev,...next};
       merged.w=clamp(merged.w,.25,20);
       merged.h=clamp(merged.h,.25,20);
-      merged.x=clamp(merged.x,0,100-merged.w);
-      merged.y=clamp(merged.y,0,100-merged.h);
+      // cell.x / cell.y 是 5×5 校准框中间那一格的左上角。
+      // 所以限制时要按整个 5×5 框限制，避免拖到顶部/边缘时被浏览器反复夹回去。
+      const minX=calibrationOffset*merged.w;
+      const minY=calibrationOffset*merged.h;
+      const maxX=100-(calibrationOffset+1)*merged.w;
+      const maxY=100-(calibrationOffset+1)*merged.h;
+      merged.x=clamp(merged.x,minX,Math.max(minX,maxX));
+      merged.y=clamp(merged.y,minY,Math.max(minY,maxY));
       return merged;
     });
   }
@@ -2096,6 +2103,29 @@ function HelperToolPage({T,onBack}){
   function zoomBy(delta){
     setZoom(z=>clamp(Number((z+delta).toFixed(2)),1,5));
   }
+
+  function stopRepeat(){
+    if(repeatRef.current.delay)clearTimeout(repeatRef.current.delay);
+    if(repeatRef.current.timer)clearInterval(repeatRef.current.timer);
+    repeatRef.current={delay:null,timer:null};
+  }
+  function repeatProps(action){
+    return {
+      onPointerDown:(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        stopRepeat();
+        action();
+        repeatRef.current.delay=setTimeout(()=>{
+          repeatRef.current.timer=setInterval(action,70);
+        },280);
+      },
+      onPointerUp:stopRepeat,
+      onPointerCancel:stopRepeat,
+      onPointerLeave:stopRepeat
+    };
+  }
+  useEffect(()=>()=>stopRepeat(),[]);
 
   function pointerToPct(e){
     const rect=imageLayerRef.current?.getBoundingClientRect();
@@ -2125,19 +2155,26 @@ function HelperToolPage({T,onBack}){
   function buildLines(){
     const lines=[];
     const cw=Math.max(cell.w,.1),ch=Math.max(cell.h,.1);
-    let left=cell.x;
-    while(left>area.x)left-=cw;
-    let top=cell.y;
-    while(top>area.y)top-=ch;
+    let rawLeft=cell.x;
+    while(rawLeft>area.x)rawLeft-=cw;
+    let rawTop=cell.y;
+    while(rawTop>area.y)rawTop-=ch;
     const xEnd=area.x+area.w,yEnd=area.y+area.h;
+
+    // 关键：坐标数字从“当前框内第一条可见网格线”开始重新计数。
+    // 旧版如果第 0 条线被裁在范围外，第一条可见线其实是第 1 条，
+    // 于是 10 号线到第一条可见线之间只剩 9 个小格，看起来就像“大格少一格”。
+    let left=rawLeft;
+    while(left<area.x-.01)left+=cw;
+    let top=rawTop;
+    while(top<area.y-.01)top+=ch;
+
     for(let x=left;x<=xEnd+cw*.2;x+=cw){
-      if(x<area.x-.01)continue;
       const k=Math.round((x-left)/cw);
       const type=k%10===0?"ten":(k%5===0?"five":null);
       if(type)lines.push({dir:"v",pos:x,type,k});
     }
     for(let y=top;y<=yEnd+ch*.2;y+=ch){
-      if(y<area.y-.01)continue;
       const k=Math.round((y-top)/ch);
       const type=k%10===0?"ten":(k%5===0?"five":null);
       if(type)lines.push({dir:"h",pos:y,type,k});
@@ -2298,21 +2335,32 @@ function HelperToolPage({T,onBack}){
                 <>
                   <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>{mode==="area"?"拖动蓝框圈住要画网格的区域，外面的标题和色卡可以先不框。":"把橙色 5×5 校准格对准原图里连续的 25 个小格，中间亮起的一格就是单格尺寸。放大到 250% 左右会更好对。"}</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:8}}>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,mode==="cell"?-cellMoveStep:-areaMoveStep,0)}>←</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,mode==="cell"?-cellMoveStep:-areaMoveStep)}>↑</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,mode==="cell" ? cellMoveStep : areaMoveStep)}>↓</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,mode==="cell" ? cellMoveStep : areaMoveStep,0)}>→</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeBox(mode,mode==="cell"?-cellMoveStep:-areaMoveStep,0))}>←</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeBox(mode,0,mode==="cell"?-cellMoveStep:-areaMoveStep))}>↑</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeBox(mode,0,mode==="cell" ? cellMoveStep : areaMoveStep))}>↓</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeBox(mode,mode==="cell" ? cellMoveStep : areaMoveStep,0))}>→</button>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,mode==="cell"?-cellSizeStep:-areaSizeStep,0)}>宽 -</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,mode==="cell" ? cellSizeStep : areaSizeStep,0)}>宽 +</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,0,mode==="cell"?-cellSizeStep:-areaSizeStep)}>高 -</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,0,mode==="cell" ? cellSizeStep : areaSizeStep)}>高 +</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeBox(mode,0,0,mode==="cell"?-cellSizeStep:-areaSizeStep,0))}>宽 -</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeBox(mode,0,0,mode==="cell" ? cellSizeStep : areaSizeStep,0))}>宽 +</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeBox(mode,0,0,0,mode==="cell"?-cellSizeStep:-areaSizeStep))}>高 -</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeBox(mode,0,0,0,mode==="cell" ? cellSizeStep : areaSizeStep))}>高 +</button>
                   </div>
                 </>
               ):(
                 <>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>这里只保留 5 格虚线和 10 格实线。要是整体网格还想再挪一格，可以直接点下面的上下左右。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>先把整体网格位置挪准，再按需要调整颜色和清晰度。上下左右支持长按连续移动。</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12,alignItems:"center"}}>
+                    <div/>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,-1))}>↑</button>
+                    <div/>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(-1,0))}>←</button>
+                    <button style={{...smallBtn,background:T.accentSoft,color:T.accent}}>移动</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(1,0))}>→</button>
+                    <div/>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,1))}>↓</button>
+                    <div/>
+                  </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
                     {[["#4a9eff","蓝"],["#ffffff","白"],["#222222","黑"],["#ff5c8a","粉"],["#ffbf3f","黄"],["custom","自定义"]].map(([c,n])=>(
                       <button key={c} onClick={()=>setLineColor(c)} style={{...btn(lineColor===c),padding:"7px 10px"}}>{n}</button>
@@ -2321,17 +2369,6 @@ function HelperToolPage({T,onBack}){
                   </div>
                   <div style={{display:"flex",gap:8,marginBottom:12}}>
                     {[["soft","淡"],["normal","标准"],["strong","清晰"]].map(([v,n])=><button key={v} onClick={()=>setStrength(v)} style={{...btn(strength===v),flex:1}}>{n}</button>)}
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12,alignItems:"center"}}>
-                    <div/>
-                    <button style={smallBtn} onClick={()=>nudgeGrid(0,-1)}>↑</button>
-                    <div/>
-                    <button style={smallBtn} onClick={()=>nudgeGrid(-1,0)}>←</button>
-                    <button style={{...smallBtn,background:T.accentSoft,color:T.accent}}>移动</button>
-                    <button style={smallBtn} onClick={()=>nudgeGrid(1,0)}>→</button>
-                    <div/>
-                    <button style={smallBtn} onClick={()=>nudgeGrid(0,1)}>↓</button>
-                    <div/>
                   </div>
                   <button onClick={()=>setShowNumbers(v=>!v)} style={{...btn(showNumbers),width:"100%"}}>{showNumbers?"已显示 5/10 坐标数字":"显示坐标数字"}</button>
                 </>
