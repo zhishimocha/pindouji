@@ -1,4 +1,4 @@
-// VERSION: helper-grid-five-ten-block-size-mode-2026-05-13
+// VERSION: helper-grid-p2-five-ten-block-mode-2026-05-13
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -2229,38 +2229,39 @@ function HelperToolPage({T,onBack}){
     if(mode==="grid"){
       const base=getCurrentGrid();
       const blockW=Math.max(base.w,.1),blockH=Math.max(base.h,.1);
+      const unitW=blockW/CALIBRATION_COUNT;
+      const unitH=blockH/CALIBRATION_COUNT;
       const originLeft=base.x;
       const originTop=base.y;
 
-      // 第三步的输入值表示“一整组 5 格”的宽高，不再拆成 5 条小格线。
-      // 也就是说：5格宽 / 5格高 控制的是 5 虚线之间的距离；
-      // 两组 5 格就是 10 实线，三组就是 15 虚线，以此带动整张图缩放。
-      // 第 0 条原点边界跳过，所以不会出现外面的 L 型额外边线。
-      const firstBlockX=Math.ceil((area.x-originLeft)/blockW);
-      const lastBlockX=Math.floor((xEnd-originLeft)/blockW);
-      const firstBlockY=Math.ceil((area.y-originTop)/blockH);
-      const lastBlockY=Math.floor((yEnd-originTop)/blockH);
+      // P2 模式：第三步的数值控制“一整组 5 格”的总宽 / 总高，
+      // 但排线仍然按真实小格去算：每 5 小格一条虚线，每 10 小格一条实线。
+      // 不再画图纸范围外框，也不画第 0 条原点线，避免外侧 L 型边线。
+      const firstMajorX=Math.ceil((area.x-originLeft)/(unitW*5))*5;
+      const lastMajorX=Math.floor((xEnd-originLeft)/(unitW*5))*5;
+      const firstMajorY=Math.ceil((area.y-originTop)/(unitH*5))*5;
+      const lastMajorY=Math.floor((yEnd-originTop)/(unitH*5))*5;
 
-      for(let n=firstBlockX;n<=lastBlockX;n++){
+      for(let n=firstMajorX;n<=lastMajorX;n+=5){
         if(n===0)continue;
-        const x=originLeft+n*blockW;
+        const x=originLeft+n*unitW;
         if(x<area.x-.01||x>xEnd+.01)continue;
-        const abs=Math.abs(n);
-        lines.push({dir:"v",pos:x,type:abs%2===0?"ten":"five",k:0,raw:n});
+        lines.push({dir:"v",pos:x,type:"five",k:0,raw:n});
       }
-      for(let n=firstBlockY;n<=lastBlockY;n++){
+      for(let n=firstMajorY;n<=lastMajorY;n+=5){
         if(n===0)continue;
-        const y=originTop+n*blockH;
+        const y=originTop+n*unitH;
         if(y<area.y-.01||y>yEnd+.01)continue;
-        const abs=Math.abs(n);
-        lines.push({dir:"h",pos:y,type:abs%2===0?"ten":"five",k:0,raw:n});
+        lines.push({dir:"h",pos:y,type:"five",k:0,raw:n});
       }
 
+      // 数字和粗细按屏幕里从左到右、从上到下重新标 5、10、15……，
+      // 这样不会出现左侧/上侧倒序，也能和 P2 的阅读方式一致。
       const vMajors=lines.filter(l=>l.dir==="v").sort((a,b)=>a.pos-b.pos);
       const hMajors=lines.filter(l=>l.dir==="h").sort((a,b)=>a.pos-b.pos);
       vMajors.forEach((l,i)=>{l.k=(i+1)*5; l.type=l.k%10===0?"ten":"five";});
       hMajors.forEach((l,i)=>{l.k=(i+1)*5; l.type=l.k%10===0?"ten":"five";});
-      return {lines,left:originLeft,top:originTop,cw:blockW,ch:blockH};
+      return {lines,left:originLeft,top:originTop,cw:unitW,ch:unitH};
     }
 
     const originLeft=cell.x;
@@ -2343,7 +2344,7 @@ function HelperToolPage({T,onBack}){
   const smallBtn={border:`1px solid ${T.border}`,background:T.card,color:T.textMid,borderRadius:12,padding:"7px 9px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer",touchAction:"none",userSelect:"none",WebkitUserSelect:"none"};
   const zoomBtn={...smallBtn,padding:"7px 10px"};
   const showGrid=mode==="grid";
-  const showArea=mode==="area" || mode==="grid";
+  const showArea=mode==="area";
   const showCell=mode==="cell";
   const calibrationLeft=cell.x-(cell.w*calibrationOffset);
   const calibrationTop=cell.y-(cell.h*calibrationOffset);
@@ -2450,7 +2451,7 @@ function HelperToolPage({T,onBack}){
                 </>
               ):(
                 <>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>第三步只接第二步校准出来的 5×5 结果：这里调的是整组 5 格的总宽/总高；5 虚线、10 实线都会跟着这组 5 格的尺寸一起缩放延伸。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>第三步只接第二步校准出来的 5×5 结果：这里调的是整组 5 格的总宽/总高；画面按 P2 那样只显示 5 虚线、10 实线，并按从左到右、从上到下顺序标号。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
                     <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>5格宽
                       <input type="number" step="0.01" value={fmt2(currentGrid.w)} onChange={e=>setGridNumber("w",e.target.value)} style={numberInput}/>
