@@ -2016,6 +2016,264 @@ function compressImageFileToDataUrl(file,{max=300,quality=0.7}={}){
 // ══════════════════════════════════
 //  FocusMode（专注模式全屏）
 // ══════════════════════════════════
+
+// ══════════════ 辅助工具：图纸网格尺 ══════════════
+function HelperToolPage({T,onBack}){
+  const [imgSrc,setImgSrc]=useState("");
+  const [area,setArea]=useState({x:5,y:8,w:90,h:78});
+  const [cell,setCell]=useState({x:12,y:14,w:4,h:4});
+  const [mode,setMode]=useState("area");
+  const [lineColor,setLineColor]=useState("#4a9eff");
+  const [customColor,setCustomColor]=useState("#4a9eff");
+  const [strength,setStrength]=useState("normal");
+  const [showNumbers,setShowNumbers]=useState(true);
+  const [msg,setMsg]=useState("");
+  const dragRef=useRef(null);
+  const previewRef=useRef(null);
+
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  const activeColor=lineColor==="custom"?customColor:lineColor;
+  const strengthMap={soft:{one:.18,five:.42,ten:.78},normal:{one:.26,five:.55,ten:.9},strong:{one:.38,five:.7,ten:1}};
+  const alpha=strengthMap[strength]||strengthMap.normal;
+  const pct=(n)=>`${n}%`;
+
+  function hexToRgba(hex,a){
+    let h=String(hex||"#4a9eff").replace("#","").trim();
+    if(h.length===3)h=h.split("").map(c=>c+c).join("");
+    const n=parseInt(h,16);
+    if(Number.isNaN(n))return `rgba(74,158,255,${a})`;
+    const r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  function onPickFile(e){
+    const file=e.target.files?.[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      setImgSrc(String(reader.result||""));
+      setMsg("已载入图片，先框住图纸主体，再把小格框对准任意一颗豆子的格子。");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateArea(next){
+    setArea(prev=>{
+      const merged={...prev,...next};
+      merged.w=clamp(merged.w,8,100-merged.x);
+      merged.h=clamp(merged.h,8,100-merged.y);
+      merged.x=clamp(merged.x,0,100-merged.w);
+      merged.y=clamp(merged.y,0,100-merged.h);
+      return merged;
+    });
+  }
+  function updateCell(next){
+    setCell(prev=>{
+      const merged={...prev,...next};
+      merged.w=clamp(merged.w,.6,35);
+      merged.h=clamp(merged.h,.6,35);
+      merged.x=clamp(merged.x,0,100-merged.w);
+      merged.y=clamp(merged.y,0,100-merged.h);
+      return merged;
+    });
+  }
+  function nudgeBox(kind,dx,dy,dw=0,dh=0){
+    if(kind==="area")updateArea({x:area.x+dx,y:area.y+dy,w:area.w+dw,h:area.h+dh});
+    else updateCell({x:cell.x+dx,y:cell.y+dy,w:cell.w+dw,h:cell.h+dh});
+  }
+
+  function pointerToPct(e){
+    const rect=previewRef.current?.getBoundingClientRect();
+    if(!rect)return {x:0,y:0};
+    return {x:clamp(((e.clientX-rect.left)/rect.width)*100,0,100),y:clamp(((e.clientY-rect.top)/rect.height)*100,0,100)};
+  }
+  function startDrag(kind,e){
+    e.preventDefault();
+    e.stopPropagation();
+    const p=pointerToPct(e);
+    dragRef.current={kind,start:p,area:{...area},cell:{...cell}};
+    try{e.currentTarget.setPointerCapture?.(e.pointerId);}catch{}
+  }
+  function onPointerMove(e){
+    const d=dragRef.current;
+    if(!d)return;
+    const p=pointerToPct(e);
+    const dx=p.x-d.start.x,dy=p.y-d.start.y;
+    if(d.kind==="area")updateArea({x:d.area.x+dx,y:d.area.y+dy});
+    if(d.kind==="cell")updateCell({x:d.cell.x+dx,y:d.cell.y+dy});
+  }
+  function stopDrag(){dragRef.current=null;}
+
+  function buildLines(){
+    const lines=[];
+    const cw=Math.max(cell.w,.1),ch=Math.max(cell.h,.1);
+    let left=cell.x;
+    while(left>area.x)left-=cw;
+    let top=cell.y;
+    while(top>area.y)top-=ch;
+    const xEnd=area.x+area.w,yEnd=area.y+area.h;
+    for(let x=left;x<=xEnd+cw*.2;x+=cw){
+      if(x<area.x-.01)continue;
+      const k=Math.round((x-left)/cw);
+      const type=k%10===0?"ten":(k%5===0?"five":"one");
+      lines.push({dir:"v",pos:x,type,k});
+    }
+    for(let y=top;y<=yEnd+ch*.2;y+=ch){
+      if(y<area.y-.01)continue;
+      const k=Math.round((y-top)/ch);
+      const type=k%10===0?"ten":(k%5===0?"five":"one");
+      lines.push({dir:"h",pos:y,type,k});
+    }
+    return {lines,left,top,cw,ch};
+  }
+  const grid=buildLines();
+
+  function exportGrid(){
+    if(!imgSrc){alert("先上传一张图纸～");return;}
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement("canvas");
+      canvas.width=img.naturalWidth;
+      canvas.height=img.naturalHeight;
+      const ctx=canvas.getContext("2d");
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const ax=area.x/100*canvas.width, ay=area.y/100*canvas.height, aw=area.w/100*canvas.width, ah=area.h/100*canvas.height;
+      const sx=grid.left/100*canvas.width, sy=grid.top/100*canvas.height, cw=grid.cw/100*canvas.width, ch=grid.ch/100*canvas.height;
+      const xEnd=ax+aw,yEnd=ay+ah;
+      ctx.save();
+      ctx.beginPath();ctx.rect(ax,ay,aw,ah);ctx.clip();
+      function drawLine(x1,y1,x2,y2,type){
+        ctx.beginPath();
+        ctx.setLineDash(type==="five"?[8,6]:[]);
+        ctx.strokeStyle=hexToRgba(activeColor,alpha[type]);
+        ctx.lineWidth=type==="ten"?Math.max(2,canvas.width/420):type==="five"?Math.max(1.4,canvas.width/700):Math.max(.7,canvas.width/1200);
+        ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      }
+      for(let x=sx,i=0;x<=xEnd+cw*.2;x+=cw,i++){
+        if(x<ax-.01)continue;
+        const type=i%10===0?"ten":(i%5===0?"five":"one");
+        drawLine(x,ay,x,yEnd,type);
+        if(showNumbers && i>0 && i%5===0){
+          ctx.setLineDash([]);ctx.fillStyle=hexToRgba(activeColor,.95);ctx.font=`${Math.max(14,canvas.width/55)}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="top";ctx.fillText(String(i),x,ay+4);
+        }
+      }
+      for(let y=sy,j=0;y<=yEnd+ch*.2;y+=ch,j++){
+        if(y<ay-.01)continue;
+        const type=j%10===0?"ten":(j%5===0?"five":"one");
+        drawLine(ax,y,xEnd,y,type);
+        if(showNumbers && j>0 && j%5===0){
+          ctx.setLineDash([]);ctx.fillStyle=hexToRgba(activeColor,.95);ctx.font=`${Math.max(14,canvas.width/55)}px sans-serif`;ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText(String(j),ax+4,y);
+        }
+      }
+      ctx.restore();
+      const a=document.createElement("a");
+      a.href=canvas.toDataURL("image/png");
+      a.download=`拼豆记-辅助网格-${Date.now()}.png`;
+      document.body.appendChild(a);a.click();a.remove();
+    };
+    img.src=imgSrc;
+  }
+
+  const btn=(active)=>({border:`1.5px solid ${active?T.accent:T.border}`,background:active?T.accentSoft:T.card,color:active?T.accent:T.textMid,borderRadius:999,padding:"8px 11px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer"});
+  const smallBtn={border:`1px solid ${T.border}`,background:T.card,color:T.textMid,borderRadius:12,padding:"7px 9px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer"};
+
+  return(
+    <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg,paddingBottom:28}}>
+      <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${T.border}`,background:T.card,position:"sticky",top:0,zIndex:50}}>
+        <button onClick={onBack} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer",lineHeight:1}}>←</button>
+        <div style={{fontSize:15,fontWeight:900,color:T.text}}>辅助工具</div>
+        <button onClick={exportGrid} style={{marginLeft:"auto",border:"none",background:T.accent,color:"#fff",borderRadius:999,padding:"8px 13px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer"}}>导出</button>
+      </div>
+
+      <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
+        <label style={{background:T.card,border:`1.5px dashed ${T.border}`,borderRadius:22,padding:"16px 14px",boxShadow:T.cardShadow,textAlign:"center",cursor:"pointer"}}>
+          <input type="file" accept="image/*" onChange={onPickFile} style={{display:"none"}}/>
+          <div style={{fontSize:28,marginBottom:6}}>🖼️</div>
+          <div style={{fontSize:13,fontWeight:900,color:T.text}}>上传图纸</div>
+          <div style={{fontSize:11,color:T.textMid,marginTop:4,lineHeight:1.6}}>上传后拖动大框圈住主体，小框对准一个完整小格</div>
+        </label>
+
+        {imgSrc&&(
+          <>
+            <div style={{display:"flex",gap:8,background:T.card,border:`1px solid ${T.border}`,borderRadius:18,padding:8,boxShadow:T.cardShadow}}>
+              <button onClick={()=>setMode("area")} style={{...btn(mode==="area"),flex:1}}>① 图纸范围</button>
+              <button onClick={()=>setMode("cell")} style={{...btn(mode==="cell"),flex:1}}>② 单格校准</button>
+              <button onClick={()=>setMode("grid")} style={{...btn(mode==="grid"),flex:1}}>③ 看网格</button>
+            </div>
+
+            <div ref={previewRef} onPointerMove={onPointerMove} onPointerUp={stopDrag} onPointerCancel={stopDrag}
+              style={{position:"relative",width:"100%",borderRadius:22,overflow:"hidden",background:T.card,border:`1.5px solid ${T.border}`,boxShadow:T.cardShadow,touchAction:"none"}}>
+              <img src={imgSrc} alt="图纸预览" style={{display:"block",width:"100%",height:"auto",userSelect:"none",pointerEvents:"none"}}/>
+              <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} preserveAspectRatio="none">
+                <defs>
+                  <clipPath id="helperGridClip"><rect x={area.x+"%"} y={area.y+"%"} width={area.w+"%"} height={area.h+"%"}/></clipPath>
+                </defs>
+                <g clipPath="url(#helperGridClip)">
+                  {grid.lines.map((l,i)=>{
+                    const stroke=hexToRgba(activeColor,alpha[l.type]);
+                    const sw=l.type==="ten"?2.2:l.type==="five"?1.6:.8;
+                    const dash=l.type==="five"?"7 5":"";
+                    if(l.dir==="v")return <line key={i} x1={pct(l.pos)} y1={pct(area.y)} x2={pct(l.pos)} y2={pct(area.y+area.h)} stroke={stroke} strokeWidth={sw} strokeDasharray={dash}/>;
+                    return <line key={i} x1={pct(area.x)} y1={pct(l.pos)} x2={pct(area.x+area.w)} y2={pct(l.pos)} stroke={stroke} strokeWidth={sw} strokeDasharray={dash}/>;
+                  })}
+                  {showNumbers&&grid.lines.filter(l=>l.k>0&&l.k%5===0).map((l,i)=> l.dir==="v"?
+                    <text key={'vx'+i} x={pct(l.pos)} y={pct(area.y+1.8)} textAnchor="middle" fontSize="10" fontWeight="900" fill={hexToRgba(activeColor,.95)}>{l.k}</text>:
+                    <text key={'hy'+i} x={pct(area.x+1)} y={pct(l.pos)} dominantBaseline="middle" fontSize="10" fontWeight="900" fill={hexToRgba(activeColor,.95)}>{l.k}</text>
+                  )}
+                </g>
+              </svg>
+              {(mode==="area"||mode==="grid")&&(
+                <div onPointerDown={e=>startDrag("area",e)} style={{position:"absolute",left:pct(area.x),top:pct(area.y),width:pct(area.w),height:pct(area.h),border:`2.5px solid ${T.accent}`,background:"rgba(74,158,255,0.06)",boxShadow:"0 0 0 9999px rgba(0,0,0,0.08)",borderRadius:8,cursor:"move",boxSizing:"border-box"}}>
+                  <span style={{position:"absolute",left:6,top:5,background:T.accent,color:"#fff",borderRadius:999,padding:"2px 7px",fontSize:10,fontWeight:900}}>图纸范围</span>
+                </div>
+              )}
+              {(mode==="cell"||mode==="grid")&&(
+                <div onPointerDown={e=>startDrag("cell",e)} style={{position:"absolute",left:pct(cell.x),top:pct(cell.y),width:pct(cell.w),height:pct(cell.h),border:"2.5px solid #ffb347",background:"rgba(255,179,71,0.15)",borderRadius:4,cursor:"move",boxSizing:"border-box"}}>
+                  <span style={{position:"absolute",left:"50%",top:"-24px",transform:"translateX(-50%)",background:"#ffb347",color:"#fff",borderRadius:999,padding:"2px 7px",fontSize:10,fontWeight:900,whiteSpace:"nowrap"}}>单格</span>
+                </div>
+              )}
+            </div>
+
+            {msg&&<div style={{fontSize:11,color:T.textMid,lineHeight:1.7,background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:"10px 12px"}}>{msg}</div>}
+
+            <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:22,padding:14,boxShadow:T.cardShadow}}>
+              <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:10}}>{mode==="area"?"图纸范围微调":mode==="cell"?"单格校准微调":"网格样式"}</div>
+              {mode!=="grid"?(
+                <>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:8}}>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,-.5,0)}>←</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,-.5)}>↑</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,.5)}>↓</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,.5,0)}>→</button>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,-.5,0)}>宽 -</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,.5,0)}>宽 +</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,0,-.5)}>高 -</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,0,.5)}>高 +</button>
+                  </div>
+                </>
+              ):(
+                <>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+                    {[["#4a9eff","蓝"],["#ffffff","白"],["#222222","黑"],["#ff5c8a","粉"],["#ffbf3f","黄"],["custom","自定义"]].map(([c,n])=>(
+                      <button key={c} onClick={()=>setLineColor(c)} style={{...btn(lineColor===c),padding:"7px 10px"}}>{n}</button>
+                    ))}
+                    {lineColor==="custom"&&<input type="color" value={customColor} onChange={e=>setCustomColor(e.target.value)} style={{width:42,height:34,border:`1px solid ${T.border}`,borderRadius:10,background:T.card}}/>}
+                  </div>
+                  <div style={{display:"flex",gap:8,marginBottom:12}}>
+                    {[["soft","淡"],["normal","标准"],["strong","清晰"]].map(([v,n])=><button key={v} onClick={()=>setStrength(v)} style={{...btn(strength===v),flex:1}}>{n}</button>)}
+                  </div>
+                  <button onClick={()=>setShowNumbers(v=>!v)} style={{...btn(showNumbers),width:"100%"}}>{showNumbers?"已显示 5/10 坐标数字":"显示坐标数字"}</button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,onRestoreStock,onLogStockDeduction,onCloudDeleteTask,tasks,setTasks,tasksLoaded,onPushHistory}){
   const [view,setView]=useState("home");
   const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
@@ -2260,22 +2518,8 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   // 图纸助手页
   if(view==="guide")return <GuideAssistant T={T} onBack={()=>setView("home")}/> ;
 
-  // 辅助工具页（先放入口占位，后面接网格功能）
-  if(view==="helper")return(
-    <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg}}>
-      <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10,borderBottom:`1px solid ${T.border}`,background:T.card}}>
-        <button onClick={()=>setView("home")} style={{background:"none",border:"none",fontSize:22,color:T.textMid,cursor:"pointer",lineHeight:1}}>←</button>
-        <div style={{fontSize:15,fontWeight:900,color:T.text}}>辅助工具</div>
-      </div>
-      <div style={{padding:"20px 16px"}}>
-        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:24,padding:"24px 18px",boxShadow:T.cardShadow,textAlign:"center"}}>
-          <div style={{width:54,height:54,borderRadius:18,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 14px"}}>📏</div>
-          <div style={{fontSize:16,fontWeight:900,color:T.text,marginBottom:8}}>辅助工具</div>
-          <div style={{fontSize:12,color:T.textMid,lineHeight:1.8}}>入口已经放好啦，下一步再接“上传图纸、校准小格、生成网格”的功能。</div>
-        </div>
-      </div>
-    </div>
-  );
+  // 辅助工具页
+  if(view==="helper")return <HelperToolPage T={T} onBack={()=>setView("home")}/>;
 
   // 日记页
   if(view==="diary")return(
@@ -2462,12 +2706,12 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
         <div className="cc" onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
           style={{background:T.card,borderRadius:20,padding:"12px 6px",minHeight:88,boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box"}}>
           {!isPro&&<span style={{position:"absolute",top:7,right:7,fontSize:8,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 5px",fontWeight:900,lineHeight:1.2}}>Pro</span>}
-          <div style={{width:40,height:40,borderRadius:14,background:`linear-gradient(135deg,${T.accentSoft},${T.accentLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>🧰</div>
+          <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#eaf7ff,#fff2cf)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.75), 0 4px 10px rgba(74,158,255,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>🧰</div>
           <div style={{fontSize:13,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap"}}>工具箱</div>
         </div>
         <div className="cc" onClick={()=>setView("missing")}
           style={{background:T.card,borderRadius:20,padding:"12px 6px",minHeight:88,boxShadow:T.cardShadow,cursor:"pointer",border:`1.5px solid ${T.border}`,display:"flex",flexDirection:"column",gap:8,alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
-          <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#e8f4ff,#c8e6ff)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>🔍</div>
+          <div style={{width:40,height:40,borderRadius:14,background:"linear-gradient(135deg,#eaf7ff,#e8dcff)",boxShadow:"inset 0 1px 0 rgba(255,255,255,.75), 0 4px 10px rgba(154,123,220,.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>🔍</div>
           <div style={{fontSize:13,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap"}}>缺色替换</div>
         </div>
         <div className="cc" onClick={()=>setView("helper")}
