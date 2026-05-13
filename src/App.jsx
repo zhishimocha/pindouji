@@ -1,3 +1,4 @@
+// VERSION: fluffy-theme-default-skin-toolbox-bg-2026-05-13
 // VERSION: helper-grid-p2-five-ten-block-mode-2026-05-13
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -305,9 +306,11 @@ function gToBeads(g){return Math.round(g*100);}
 function fmtG(g){const n=Math.round(g*100)/100;return Number.isInteger(n)?String(n):n.toFixed(2).replace(/\.?0+$/,"");}
 
 const THEMES={
-  sky:{bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"夜空 🌙",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff"},
-  night:{bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"晴天 ☀️",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166"}
+  sky:{name:"晴空蓝",icon:"☁️",bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"夜空 🌙",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff",toolboxPanelBg:"linear-gradient(180deg,#f8fcff 0%,#eef8ff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
+  fluffy:{name:"毛绒甜莓",icon:"🐑",bg:"linear-gradient(180deg,#fffaf7 0%,#fff0f3 45%,#eef8ff 100%)",card:"rgba(255,255,255,0.88)",border:"#f4d4dc",accent:"#b84a55",accentLight:"#fff0f2",accentSoft:"#fff6f2",warn:"#e49b72",warnBg:"#fff4ec",warnBorder:"#f4d7c6",danger:"#d85c70",dangerBg:"#fff0f4",dangerBorder:"#f4c8d2",text:"#60414b",textMid:"#a47782",textLight:"#d3aeb7",nav:"rgba(255,255,255,0.92)",navBorder:"#f2d5dc",barBg:"#f7dde5",bars:["#b84a55","#e59aa5","#f7cdd4","#cfe4f5","#f6dcc6"],switchBtn:"晴空 ☁️",cardShadow:"0 8px 24px rgba(184,74,85,0.10), inset 0 1px 0 rgba(255,255,255,0.95)",floatShadow:"0 12px 38px rgba(184,74,85,0.18)",headerBg:"linear-gradient(135deg,#fffaf7 0%,#ffeef2 54%,#edf8ff 100%)",navActiveDot:"#b84a55",toolboxPanelBg:"linear-gradient(180deg,#fffaf7 0%,#fff1f4 50%,#f6fbff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
+  night:{name:"夜空黄",icon:"🌙",bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"毛绒 🐑",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166",toolboxPanelBg:"#152236",toolboxCatBg:"#0d1b2e"}
 };
+const THEME_ORDER=["sky","fluffy","night"];
 
 const G=`
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -388,7 +391,7 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
         <div style={{fontSize:10,color:T.textLight,marginBottom:4,fontWeight:600}}>改库存</div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:3}}>
           <input ref={inputRef} value={localB} onChange={e=>setLocalB(e.target.value)} onBlur={saveEdit} onKeyDown={onKeyEdit} type="number" min="0"
-            style={{width:68,textAlign:"center",fontSize:15,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.accent}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.accent,outline:"none"}}/>
+            style={{width:68,textAlign:"center",fontSize:15,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.accent}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn!=="night"?"#f8fbff":T.card,color:T.accent,outline:"none"}}/>
           <span style={{fontSize:11,color:T.textLight,fontWeight:700}}>粒</span>
         </div>
         <div style={{fontSize:10,color:T.textLight}}>= {((parseInt(localB)||0)/100).toFixed(1).replace(/\.0$/,"")} g</div>
@@ -399,7 +402,7 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
         <div style={{fontSize:10,color:T.warn,marginBottom:4,fontWeight:600}}>扣用量</div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:3}}>
           <input ref={inputRef} value={localB} onChange={e=>setLocalB(e.target.value)} onBlur={saveDeduct} onKeyDown={onKeyDeduct} type="number" min="0"
-            style={{width:68,textAlign:"center",fontSize:15,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.warn}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn==="sky"?"#f8fbff":T.card,color:T.warn,outline:"none"}}/>
+            style={{width:68,textAlign:"center",fontSize:15,fontWeight:800,padding:"4px 6px",border:`2px solid ${T.warn}`,borderRadius:10,fontFamily:"'Nunito',sans-serif",background:tn!=="night"?"#f8fbff":T.card,color:T.warn,outline:"none"}}/>
           <span style={{fontSize:11,color:T.textLight,fontWeight:700}}>粒</span>
         </div>
         <div style={{fontSize:10,color:T.textLight}}>库存 {beads} → {Math.max(0,beads-(parseInt(localB)||0))} 粒</div>
@@ -410,8 +413,10 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
 
 
 export default function App(){
-  const [tn,setTn]=useState("sky");
-  const T=THEMES[tn];
+  const [tn,setTn]=useState(()=>{try{return localStorage.getItem("pindou_current_theme")||localStorage.getItem("pindou_default_theme")||"sky";}catch{return "sky";}});
+  const safeTn=THEMES[tn]?tn:"sky";
+  const T=THEMES[safeTn];
+  useEffect(()=>{try{localStorage.setItem("pindou_current_theme",safeTn);}catch{}},[safeTn]);
   const [user,setUser]=useState(null);
   const [authLoading,setAuthLoading]=useState(true);
 
@@ -815,7 +820,7 @@ export default function App(){
 
 
 
-  const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn==="sky"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
+  const inp=(ex={})=>({fontFamily:"'Nunito',sans-serif",border:`1.5px solid ${T.border}`,borderRadius:12,background:tn!=="night"?"#f8fbff":T.card,color:T.text,outline:"none",...ex});
 
   function pushHistory(s,u,t){setHistory(h=>[...h.slice(-MAX_HISTORY+1),{stock:{...s},used:{...u},...(t!==undefined&&{tasks:[...t]})}]);}
 
@@ -1153,7 +1158,7 @@ export default function App(){
               })()}
             </div>
           </div>
-          <button className="btn" onClick={()=>setTn(t=>t==="sky"?"night":"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
+          <button className="btn" onClick={()=>setTn(t=>THEME_ORDER[(THEME_ORDER.indexOf(t)+1)%THEME_ORDER.length]||"sky")} style={{padding:"7px 16px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,color:T.accent,background:T.accentLight}}>{T.switchBtn}</button>
         </div>}
         {/* 导入隐藏input */}
         <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={importData}/>
@@ -1209,7 +1214,7 @@ export default function App(){
           {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} onRestoreStock={restoreStock} onLogStockDeduction={writeStockLogs} onCloudDeleteTask={deleteTaskFromCloud} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
 
           {/* 我的页 */}
-          {page==="mine"&&<MinePage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} inviteInfo={inviteInfo}/>}
+          {page==="mine"&&<MinePage T={T} tn={safeTn} setTn={setTn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} inviteInfo={inviteInfo}/>}
 
         </div>{/* end 主内容滚动区 */}
 
@@ -3263,13 +3268,16 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 // ══════════════════════════════════
 //  MinePage（我的页）
 // ══════════════════════════════════
-function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteInfo}){
+function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteInfo}){
   const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
   const [nickname,setNickname]=useState(()=>localStorage.getItem('pindou_nickname')||"");
   const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
   const [editingName,setEditingName]=useState(false);
   const [nameInput,setNameInput]=useState("");
   const avatarRef=useRef(null);
+  const [defaultTheme,setDefaultTheme]=useState(()=>{try{return localStorage.getItem("pindou_default_theme")||"sky";}catch{return "sky";}});
+  function chooseTheme(key){setTn(key);try{localStorage.setItem("pindou_current_theme",key);}catch{}}
+  function setAsDefaultTheme(key){setDefaultTheme(key);setTn(key);try{localStorage.setItem("pindou_default_theme",key);localStorage.setItem("pindou_current_theme",key);}catch{}}
 
   function saveNickname(){
     localStorage.setItem('pindou_nickname',nameInput);
@@ -3290,7 +3298,7 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteIn
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",padding:"0 0 20px"}}>
       {/* 头部 */}
-      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"16px 20px 14px",display:"flex",flexDirection:"column",alignItems:"center"}}>
+      <div style={{background:T.headerBg,padding:"16px 20px 14px",display:"flex",flexDirection:"column",alignItems:"center"}}>
         {/* 头像 */}
         <div onClick={()=>avatarRef.current?.click()} style={{position:"relative",marginBottom:12,cursor:"pointer"}}>
           <div style={{width:76,height:76,borderRadius:24,background:T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,overflow:"hidden",boxShadow:`0 4px 16px ${T.accent}44`}}>
@@ -3343,6 +3351,33 @@ function MinePage({T,tn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteIn
             <div style={{fontSize:11,color:T.textMid,fontWeight:700,whiteSpace:"nowrap"}}>{inviteInfo.count||0} / 5 人</div>
           </div>
           {(inviteInfo.bonus||0)>0&&<div style={{marginTop:8,fontSize:11,color:"#4caf50",fontWeight:700}}>🎉 已获得 {inviteInfo.bonus} 次额外识图</div>}
+        </div>
+
+        {/* 皮肤设置 */}
+        <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:20,padding:"16px",marginBottom:12,boxShadow:T.cardShadow}}>
+          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🎨 皮肤设置</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {THEME_ORDER.map(key=>{
+              const theme=THEMES[key];
+              const active=tn===key;
+              const isDefault=defaultTheme===key;
+              return (
+                <div key={key} className="cc" onClick={()=>chooseTheme(key)}
+                  style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:16,border:`1.5px solid ${active?theme.accent:T.border}`,background:active?theme.accentSoft:T.accentSoft,cursor:"pointer",boxShadow:active?`0 0 0 3px ${theme.accent}18`:"none"}}>
+                  <div style={{width:38,height:38,borderRadius:14,background:theme.headerBg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:`1.5px solid ${theme.border}`,boxShadow:theme.cardShadow}}>{theme.icon}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>{theme.name}</div>
+                    <div style={{fontSize:10,color:T.textMid,marginTop:2}}>{key==="fluffy"?"毛茸茸甜点感，偏红粉奶油色":"点击立即切换"}</div>
+                  </div>
+                  <button onClick={(e)=>{e.stopPropagation();setAsDefaultTheme(key);}}
+                    style={{width:26,height:26,borderRadius:"50%",border:`2px solid ${isDefault?theme.accent:T.border}`,background:isDefault?theme.accent:T.card,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,cursor:"pointer",flexShrink:0}}>
+                    {isDefault?"✓":""}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{fontSize:10,color:T.textLight,lineHeight:1.6,marginTop:10}}>右侧圆圈打勾的就是默认皮肤，下次进来会自动使用它。</div>
         </div>
 
         {/* 数据管理 */}
@@ -4343,7 +4378,7 @@ function ToolboxModal({toolbox,setToolbox,T,onClose}){
   return(
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:1200,display:'flex',alignItems:'flex-end',justifyContent:'center'}}
       onClick={onClose} onTouchMove={onCatMove} onTouchEnd={onCatEnd} onTouchCancel={()=>setCatDrag(null)}>
-      <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,maxHeight:'85vh',background:T.card,borderRadius:'24px 24px 0 0',overflow:'hidden',display:'flex',flexDirection:'column'}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:480,maxHeight:'85vh',background:T.toolboxPanelBg||T.card,borderRadius:'24px 24px 0 0',overflow:'hidden',display:'flex',flexDirection:'column'}}>
         <div style={{padding:'16px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`1px solid ${T.border}`,flexShrink:0}}>
           <div style={{fontSize:15,fontWeight:900,color:T.text}}>🧰 工具箱</div>
           <button onClick={onClose} style={{background:'none',border:'none',fontSize:18,color:T.textMid,cursor:'pointer'}}>✕</button>
@@ -4356,7 +4391,7 @@ function ToolboxModal({toolbox,setToolbox,T,onClose}){
             const itemDisplay=getItemDisplay(cat);
             const itemD=itemDrags[cat.id];
             return(
-              <div key={cat.id} style={{background:T.bg,border:`1.5px solid ${isDragging?T.accent:T.border}`,borderRadius:18,padding:'12px 12px 8px',marginBottom:12,opacity:isDragging?0.65:1,transition:'opacity 0.12s,border-color 0.12s'}}>
+              <div key={cat.id} style={{background:T.toolboxCatBg||T.bg,border:`1.5px solid ${isDragging?T.accent:T.border}`,borderRadius:18,padding:'12px 12px 8px',marginBottom:12,opacity:isDragging?0.65:1,transition:'opacity 0.12s,border-color 0.12s',boxShadow:T.cardShadow}}>
                 {/* 大类 header */}
                 <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:openCats[cat.id]?10:0}}>
                   <div onTouchStart={(e)=>onCatStart(origIdx,e)} style={{cursor:'grab',color:T.textLight,flexShrink:0,padding:'4px 6px',touchAction:'none',userSelect:'none',fontSize:16}}>⠿</div>
