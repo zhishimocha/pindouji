@@ -2092,13 +2092,59 @@ function HelperToolPage({T,onBack}){
     });
   }
   function nudgeBox(kind,dx,dy,dw=0,dh=0){
-    if(kind==="area")updateArea({x:area.x+dx,y:area.y+dy,w:area.w+dw,h:area.h+dh});
-    else updateCell({x:cell.x+dx,y:cell.y+dy,w:cell.w+dw,h:cell.h+dh});
+    if(kind==="area"){
+      setArea(prev=>{
+        const merged={...prev,x:prev.x+dx,y:prev.y+dy,w:prev.w+dw,h:prev.h+dh};
+        merged.w=clamp(merged.w,8,100-merged.x);
+        merged.h=clamp(merged.h,8,100-merged.y);
+        merged.x=clamp(merged.x,0,100-merged.w);
+        merged.y=clamp(merged.y,0,100-merged.h);
+        return merged;
+      });
+    }else{
+      setCell(prev=>{
+        const merged={...prev,x:prev.x+dx,y:prev.y+dy,w:prev.w+dw,h:prev.h+dh};
+        merged.w=clamp(merged.w,.25,20);
+        merged.h=clamp(merged.h,.25,20);
+        const minX=calibrationOffset*merged.w;
+        const minY=calibrationOffset*merged.h;
+        const maxX=100-(calibrationOffset+1)*merged.w;
+        const maxY=100-(calibrationOffset+1)*merged.h;
+        merged.x=clamp(merged.x,minX,Math.max(minX,maxX));
+        merged.y=clamp(merged.y,minY,Math.max(minY,maxY));
+        return merged;
+      });
+    }
   }
   function nudgeGrid(dxCells,dyCells){
     // 不能按“一整格”移动：整格移动后网格视觉上会落在同一组线位，看起来像没动。
     // 这里按 1/5 格微调，第三步的上下左右才会明显推进网格位置。
-    updateCell({x:cell.x+(cell.w/5)*dxCells,y:cell.y+(cell.h/5)*dyCells});
+    setCell(prev=>{
+      const merged={...prev,x:prev.x+(prev.w/5)*dxCells,y:prev.y+(prev.h/5)*dyCells};
+      const minX=calibrationOffset*merged.w;
+      const minY=calibrationOffset*merged.h;
+      const maxX=100-(calibrationOffset+1)*merged.w;
+      const maxY=100-(calibrationOffset+1)*merged.h;
+      merged.x=clamp(merged.x,minX,Math.max(minX,maxX));
+      merged.y=clamp(merged.y,minY,Math.max(minY,maxY));
+      return merged;
+    });
+  }
+  function resizeGrid(dw=0,dh=0){
+    setCell(prev=>{
+      const centerX=prev.x+prev.w/2;
+      const centerY=prev.y+prev.h/2;
+      const merged={...prev,w:clamp(prev.w+dw,.25,20),h:clamp(prev.h+dh,.25,20)};
+      merged.x=centerX-merged.w/2;
+      merged.y=centerY-merged.h/2;
+      const minX=calibrationOffset*merged.w;
+      const minY=calibrationOffset*merged.h;
+      const maxX=100-(calibrationOffset+1)*merged.w;
+      const maxY=100-(calibrationOffset+1)*merged.h;
+      merged.x=clamp(merged.x,minX,Math.max(minX,maxX));
+      merged.y=clamp(merged.y,minY,Math.max(minY,maxY));
+      return merged;
+    });
   }
   function zoomBy(delta){
     setZoom(z=>clamp(Number((z+delta).toFixed(2)),1,5));
@@ -2122,7 +2168,8 @@ function HelperToolPage({T,onBack}){
       },
       onPointerUp:stopRepeat,
       onPointerCancel:stopRepeat,
-      onPointerLeave:stopRepeat
+      onPointerLeave:stopRepeat,
+      onContextMenu:(e)=>e.preventDefault()
     };
   }
   useEffect(()=>()=>stopRepeat(),[]);
@@ -2171,11 +2218,13 @@ function HelperToolPage({T,onBack}){
 
     for(let x=left;x<=xEnd+cw*.2;x+=cw){
       const k=Math.round((x-left)/cw);
+      if(k<=0)continue;
       const type=k%10===0?"ten":(k%5===0?"five":null);
       if(type)lines.push({dir:"v",pos:x,type,k});
     }
     for(let y=top;y<=yEnd+ch*.2;y+=ch){
       const k=Math.round((y-top)/ch);
+      if(k<=0)continue;
       const type=k%10===0?"ten":(k%5===0?"five":null);
       if(type)lines.push({dir:"h",pos:y,type,k});
     }
@@ -2205,7 +2254,7 @@ function HelperToolPage({T,onBack}){
         ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
       }
       for(let x=sx,i=0;x<=xEnd+cw*.2;x+=cw,i++){
-        if(x<ax-.01)continue;
+        if(x<ax-.01 || i<=0)continue;
         const type=i%10===0?"ten":(i%5===0?"five":null);
         if(!type)continue;
         drawLine(x,ay,x,yEnd,type);
@@ -2219,7 +2268,7 @@ function HelperToolPage({T,onBack}){
         }
       }
       for(let y=sy,j=0;y<=yEnd+ch*.2;y+=ch,j++){
-        if(y<ay-.01)continue;
+        if(y<ay-.01 || j<=0)continue;
         const type=j%10===0?"ten":(j%5===0?"five":null);
         if(!type)continue;
         drawLine(ax,y,xEnd,y,type);
@@ -2242,7 +2291,7 @@ function HelperToolPage({T,onBack}){
   }
 
   const btn=(active)=>({border:`1.5px solid ${active?T.accent:T.border}`,background:active?T.accentSoft:T.card,color:active?T.accent:T.textMid,borderRadius:999,padding:"8px 11px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer"});
-  const smallBtn={border:`1px solid ${T.border}`,background:T.card,color:T.textMid,borderRadius:12,padding:"7px 9px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer"};
+  const smallBtn={border:`1px solid ${T.border}`,background:T.card,color:T.textMid,borderRadius:12,padding:"7px 9px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer",touchAction:"none",userSelect:"none",WebkitUserSelect:"none"};
   const zoomBtn={...smallBtn,padding:"7px 10px"};
   const showGrid=mode==="grid";
   const showArea=mode==="area" || mode==="grid";
@@ -2360,6 +2409,13 @@ function HelperToolPage({T,onBack}){
                     <div/>
                     <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,1))}>↓</button>
                     <div/>
+                  </div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>网格大小也可以在第三步直接调，宽和高支持长按连续增加/减少。</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
+                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(-cellSizeStep,0))}>格宽 -</button>
+                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(cellSizeStep,0))}>格宽 +</button>
+                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(0,-cellSizeStep))}>格高 -</button>
+                    <button style={smallBtn} {...repeatProps(()=>resizeGrid(0,cellSizeStep))}>格高 +</button>
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
                     {[["#4a9eff","蓝"],["#ffffff","白"],["#222222","黑"],["#ff5c8a","粉"],["#ffbf3f","黄"],["custom","自定义"]].map(([c,n])=>(
