@@ -2021,19 +2021,21 @@ function compressImageFileToDataUrl(file,{max=300,quality=0.7}={}){
 function HelperToolPage({T,onBack}){
   const [imgSrc,setImgSrc]=useState("");
   const [area,setArea]=useState({x:5,y:8,w:90,h:78});
-  const [cell,setCell]=useState({x:12,y:14,w:4,h:4});
+  const [cell,setCell]=useState({x:12,y:14,w:2.2,h:2.2});
   const [mode,setMode]=useState("area");
+  const [zoom,setZoom]=useState(1.8);
   const [lineColor,setLineColor]=useState("#4a9eff");
   const [customColor,setCustomColor]=useState("#4a9eff");
   const [strength,setStrength]=useState("normal");
   const [showNumbers,setShowNumbers]=useState(true);
   const [msg,setMsg]=useState("");
   const dragRef=useRef(null);
-  const previewRef=useRef(null);
+  const viewportRef=useRef(null);
+  const imageLayerRef=useRef(null);
 
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const activeColor=lineColor==="custom"?customColor:lineColor;
-  const strengthMap={soft:{one:.18,five:.42,ten:.78},normal:{one:.26,five:.55,ten:.9},strong:{one:.38,five:.7,ten:1}};
+  const strengthMap={soft:{one:.16,five:.38,ten:.72},normal:{one:.24,five:.52,ten:.9},strong:{one:.34,five:.68,ten:1}};
   const alpha=strengthMap[strength]||strengthMap.normal;
   const pct=(n)=>`${n}%`;
 
@@ -2052,7 +2054,10 @@ function HelperToolPage({T,onBack}){
     const reader=new FileReader();
     reader.onload=()=>{
       setImgSrc(String(reader.result||""));
-      setMsg("已载入图片，先框住图纸主体，再把小格框对准任意一颗豆子的格子。");
+      setMode("area");
+      setZoom(1.8);
+      setMsg("先放大图纸，框住主体范围；再切到单格校准，用九宫格对准原图中的 3×3 小格。只要九宫格贴准，后面的网格就会更稳。");
+      setTimeout(()=>{try{viewportRef.current.scrollTo({left:0,top:0});}catch{}},0);
     };
     reader.readAsDataURL(file);
   }
@@ -2070,8 +2075,8 @@ function HelperToolPage({T,onBack}){
   function updateCell(next){
     setCell(prev=>{
       const merged={...prev,...next};
-      merged.w=clamp(merged.w,.6,35);
-      merged.h=clamp(merged.h,.6,35);
+      merged.w=clamp(merged.w,.25,20);
+      merged.h=clamp(merged.h,.25,20);
       merged.x=clamp(merged.x,0,100-merged.w);
       merged.y=clamp(merged.y,0,100-merged.h);
       return merged;
@@ -2081,11 +2086,17 @@ function HelperToolPage({T,onBack}){
     if(kind==="area")updateArea({x:area.x+dx,y:area.y+dy,w:area.w+dw,h:area.h+dh});
     else updateCell({x:cell.x+dx,y:cell.y+dy,w:cell.w+dw,h:cell.h+dh});
   }
+  function zoomBy(delta){
+    setZoom(z=>clamp(Number((z+delta).toFixed(2)),1,5));
+  }
 
   function pointerToPct(e){
-    const rect=previewRef.current?.getBoundingClientRect();
+    const rect=imageLayerRef.current?.getBoundingClientRect();
     if(!rect)return {x:0,y:0};
-    return {x:clamp(((e.clientX-rect.left)/rect.width)*100,0,100),y:clamp(((e.clientY-rect.top)/rect.height)*100,0,100)};
+    return {
+      x:clamp(((e.clientX-rect.left)/rect.width)*100,0,100),
+      y:clamp(((e.clientY-rect.top)/rect.height)*100,0,100)
+    };
   }
   function startDrag(kind,e){
     e.preventDefault();
@@ -2176,6 +2187,14 @@ function HelperToolPage({T,onBack}){
 
   const btn=(active)=>({border:`1.5px solid ${active?T.accent:T.border}`,background:active?T.accentSoft:T.card,color:active?T.accent:T.textMid,borderRadius:999,padding:"8px 11px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer"});
   const smallBtn={border:`1px solid ${T.border}`,background:T.card,color:T.textMid,borderRadius:12,padding:"7px 9px",fontSize:12,fontWeight:900,fontFamily:"'Nunito',sans-serif",cursor:"pointer"};
+  const zoomBtn={...smallBtn,padding:"7px 10px"};
+  const showGrid=mode==="grid";
+  const showArea=mode==="area" || mode==="grid";
+  const showCell=mode==="cell";
+  const nineLeft=cell.x-cell.w;
+  const nineTop=cell.y-cell.h;
+  const nineW=cell.w*3;
+  const nineH=cell.h*3;
 
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg,paddingBottom:28}}>
@@ -2190,67 +2209,84 @@ function HelperToolPage({T,onBack}){
           <input type="file" accept="image/*" onChange={onPickFile} style={{display:"none"}}/>
           <div style={{fontSize:28,marginBottom:6}}>🖼️</div>
           <div style={{fontSize:13,fontWeight:900,color:T.text}}>上传图纸</div>
-          <div style={{fontSize:11,color:T.textMid,marginTop:4,lineHeight:1.6}}>上传后拖动大框圈住主体，小框对准一个完整小格</div>
+          <div style={{fontSize:11,color:T.textMid,marginTop:4,lineHeight:1.6}}>先放大原图，再用九宫格对准图纸里的 3×3 小格</div>
         </label>
 
         {imgSrc&&(
           <>
             <div style={{display:"flex",gap:8,background:T.card,border:`1px solid ${T.border}`,borderRadius:18,padding:8,boxShadow:T.cardShadow}}>
-              <button onClick={()=>setMode("area")} style={{...btn(mode==="area"),flex:1}}>① 图纸范围</button>
-              <button onClick={()=>setMode("cell")} style={{...btn(mode==="cell"),flex:1}}>② 单格校准</button>
-              <button onClick={()=>setMode("grid")} style={{...btn(mode==="grid"),flex:1}}>③ 看网格</button>
+              <button onClick={()=>setMode("area")} style={{...btn(mode==="area"),flex:1}}>① 范围</button>
+              <button onClick={()=>setMode("cell")} style={{...btn(mode==="cell"),flex:1}}>② 对准</button>
+              <button onClick={()=>setMode("grid")} style={{...btn(mode==="grid"),flex:1}}>③ 网格</button>
             </div>
 
-            <div ref={previewRef} onPointerMove={onPointerMove} onPointerUp={stopDrag} onPointerCancel={stopDrag}
-              style={{position:"relative",width:"100%",borderRadius:22,overflow:"hidden",background:T.card,border:`1.5px solid ${T.border}`,boxShadow:T.cardShadow,touchAction:"none"}}>
-              <img src={imgSrc} alt="图纸预览" style={{display:"block",width:"100%",height:"auto",userSelect:"none",pointerEvents:"none"}}/>
-              <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} preserveAspectRatio="none">
-                <defs>
-                  <clipPath id="helperGridClip"><rect x={area.x+"%"} y={area.y+"%"} width={area.w+"%"} height={area.h+"%"}/></clipPath>
-                </defs>
-                <g clipPath="url(#helperGridClip)">
-                  {grid.lines.map((l,i)=>{
-                    const stroke=hexToRgba(activeColor,alpha[l.type]);
-                    const sw=l.type==="ten"?2.2:l.type==="five"?1.6:.8;
-                    const dash=l.type==="five"?"7 5":"";
-                    if(l.dir==="v")return <line key={i} x1={pct(l.pos)} y1={pct(area.y)} x2={pct(l.pos)} y2={pct(area.y+area.h)} stroke={stroke} strokeWidth={sw} strokeDasharray={dash}/>;
-                    return <line key={i} x1={pct(area.x)} y1={pct(l.pos)} x2={pct(area.x+area.w)} y2={pct(l.pos)} stroke={stroke} strokeWidth={sw} strokeDasharray={dash}/>;
-                  })}
-                  {showNumbers&&grid.lines.filter(l=>l.k>0&&l.k%5===0).map((l,i)=> l.dir==="v"?
-                    <text key={'vx'+i} x={pct(l.pos)} y={pct(area.y+1.8)} textAnchor="middle" fontSize="10" fontWeight="900" fill={hexToRgba(activeColor,.95)}>{l.k}</text>:
-                    <text key={'hy'+i} x={pct(area.x+1)} y={pct(l.pos)} dominantBaseline="middle" fontSize="10" fontWeight="900" fill={hexToRgba(activeColor,.95)}>{l.k}</text>
-                  )}
-                </g>
-              </svg>
-              {(mode==="area"||mode==="grid")&&(
-                <div onPointerDown={e=>startDrag("area",e)} style={{position:"absolute",left:pct(area.x),top:pct(area.y),width:pct(area.w),height:pct(area.h),border:`2.5px solid ${T.accent}`,background:"rgba(74,158,255,0.06)",boxShadow:"0 0 0 9999px rgba(0,0,0,0.08)",borderRadius:8,cursor:"move",boxSizing:"border-box"}}>
-                  <span style={{position:"absolute",left:6,top:5,background:T.accent,color:"#fff",borderRadius:999,padding:"2px 7px",fontSize:10,fontWeight:900}}>图纸范围</span>
-                </div>
-              )}
-              {(mode==="cell"||mode==="grid")&&(
-                <div onPointerDown={e=>startDrag("cell",e)} style={{position:"absolute",left:pct(cell.x),top:pct(cell.y),width:pct(cell.w),height:pct(cell.h),border:"2.5px solid #ffb347",background:"rgba(255,179,71,0.15)",borderRadius:4,cursor:"move",boxSizing:"border-box"}}>
-                  <span style={{position:"absolute",left:"50%",top:"-24px",transform:"translateX(-50%)",background:"#ffb347",color:"#fff",borderRadius:999,padding:"2px 7px",fontSize:10,fontWeight:900,whiteSpace:"nowrap"}}>单格</span>
-                </div>
-              )}
+            <div style={{display:"flex",alignItems:"center",gap:8,background:T.card,border:`1px solid ${T.border}`,borderRadius:18,padding:"8px 10px",boxShadow:T.cardShadow,position:"sticky",top:55,zIndex:40}}>
+              <button style={zoomBtn} onClick={()=>zoomBy(-.25)}>－</button>
+              <div style={{flex:1,textAlign:"center",fontSize:12,fontWeight:900,color:T.textMid}}>放大 {Math.round(zoom*100)}%</div>
+              <button style={zoomBtn} onClick={()=>zoomBy(.25)}>＋</button>
+              <button style={zoomBtn} onClick={()=>setZoom(2.5)}>精细</button>
+            </div>
+
+            <div ref={viewportRef} onPointerMove={onPointerMove} onPointerUp={stopDrag} onPointerCancel={stopDrag}
+              style={{position:"relative",width:"100%",maxHeight:"62vh",overflow:"auto",borderRadius:22,background:T.card,border:`1.5px solid ${T.border}`,boxShadow:T.cardShadow,WebkitOverflowScrolling:"touch"}}>
+              <div ref={imageLayerRef} style={{position:"relative",width:`${zoom*100}%`,minWidth:"100%",lineHeight:0}}>
+                <img src={imgSrc} alt="图纸预览" style={{display:"block",width:"100%",height:"auto",userSelect:"none",pointerEvents:"none"}}/>
+                {showGrid&&(
+                  <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} preserveAspectRatio="none">
+                    <defs>
+                      <clipPath id="helperGridClip"><rect x={area.x+"%"} y={area.y+"%"} width={area.w+"%"} height={area.h+"%"}/></clipPath>
+                    </defs>
+                    <g clipPath="url(#helperGridClip)">
+                      {grid.lines.map((l,i)=>{
+                        const stroke=hexToRgba(activeColor,alpha[l.type]);
+                        const sw=l.type==="ten"?2.2:l.type==="five"?1.6:.8;
+                        const dash=l.type==="five"?"7 5":"";
+                        if(l.dir==="v")return <line key={i} x1={pct(l.pos)} y1={pct(area.y)} x2={pct(l.pos)} y2={pct(area.y+area.h)} stroke={stroke} strokeWidth={sw} strokeDasharray={dash}/>;
+                        return <line key={i} x1={pct(area.x)} y1={pct(l.pos)} x2={pct(area.x+area.w)} y2={pct(l.pos)} stroke={stroke} strokeWidth={sw} strokeDasharray={dash}/>;
+                      })}
+                      {showNumbers&&grid.lines.filter(l=>l.k>0&&l.k%5===0).map((l,i)=> l.dir==="v"?
+                        <text key={'vx'+i} x={pct(l.pos)} y={pct(area.y+1.8)} textAnchor="middle" fontSize="10" fontWeight="900" fill={hexToRgba(activeColor,.95)}>{l.k}</text>:
+                        <text key={'hy'+i} x={pct(area.x+1)} y={pct(l.pos)} dominantBaseline="middle" fontSize="10" fontWeight="900" fill={hexToRgba(activeColor,.95)}>{l.k}</text>
+                      )}
+                    </g>
+                  </svg>
+                )}
+                {showArea&&(
+                  <div onPointerDown={e=>startDrag("area",e)} style={{position:"absolute",left:pct(area.x),top:pct(area.y),width:pct(area.w),height:pct(area.h),border:`2px solid ${T.accent}`,background:"rgba(74,158,255,0.025)",borderRadius:6,cursor:"move",boxSizing:"border-box",touchAction:"none"}}>
+                    {mode==="area"&&<span style={{position:"absolute",left:6,top:5,background:T.accent,color:"#fff",borderRadius:999,padding:"2px 7px",fontSize:10,fontWeight:900,lineHeight:1.4}}>图纸范围</span>}
+                  </div>
+                )}
+                {showCell&&(
+                  <div onPointerDown={e=>startDrag("cell",e)} style={{position:"absolute",left:pct(nineLeft),top:pct(nineTop),width:pct(nineW),height:pct(nineH),border:"2.5px solid #ff9f2f",background:"rgba(255,159,47,0.08)",borderRadius:5,cursor:"move",boxSizing:"border-box",touchAction:"none"}}>
+                    <div style={{position:"absolute",left:"33.333%",top:0,bottom:0,borderLeft:"2px dashed rgba(255,159,47,.95)"}}/>
+                    <div style={{position:"absolute",left:"66.666%",top:0,bottom:0,borderLeft:"2px dashed rgba(255,159,47,.95)"}}/>
+                    <div style={{position:"absolute",top:"33.333%",left:0,right:0,borderTop:"2px dashed rgba(255,159,47,.95)"}}/>
+                    <div style={{position:"absolute",top:"66.666%",left:0,right:0,borderTop:"2px dashed rgba(255,159,47,.95)"}}/>
+                    <div style={{position:"absolute",left:"33.333%",top:"33.333%",width:"33.333%",height:"33.333%",background:"rgba(255,159,47,.18)",outline:"2px solid rgba(255,159,47,.95)",boxSizing:"border-box"}}/>
+                    <span style={{position:"absolute",left:"50%",top:"-26px",transform:"translateX(-50%)",background:"#ff9f2f",color:"#fff",borderRadius:999,padding:"3px 8px",fontSize:10,fontWeight:900,whiteSpace:"nowrap",lineHeight:1.3}}>九宫格校准</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {msg&&<div style={{fontSize:11,color:T.textMid,lineHeight:1.7,background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:"10px 12px"}}>{msg}</div>}
 
             <div style={{background:T.card,border:`1.5px solid ${T.border}`,borderRadius:22,padding:14,boxShadow:T.cardShadow}}>
-              <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:10}}>{mode==="area"?"图纸范围微调":mode==="cell"?"单格校准微调":"网格样式"}</div>
+              <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:10}}>{mode==="area"?"图纸范围微调":mode==="cell"?"九宫格校准微调":"网格样式"}</div>
               {mode!=="grid"?(
                 <>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>{mode==="area"?"拖动蓝框圈住要画网格的区域，外面的标题和色卡可以先不框。":"把橙色九宫格对准原图里连续的 3×3 小格，中间亮起的一格就是单格尺寸。放大到 250% 左右会好对很多。"}</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:8}}>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,-.5,0)}>←</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,-.5)}>↑</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,.5)}>↓</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,.5,0)}>→</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,mode==="cell"?-.15:-.5,0)}>←</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,mode==="cell"?-.15:-.5)}>↑</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,mode==="cell" ? .15 : .5)}>↓</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,mode==="cell" ? .15 : .5,0)}>→</button>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,-.5,0)}>宽 -</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,.5,0)}>宽 +</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,0,-.5)}>高 -</button>
-                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,0,.5)}>高 +</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,mode==="cell"?-.08:-.5,0)}>宽 -</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,mode==="cell" ? .08 : .5,0)}>宽 +</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,0,mode==="cell"?-.08:-.5)}>高 -</button>
+                    <button style={smallBtn} onClick={()=>nudgeBox(mode,0,0,0,mode==="cell" ? .08 : .5)}>高 +</button>
                   </div>
                 </>
               ):(
