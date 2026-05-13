@@ -422,18 +422,7 @@ const G=`
 .btn{transition:all 0.18s;}
 .btn:active{transform:scale(0.95);}
 
-/* ═══ 毛绒背景柔光晕（仅fluffy主题生效）═══ */
-@keyframes fluffyFloat{
-  0%,100%{opacity:.85;}
-  50%{opacity:1;}
-}
-.fur-page-bg::before{
-  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(ellipse 60% 40% at 18% 22%,rgba(255,200,220,.22),transparent),
-    radial-gradient(ellipse 55% 45% at 82% 78%,rgba(200,220,255,.18),transparent),
-    radial-gradient(ellipse 40% 40% at 50% 50%,rgba(255,225,238,.10),transparent);
-  animation:fluffyFloat 6s ease-in-out infinite;}
+
 `;
 
 // ── 色卡组件（点击弹菜单：改库存 / 扣用量）──
@@ -1170,7 +1159,7 @@ export default function App(){
       <style>{G}</style>
       {showUpgrade&&<UpgradeModal T={T} onClose={()=>setShowUpgrade(false)}/>}
       {showStockAlert&&<StockAlertModal T={T} stock={stock} alertThreshold={alertThreshold} setAlertThreshold={setAlertThreshold} onClose={()=>setShowStockAlert(false)}/>}
-      <div className={`tt${safeTn==="fluffy"?" fur-page-bg":""}`} style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
+      <div className="tt" style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
 
         {/* 裁剪弹窗 */}
         {cropImg&&<div style={{position:"fixed",inset:0,zIndex:999,background:"rgba(0,0,0,0.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
