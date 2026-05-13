@@ -1,3 +1,4 @@
+// VERSION: helper-grid-direct-fix-2026-05-13
 import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -2022,6 +2023,7 @@ function HelperToolPage({T,onBack}){
   const [imgSrc,setImgSrc]=useState("");
   const [area,setArea]=useState({x:5,y:8,w:90,h:78});
   const [cell,setCell]=useState({x:12,y:14,w:2.2,h:2.2});
+  const [gridCell,setGridCell]=useState(null);
   const [mode,setMode]=useState("area");
   const [zoom,setZoom]=useState(1.8);
   const [lineColor,setLineColor]=useState("#4a9eff");
@@ -2058,6 +2060,7 @@ function HelperToolPage({T,onBack}){
     reader.onload=()=>{
       setImgSrc(String(reader.result||""));
       setMode("area");
+      setGridCell(null);
       setZoom(1.8);
       setMsg("先放大图纸，框住主体范围；再切到 5×5 校准格，用它对准原图里连续的 25 个小格。第二步贴准后，第三步就会按这个单格尺寸去延展整张网格。")
       setTimeout(()=>{try{viewportRef.current.scrollTo({left:0,top:0});}catch{}},0);
@@ -2116,34 +2119,37 @@ function HelperToolPage({T,onBack}){
       });
     }
   }
-  function nudgeGrid(dxCells,dyCells){
-    // 不能按“一整格”移动：整格移动后网格视觉上会落在同一组线位，看起来像没动。
-    // 这里按 1/5 格微调，第三步的上下左右才会明显推进网格位置。
-    setCell(prev=>{
-      const merged={...prev,x:prev.x+(prev.w/5)*dxCells,y:prev.y+(prev.h/5)*dyCells};
-      const minX=calibrationOffset*merged.w;
-      const minY=calibrationOffset*merged.h;
-      const maxX=100-(calibrationOffset+1)*merged.w;
-      const maxY=100-(calibrationOffset+1)*merged.h;
-      merged.x=clamp(merged.x,minX,Math.max(minX,maxX));
-      merged.y=clamp(merged.y,minY,Math.max(minY,maxY));
-      return merged;
+  function ensureGridCell(){
+    setGridCell(prev=>prev||{...cell});
+  }
+  function enterGridMode(){
+    setGridCell({...cell});
+    setMode("grid");
+  }
+  function nudgeGrid(dx=0,dy=0){
+    // 第三步只移动最终网格的原点，用百分比数值移动；
+    // 不再按“单格的 1/5”去折算，避免按够 5 下后视觉上又被周期网格吞回原位。
+    setGridCell(prev=>{
+      const base=prev||cell;
+      return {...base,x:Number((base.x+dx).toFixed(3)),y:Number((base.y+dy).toFixed(3))};
     });
   }
   function resizeGrid(dw=0,dh=0){
-    setCell(prev=>{
-      const centerX=prev.x+prev.w/2;
-      const centerY=prev.y+prev.h/2;
-      const merged={...prev,w:clamp(prev.w+dw,.25,20),h:clamp(prev.h+dh,.25,20)};
-      merged.x=centerX-merged.w/2;
-      merged.y=centerY-merged.h/2;
-      const minX=calibrationOffset*merged.w;
-      const minY=calibrationOffset*merged.h;
-      const maxX=100-(calibrationOffset+1)*merged.w;
-      const maxY=100-(calibrationOffset+1)*merged.h;
-      merged.x=clamp(merged.x,minX,Math.max(minX,maxX));
-      merged.y=clamp(merged.y,minY,Math.max(minY,maxY));
-      return merged;
+    // 第三步改格宽/格高时固定当前网格锚点，只改单格尺寸，不做 5×5 校准框边界夹取。
+    setGridCell(prev=>{
+      const base=prev||cell;
+      return {...base,w:clamp(Number((base.w+dw).toFixed(3)),.25,20),h:clamp(Number((base.h+dh).toFixed(3)),.25,20)};
+    });
+  }
+  function setGridNumber(key,value){
+    const num=Number(value);
+    if(!Number.isFinite(num))return;
+    setGridCell(prev=>{
+      const base=prev||cell;
+      const next={...base,[key]:num};
+      next.w=clamp(next.w,.25,20);
+      next.h=clamp(next.h,.25,20);
+      return next;
     });
   }
   function zoomBy(delta){
@@ -2201,34 +2207,35 @@ function HelperToolPage({T,onBack}){
 
   function buildLines(){
     const lines=[];
-    const cw=Math.max(cell.w,.1),ch=Math.max(cell.h,.1);
-    let rawLeft=cell.x;
-    while(rawLeft>area.x)rawLeft-=cw;
-    let rawTop=cell.y;
-    while(rawTop>area.y)rawTop-=ch;
+    const baseCell=(mode==="grid"&&gridCell)?gridCell:cell;
+    const cw=Math.max(baseCell.w,.1),ch=Math.max(baseCell.h,.1);
+    const originLeft=baseCell.x;
+    const originTop=baseCell.y;
     const xEnd=area.x+area.w,yEnd=area.y+area.h;
 
-    // 关键：坐标数字从“当前框内第一条可见网格线”开始重新计数。
-    // 旧版如果第 0 条线被裁在范围外，第一条可见线其实是第 1 条，
-    // 于是 10 号线到第一条可见线之间只剩 9 个小格，看起来就像“大格少一格”。
-    let left=rawLeft;
-    while(left<area.x-.01)left+=cw;
-    let top=rawTop;
-    while(top<area.y-.01)top+=ch;
+    // 这里不能再从“第一条可见线”重新计数。
+    // 否则网格每移动 1 个小格，也就是按 5 次 0.2 格后，5/10 辅助线会重新归零，视觉上就像弹回原位。
+    // 现在固定使用 gridCell.x / gridCell.y 作为网格原点，所有 5/10 线都按这个原点计算。
+    const startX=Math.ceil((area.x-originLeft)/cw)-1;
+    const endX=Math.floor((xEnd-originLeft)/cw)+1;
+    const startY=Math.ceil((area.y-originTop)/ch)-1;
+    const endY=Math.floor((yEnd-originTop)/ch)+1;
 
-    for(let x=left;x<=xEnd+cw*.2;x+=cw){
-      const k=Math.round((x-left)/cw);
-      if(k<=0)continue;
-      const type=k%10===0?"ten":(k%5===0?"five":null);
-      if(type)lines.push({dir:"v",pos:x,type,k});
+    for(let n=startX;n<=endX;n++){
+      if(n===0)continue;
+      const x=originLeft+n*cw;
+      if(x<area.x-.01||x>xEnd+.01)continue;
+      const type=n%10===0?"ten":(n%5===0?"five":null);
+      if(type)lines.push({dir:"v",pos:x,type,k:Math.abs(n)});
     }
-    for(let y=top;y<=yEnd+ch*.2;y+=ch){
-      const k=Math.round((y-top)/ch);
-      if(k<=0)continue;
-      const type=k%10===0?"ten":(k%5===0?"five":null);
-      if(type)lines.push({dir:"h",pos:y,type,k});
+    for(let n=startY;n<=endY;n++){
+      if(n===0)continue;
+      const y=originTop+n*ch;
+      if(y<area.y-.01||y>yEnd+.01)continue;
+      const type=n%10===0?"ten":(n%5===0?"five":null);
+      if(type)lines.push({dir:"h",pos:y,type,k:Math.abs(n)});
     }
-    return {lines,left,top,cw,ch};
+    return {lines,left:originLeft,top:originTop,cw,ch};
   }
   const grid=buildLines();
 
@@ -2242,7 +2249,6 @@ function HelperToolPage({T,onBack}){
       const ctx=canvas.getContext("2d");
       ctx.drawImage(img,0,0,canvas.width,canvas.height);
       const ax=area.x/100*canvas.width, ay=area.y/100*canvas.height, aw=area.w/100*canvas.width, ah=area.h/100*canvas.height;
-      const sx=grid.left/100*canvas.width, sy=grid.top/100*canvas.height, cw=grid.cw/100*canvas.width, ch=grid.ch/100*canvas.height;
       const xEnd=ax+aw,yEnd=ay+ah;
       ctx.save();
       ctx.beginPath();ctx.rect(ax,ay,aw,ah);ctx.clip();
@@ -2253,34 +2259,30 @@ function HelperToolPage({T,onBack}){
         ctx.lineWidth=type==="ten"?Math.max(2.2,canvas.width/420):Math.max(1.4,canvas.width/700);
         ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
       }
-      for(let x=sx,i=0;x<=xEnd+cw*.2;x+=cw,i++){
-        if(x<ax-.01 || i<=0)continue;
-        const type=i%10===0?"ten":(i%5===0?"five":null);
-        if(!type)continue;
-        drawLine(x,ay,x,yEnd,type);
-        if(showNumbers && i>0 && i%5===0){
-          ctx.setLineDash([]);
-          ctx.fillStyle=hexToRgba(activeColor,.95);
-          ctx.font=`${Math.max(14,canvas.width/55)}px sans-serif`;
-          ctx.textAlign="center";
-          ctx.textBaseline="top";
-          ctx.fillText(String(i),x,ay+4);
+      grid.lines.forEach(l=>{
+        const pos=(l.pos/100)*(l.dir==="v"?canvas.width:canvas.height);
+        if(l.dir==="v"){
+          drawLine(pos,ay,pos,yEnd,l.type);
+          if(showNumbers && l.k>0 && l.k%5===0){
+            ctx.setLineDash([]);
+            ctx.fillStyle=hexToRgba(activeColor,.95);
+            ctx.font=`${Math.max(14,canvas.width/55)}px sans-serif`;
+            ctx.textAlign="center";
+            ctx.textBaseline="top";
+            ctx.fillText(String(l.k),pos,ay+4);
+          }
+        }else{
+          drawLine(ax,pos,xEnd,pos,l.type);
+          if(showNumbers && l.k>0 && l.k%5===0){
+            ctx.setLineDash([]);
+            ctx.fillStyle=hexToRgba(activeColor,.95);
+            ctx.font=`${Math.max(14,canvas.width/55)}px sans-serif`;
+            ctx.textAlign="left";
+            ctx.textBaseline="middle";
+            ctx.fillText(String(l.k),ax+4,pos);
+          }
         }
-      }
-      for(let y=sy,j=0;y<=yEnd+ch*.2;y+=ch,j++){
-        if(y<ay-.01 || j<=0)continue;
-        const type=j%10===0?"ten":(j%5===0?"five":null);
-        if(!type)continue;
-        drawLine(ax,y,xEnd,y,type);
-        if(showNumbers && j>0 && j%5===0){
-          ctx.setLineDash([]);
-          ctx.fillStyle=hexToRgba(activeColor,.95);
-          ctx.font=`${Math.max(14,canvas.width/55)}px sans-serif`;
-          ctx.textAlign="left";
-          ctx.textBaseline="middle";
-          ctx.fillText(String(j),ax+4,y);
-        }
-      }
+      });
       ctx.restore();
       const a=document.createElement("a");
       a.href=canvas.toDataURL("image/png");
@@ -2302,8 +2304,11 @@ function HelperToolPage({T,onBack}){
   const calibrationH=cell.h*CALIBRATION_COUNT;
   const cellMoveStep=.15;
   const areaMoveStep=.5;
+  const gridMoveStep=.12;
   const cellSizeStep=.08;
   const areaSizeStep=.5;
+  const currentGrid=gridCell||cell;
+  const numberInput={width:"100%",boxSizing:"border-box",border:`1px solid ${T.border}`,background:T.bg,color:T.text,borderRadius:12,padding:"8px 9px",fontSize:12,fontWeight:800,fontFamily:"'Nunito',sans-serif",outline:"none"};
 
   return(
     <div style={{fontFamily:"'Nunito',sans-serif",minHeight:"100vh",background:T.bg,paddingBottom:28}}>
@@ -2326,7 +2331,7 @@ function HelperToolPage({T,onBack}){
             <div style={{display:"flex",gap:8,background:T.card,border:`1px solid ${T.border}`,borderRadius:18,padding:8,boxShadow:T.cardShadow}}>
               <button onClick={()=>setMode("area")} style={{...btn(mode==="area"),flex:1}}>① 范围</button>
               <button onClick={()=>setMode("cell")} style={{...btn(mode==="cell"),flex:1}}>② 对准</button>
-              <button onClick={()=>setMode("grid")} style={{...btn(mode==="grid"),flex:1}}>③ 网格</button>
+              <button onClick={enterGridMode} style={{...btn(mode==="grid"),flex:1}}>③ 网格</button>
             </div>
 
             <div style={{display:"flex",alignItems:"center",gap:8,background:T.card,border:`1px solid ${T.border}`,borderRadius:18,padding:"8px 10px",boxShadow:T.cardShadow,position:"sticky",top:55,zIndex:40}}>
@@ -2401,16 +2406,31 @@ function HelperToolPage({T,onBack}){
                   <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,marginBottom:10}}>先把整体网格位置挪准，再按需要调整颜色和清晰度。上下左右支持长按连续移动。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12,alignItems:"center"}}>
                     <div/>
-                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,-1))}>↑</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,-gridMoveStep))}>↑</button>
                     <div/>
-                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(-1,0))}>←</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(-gridMoveStep,0))}>←</button>
                     <button style={{...smallBtn,background:T.accentSoft,color:T.accent}}>移动</button>
-                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(1,0))}>→</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(gridMoveStep,0))}>→</button>
                     <div/>
-                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,1))}>↓</button>
+                    <button style={smallBtn} {...repeatProps(()=>nudgeGrid(0,gridMoveStep))}>↓</button>
                     <div/>
                   </div>
-                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>网格大小也可以在第三步直接调，宽和高支持长按连续增加/减少。</div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>也可以直接填数值：X/Y 控制网格位置，格宽/格高控制单格大小。数值单位都是百分比。</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12}}>
+                    <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>X
+                      <input type="number" step="0.1" value={Number(currentGrid.x.toFixed(2))} onChange={e=>setGridNumber("x",e.target.value)} style={numberInput}/>
+                    </label>
+                    <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>Y
+                      <input type="number" step="0.1" value={Number(currentGrid.y.toFixed(2))} onChange={e=>setGridNumber("y",e.target.value)} style={numberInput}/>
+                    </label>
+                    <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>格宽
+                      <input type="number" step="0.01" value={Number(currentGrid.w.toFixed(2))} onChange={e=>setGridNumber("w",e.target.value)} style={numberInput}/>
+                    </label>
+                    <label style={{fontSize:10,fontWeight:900,color:T.textMid}}>格高
+                      <input type="number" step="0.01" value={Number(currentGrid.h.toFixed(2))} onChange={e=>setGridNumber("h",e.target.value)} style={numberInput}/>
+                    </label>
+                  </div>
+                  <div style={{fontSize:11,color:T.textMid,lineHeight:1.6,margin:"-2px 0 8px"}}>网格大小也可以用按钮调，宽和高支持长按连续增加/减少。</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
                     <button style={smallBtn} {...repeatProps(()=>resizeGrid(-cellSizeStep,0))}>格宽 -</button>
                     <button style={smallBtn} {...repeatProps(()=>resizeGrid(cellSizeStep,0))}>格宽 +</button>
