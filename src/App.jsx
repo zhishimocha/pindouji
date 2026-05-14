@@ -2104,9 +2104,374 @@ const BOARD_SIZES=[
   {label:"78×78",cols:78,rows:78},
   {label:"104×104",cols:104,rows:104},
 ];
-const SERIES_NAMES={A:"黄橙",B:"绿",C:"蓝",D:"紫",E:"粉红",F:"红",G:"棕肤",H:"黑白灰",M:"大地"};
 
 function DrawingPage({T,tn,onBack}){
+  const [sizeIdx,setSizeIdx]=useState(0);
+  const {cols,rows}=BOARD_SIZES[sizeIdx];
+  const [cells,setCells]=useState(()=>Array(52).fill(null).map(()=>Array(52).fill(null)));
+  const [activeSeries,setActiveSeries]=useState(null);
+  const [pickedColor,setPickedColor]=useState(null);
+  const [tool,setTool]=useState("pen"); // pen | eraser
+  const [mirrorMode,setMirrorMode]=useState(false);
+  const [showGrid,setShowGrid]=useState(false);
+  const [favorites,setFavorites]=useState([]);
+  const [showFav,setShowFav]=useState(true);
+  const [history,setHistory]=useState([]);
+  const [redoStack,setRedoStack]=useState([]);
+  const [painting,setPainting]=useState(false);
+  const [cellSize,setCellSize]=useState(10);
+  const [confirmSize,setConfirmSize]=useState(null);
+  const wrapRef=useRef(null);
+  const pinchRef=useRef({active:false,startDist:0,startSize:0});
+  const isFluffyUi=tn==="fluffy";
+  const accentC=isFluffyUi?"#d07a94":"#4a9eff";
+  const LABEL_SIZE=16; // 行列标注区域宽/高px
+
+  const seriesList=["A","B","C","D","E","F","G","H","M"];
+  const seriesColors=(s)=>ALL_COLORS.filter(c=>c.id.startsWith(s));
+
+  function requestSizeChange(idx){
+    if(idx===sizeIdx)return;
+    const hasContent=cells.some(row=>row.some(c=>c!==null));
+    if(hasContent)setConfirmSize(idx);
+    else applySize(idx);
+  }
+  function applySize(idx){
+    const{cols:nc,rows:nr}=BOARD_SIZES[idx];
+    setSizeIdx(idx);
+    setCells(Array(nr).fill(null).map(()=>Array(nc).fill(null)));
+    setHistory([]);setRedoStack([]);setConfirmSize(null);
+  }
+
+  function pushHistory(snap){setHistory(h=>[...h.slice(-29),snap]);setRedoStack([]);}
+  function undo(){setHistory(h=>{if(!h.length)return h;const prev=h[h.length-1];setRedoStack(r=>[...r,cells]);setCells(prev);return h.slice(0,-1);});}
+  function redo(){setRedoStack(r=>{if(!r.length)return r;const next=r[r.length-1];setHistory(h=>[...h,cells]);setCells(next);return r.slice(0,-1);});}
+
+  function paintCell(row,col){
+    if(row<0||col<0||row>=rows||col>=cols)return;
+    setCells(prev=>{
+      const next=prev.map(r=>[...r]);
+      if(tool==="eraser"){next[row][col]=null;if(mirrorMode)next[row][cols-1-col]=null;}
+      else{next[row][col]=pickedColor;if(mirrorMode)next[row][cols-1-col]=pickedColor;}
+      return next;
+    });
+  }
+
+  function getCellFromEvent(e,el){
+    const rect=el.getBoundingClientRect();
+    const touch=e.touches?e.touches[0]:e;
+    const x=touch.clientX-rect.left;
+    const y=touch.clientY-rect.top;
+    return{row:Math.floor(y/cellSize),col:Math.floor(x/cellSize)};
+  }
+
+  // Pinch-to-zoom
+  function onTouchStart(e){
+    if(e.touches.length===2){
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      pinchRef.current={active:true,startDist:Math.hypot(dx,dy),startSize:cellSize};
+      setPainting(false);
+      return;
+    }
+    if(!pickedColor&&tool!=="eraser")return;
+    const snap=cells.map(r=>[...r]);
+    pushHistory(snap);
+    setPainting(true);
+    const{row,col}=getCellFromEvent(e,e.currentTarget);
+    paintCell(row,col);
+  }
+  function onTouchMove(e){
+    if(e.touches.length===2&&pinchRef.current.active){
+      e.preventDefault();
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      const dist=Math.hypot(dx,dy);
+      const ratio=dist/pinchRef.current.startDist;
+      const next=Math.round(pinchRef.current.startSize*ratio);
+      setCellSize(Math.max(6,Math.min(28,next)));
+      return;
+    }
+    if(!painting)return;
+    e.preventDefault();
+    const{row,col}=getCellFromEvent(e,e.currentTarget);
+    paintCell(row,col);
+  }
+  function onTouchEnd(){pinchRef.current.active=false;setPainting(false);}
+
+  function onMouseDown(e){
+    if(!pickedColor&&tool!=="eraser")return;
+    const snap=cells.map(r=>[...r]);pushHistory(snap);
+    setPainting(true);
+    const{row,col}=getCellFromEvent(e,e.currentTarget);paintCell(row,col);
+  }
+  function onMouseMove(e){if(!painting)return;const{row,col}=getCellFromEvent(e,e.currentTarget);paintCell(row,col);}
+  function onMouseUp(){setPainting(false);}
+
+  const colorCount=useMemo(()=>{const m={};cells.forEach(row=>row.forEach(c=>{if(c)m[c]=(m[c]||0)+1;}));return m;},[cells]);
+
+  function exportCanvas(){
+    const cs=Math.max(cellSize,16);
+    const canvas=document.createElement("canvas");
+    canvas.width=LABEL_SIZE+cols*cs;
+    canvas.height=LABEL_SIZE+rows*cs;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
+    // 行列标注
+    ctx.fillStyle="#888";ctx.font=`bold 9px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+    for(let c=0;c<cols;c++){if((c+1)%5===0||c===0)ctx.fillText(String(c+1),LABEL_SIZE+c*cs+cs/2,8);}
+    for(let r=0;r<rows;r++){if((r+1)%5===0||r===0)ctx.fillText(String(r+1),8,LABEL_SIZE+r*cs+cs/2);}
+    // 格子
+    cells.forEach((row,ri)=>row.forEach((cid,ci)=>{
+      const ox=LABEL_SIZE+ci*cs,oy=LABEL_SIZE+ri*cs;
+      if(cid){
+        const color=ALL_COLORS.find(c=>c.id===cid);
+        if(color){ctx.fillStyle=color.hex;ctx.fillRect(ox,oy,cs,cs);}
+        const dark=isDark(color?.hex||"#fff");
+        ctx.fillStyle=dark?"rgba(255,255,255,0.85)":"rgba(0,0,0,0.65)";
+        ctx.font=`bold ${Math.max(5,cs*0.36)}px sans-serif`;
+        ctx.textAlign="center";ctx.textBaseline="middle";
+        ctx.fillText(cid,ox+cs/2,oy+cs/2);
+      }
+      // 网格线
+      ctx.strokeStyle=(ci+1)%10===0?"rgba(0,0,0,0.30)":(ci+1)%5===0?"rgba(0,0,0,0.18)":"rgba(0,0,0,0.07)";
+      ctx.lineWidth=(ci+1)%10===0?1.2:(ci+1)%5===0?0.8:0.4;
+      ctx.strokeRect(ox,oy,cs,cs);
+    }));
+    // 底部统计
+    const entries=Object.entries(colorCount).sort((a,b)=>b[1]-a[1]);
+    if(entries.length){
+      const statH=Math.ceil(entries.length/4)*22+36;
+      const c2=document.createElement("canvas");
+      c2.width=canvas.width;c2.height=canvas.height+statH;
+      const ctx2=c2.getContext("2d");
+      ctx2.fillStyle="#fff";ctx2.fillRect(0,0,c2.width,c2.height);
+      ctx2.drawImage(canvas,0,0);
+      ctx2.fillStyle="#333";ctx2.font="bold 12px sans-serif";ctx2.fillText("色号统计：",8,canvas.height+18);
+      let x=8,y=canvas.height+34,i=0;
+      entries.forEach(([id,cnt])=>{
+        const color=ALL_COLORS.find(c=>c.id===id);
+        if(color){ctx2.fillStyle=color.hex;ctx2.fillRect(x,y-12,14,14);}
+        ctx2.fillStyle="#333";ctx2.font="11px sans-serif";ctx2.fillText(`${id}×${cnt}`,x+17,y);
+        x+=80;i++;if(i%4===0){x=8;y+=22;}
+      });
+      const a=document.createElement("a");a.href=c2.toDataURL("image/png");a.download="图纸.png";a.click();return;
+    }
+    const a=document.createElement("a");a.href=canvas.toDataURL("image/png");a.download="图纸.png";a.click();
+  }
+
+  function toggleFav(id){setFavorites(prev=>prev.includes(id)?prev.filter(f=>f!==id):[...prev.slice(-11),id]);}
+
+  // 网格线颜色
+  function gridLineStyle(ci,ri){
+    const right=(ci+1)%10===0?"rgba(0,0,0,0.22)":(ci+1)%5===0?"rgba(0,0,0,0.13)":"rgba(0,0,0,0.05)";
+    const bottom=(ri+1)%10===0?"rgba(0,0,0,0.22)":(ri+1)%5===0?"rgba(0,0,0,0.13)":"rgba(0,0,0,0.05)";
+    return{borderRight:`${(ci+1)%10===0?1.2:(ci+1)%5===0?0.8:0.4}px solid ${right}`,borderBottom:`${(ri+1)%10===0?1.2:(ri+1)%5===0?0.8:0.4}px solid ${bottom}`};
+  }
+
+  return(
+    <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text,userSelect:"none"}}>
+      {/* 顶栏 */}
+      <div style={{background:T.card,borderBottom:`1.5px solid ${T.border}`,padding:"8px 14px",display:"flex",alignItems:"center",gap:8,flexShrink:0,zIndex:10}}>
+        <button onClick={onBack} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",padding:"2px 6px",color:T.text}}>←</button>
+        <span style={{fontWeight:900,fontSize:15,flex:1}}>图纸绘制</span>
+        {BOARD_SIZES.map((s,i)=>(
+          <button key={s.label} onClick={()=>requestSizeChange(i)}
+            style={{padding:"4px 8px",borderRadius:50,border:`1.5px solid ${i===sizeIdx?accentC:T.border}`,background:i===sizeIdx?accentC:"transparent",color:i===sizeIdx?"#fff":T.textMid,fontSize:10,fontWeight:800,cursor:"pointer"}}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 工具栏 */}
+      <div style={{background:T.card,borderBottom:`1px solid ${T.border}`,padding:"6px 12px",display:"flex",alignItems:"center",gap:6,flexShrink:0,overflowX:"auto"}}>
+        {[["pen","✏️","画笔"],["eraser","🧹","橡皮"]].map(([t,ic,lb])=>(
+          <button key={t} onClick={()=>setTool(t)}
+            style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${tool===t?accentC:T.border}`,background:tool===t?accentC:"transparent",color:tool===t?"#fff":T.textMid,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",gap:3,flexShrink:0}}>
+            {ic}<span>{lb}</span>
+          </button>
+        ))}
+        <div style={{width:1,height:20,background:T.border,margin:"0 2px"}}/>
+        <button onClick={()=>setMirrorMode(m=>!m)}
+          style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${mirrorMode?accentC:T.border}`,background:mirrorMode?accentC:"transparent",color:mirrorMode?"#fff":T.textMid,fontSize:11,fontWeight:800,cursor:"pointer",flexShrink:0}}>
+          ↔ 镜像
+        </button>
+        <button onClick={()=>setShowGrid(g=>!g)}
+          style={{padding:"4px 10px",borderRadius:50,border:`1.5px solid ${showGrid?accentC:T.border}`,background:showGrid?accentC:"transparent",color:showGrid?"#fff":T.textMid,fontSize:11,fontWeight:800,cursor:"pointer",flexShrink:0}}>
+          # 网格
+        </button>
+        <div style={{flex:1}}/>
+        <button onClick={undo} disabled={!history.length}
+          style={{padding:"4px 8px",borderRadius:50,border:`1px solid ${T.border}`,background:"transparent",color:history.length?T.text:T.textLight,fontSize:13,cursor:history.length?"pointer":"default"}}>↩</button>
+        <button onClick={redo} disabled={!redoStack.length}
+          style={{padding:"4px 8px",borderRadius:50,border:`1px solid ${T.border}`,background:"transparent",color:redoStack.length?T.text:T.textLight,fontSize:13,cursor:redoStack.length?"pointer":"default"}}>↪</button>
+        <button onClick={exportCanvas}
+          style={{padding:"4px 10px",borderRadius:50,border:"none",background:accentC,color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",flexShrink:0}}>导出</button>
+      </div>
+
+      {/* 常用色栏 */}
+      {showFav?(
+        <div style={{background:T.card,borderBottom:`1px solid ${T.border}`,padding:"4px 10px",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+          <span style={{fontSize:10,color:T.textLight,fontWeight:700,flexShrink:0}}>常用</span>
+          <div style={{display:"flex",gap:4,overflowX:"auto",flex:1}}>
+            {favorites.length===0&&<span style={{fontSize:10,color:T.textLight,padding:"4px 0"}}>长按色号加入常用色</span>}
+            {favorites.map(id=>{const c=ALL_COLORS.find(x=>x.id===id);if(!c)return null;return(
+              <div key={id} onClick={()=>setPickedColor(id)}
+                style={{width:32,height:32,borderRadius:8,background:c.hex,border:`2px solid ${pickedColor===id?accentC:"transparent"}`,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                <span style={{fontSize:7,fontWeight:800,color:isDark(c.hex)?"#fff":"#000"}}>{id}</span>
+              </div>
+            );})}
+          </div>
+          <button onClick={()=>setShowFav(false)} style={{background:"none",border:"none",color:T.textLight,fontSize:14,cursor:"pointer"}}>×</button>
+        </div>
+      ):(
+        <button onClick={()=>setShowFav(true)} style={{background:T.card,border:"none",borderBottom:`1px solid ${T.border}`,padding:"3px",fontSize:10,color:T.textMid,cursor:"pointer",fontWeight:700}}>▼ 常用色</button>
+      )}
+
+      {/* 主区 */}
+      <div style={{flex:1,display:"flex",overflow:"hidden"}}>
+
+        {/* 色系/色号抽屉 */}
+        {activeSeries===null?(
+          <div style={{width:44,flexShrink:0,background:T.card,borderRight:`1px solid ${T.border}`,display:"flex",flexDirection:"column",overflowY:"auto",zIndex:2}}>
+            {seriesList.map(s=>(
+              <button key={s} onClick={()=>setActiveSeries(s)}
+                style={{padding:"8px 0",border:"none",background:"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,borderBottom:`1px solid ${T.border}`}}>
+                <div style={{width:22,height:22,borderRadius:6,background:seriesColors(s)[0]?.hex||"#ccc",border:`1.5px solid ${T.border}`}}/>
+                <span style={{fontSize:9,fontWeight:800,color:T.textMid}}>{s}</span>
+              </button>
+            ))}
+          </div>
+        ):(
+          <div style={{width:68,flexShrink:0,background:T.card,borderRight:`1px solid ${T.border}`,display:"flex",flexDirection:"column",zIndex:2}}>
+            <button onClick={()=>setActiveSeries(null)}
+              style={{padding:"8px 0",border:"none",borderBottom:`1px solid ${T.border}`,background:accentC,color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",flexShrink:0}}>
+              ✓ 完成
+            </button>
+            <div style={{flex:1,overflowY:"auto",padding:"4px"}}>
+              {seriesColors(activeSeries).map(c=>(
+                <div key={c.id}
+                  onClick={()=>setPickedColor(c.id)}
+                  onContextMenu={e=>{e.preventDefault();toggleFav(c.id);}}
+                  style={{display:"flex",alignItems:"center",gap:4,padding:"3px 2px",borderRadius:6,marginBottom:2,background:pickedColor===c.id?`${accentC}22`:"transparent",border:`1.5px solid ${pickedColor===c.id?accentC:"transparent"}`,cursor:"pointer"}}>
+                  <div style={{width:20,height:20,borderRadius:5,background:c.hex,border:"1px solid rgba(0,0,0,0.10)",flexShrink:0}}/>
+                  <span style={{fontSize:9,fontWeight:800,color:T.text}}>{c.id}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 画布区域 */}
+        <div ref={wrapRef} style={{flex:1,overflow:"auto",position:"relative",background:T.bg}}>
+
+          {/* 缩放按钮 */}
+          <div style={{position:"sticky",top:8,right:8,float:"right",zIndex:5,display:"flex",gap:4,marginRight:8,marginBottom:-36}}>
+            <button onClick={()=>setCellSize(s=>Math.min(s+2,28))}
+              style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.card,fontSize:16,cursor:"pointer",fontWeight:900,color:T.text,boxShadow:T.cardShadow}}>+</button>
+            <button onClick={()=>setCellSize(s=>Math.max(s-2,6))}
+              style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${T.border}`,background:T.card,fontSize:16,cursor:"pointer",fontWeight:900,color:T.text,boxShadow:T.cardShadow}}>−</button>
+          </div>
+
+          {/* 当前选色 */}
+          {pickedColor&&(
+            <div style={{position:"sticky",top:8,left:8,display:"inline-flex",alignItems:"center",gap:5,background:T.card,borderRadius:50,padding:"3px 10px 3px 5px",boxShadow:T.cardShadow,border:`1px solid ${T.border}`,zIndex:5,marginBottom:-28,marginLeft:8}}>
+              <div style={{width:18,height:18,borderRadius:5,background:ALL_COLORS.find(c=>c.id===pickedColor)?.hex||"#ccc",border:"1px solid rgba(0,0,0,0.1)"}}/>
+              <span style={{fontSize:11,fontWeight:800,color:T.text}}>{pickedColor}</span>
+            </div>
+          )}
+
+          {/* 画布本体：标注+格子 */}
+          <div style={{display:"inline-block",margin:48,position:"relative"}}>
+            {/* 列号标注行 */}
+            <div style={{display:"flex",marginLeft:LABEL_SIZE,marginBottom:0}}>
+              {Array.from({length:cols},(_,ci)=>(
+                <div key={ci} style={{width:cellSize,height:LABEL_SIZE,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  {((ci+1)%10===0)||(ci===0)?<span style={{fontSize:Math.max(6,cellSize*0.5),color:"#6a9bd8",fontWeight:800,lineHeight:1}}>{ci+1}</span>:
+                   (ci+1)%5===0?<span style={{fontSize:Math.max(5,cellSize*0.42),color:"#a0b8d0",fontWeight:700,lineHeight:1}}>{ci+1}</span>:null}
+                </div>
+              ))}
+            </div>
+            {/* 行 */}
+            <div style={{display:"flex"}}>
+              {/* 行号列 */}
+              <div style={{width:LABEL_SIZE,flexShrink:0,display:"flex",flexDirection:"column"}}>
+                {Array.from({length:rows},(_,ri)=>(
+                  <div key={ri} style={{height:cellSize,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {((ri+1)%10===0)||(ri===0)?<span style={{fontSize:Math.max(6,cellSize*0.5),color:"#6a9bd8",fontWeight:800,lineHeight:1}}>{ri+1}</span>:
+                     (ri+1)%5===0?<span style={{fontSize:Math.max(5,cellSize*0.42),color:"#a0b8d0",fontWeight:700,lineHeight:1}}>{ri+1}</span>:null}
+                  </div>
+                ))}
+              </div>
+              {/* 格子区 */}
+              <div
+                onMouseDown={onMouseDown}
+                onMouseMove={onMouseMove}
+                onMouseUp={onMouseUp}
+                onMouseLeave={onMouseUp}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+                style={{
+                  display:"grid",
+                  gridTemplateColumns:`repeat(${cols},${cellSize}px)`,
+                  width:cols*cellSize,
+                  cursor:tool==="eraser"?"cell":"crosshair",
+                  touchAction:"none",
+                  border:"1.5px solid rgba(0,0,0,0.18)",
+                }}>
+                {cells.map((row,ri)=>row.map((cid,ci)=>{
+                  const color=cid?ALL_COLORS.find(c=>c.id===cid):null;
+                  const gs=showGrid?gridLineStyle(ci,ri):{borderRight:`${(ci+1)%10===0?1.2:(ci+1)%5===0?0.7:0.3}px solid ${(ci+1)%10===0?"rgba(0,0,0,0.18)":(ci+1)%5===0?"rgba(0,0,0,0.10)":"rgba(0,0,0,0.04)"}`,borderBottom:`${(ri+1)%10===0?1.2:(ri+1)%5===0?0.7:0.3}px solid ${(ri+1)%10===0?"rgba(0,0,0,0.18)":(ri+1)%5===0?"rgba(0,0,0,0.10)":"rgba(0,0,0,0.04)"}`};
+                  return(
+                    <div key={`${ri}-${ci}`} style={{width:cellSize,height:cellSize,background:color?color.hex:"#fff",boxSizing:"border-box",...gs,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+                      {color&&cellSize>=12&&(
+                        <span style={{fontSize:cellSize*0.32,fontWeight:800,color:isDark(color.hex)?"rgba(255,255,255,0.82)":"rgba(0,0,0,0.55)",lineHeight:1,pointerEvents:"none",userSelect:"none"}}>{cid}</span>
+                      )}
+                    </div>
+                  );
+                }))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 底部统计 */}
+      {Object.keys(colorCount).length>0&&(
+        <div style={{background:T.card,borderTop:`1px solid ${T.border}`,padding:"6px 10px",flexShrink:0,maxHeight:72,overflowY:"auto"}}>
+          <div style={{fontSize:10,color:T.textLight,fontWeight:700,marginBottom:4}}>用色统计</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+            {Object.entries(colorCount).sort((a,b)=>b[1]-a[1]).map(([id,cnt])=>{
+              const color=ALL_COLORS.find(c=>c.id===id);
+              return(
+                <div key={id} style={{display:"flex",alignItems:"center",gap:3,padding:"2px 6px",borderRadius:50,background:T.accentSoft,border:`1px solid ${T.border}`}}>
+                  {color&&<div style={{width:10,height:10,borderRadius:3,background:color.hex,border:"1px solid rgba(0,0,0,0.1)"}}/>}
+                  <span style={{fontSize:10,fontWeight:800,color:T.text}}>{id}</span>
+                  <span style={{fontSize:10,color:T.textMid}}>×{cnt}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 换尺寸确认 */}
+      {confirmSize!==null&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{background:T.card,borderRadius:20,padding:"24px 20px",margin:"0 24px",textAlign:"center",boxShadow:T.floatShadow}}>
+            <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:8}}>切换画布尺寸</div>
+            <div style={{fontSize:13,color:T.textMid,marginBottom:20}}>当前内容将被清空，确认切换到 {BOARD_SIZES[confirmSize].label}？</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setConfirmSize(null)} style={{flex:1,padding:"10px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontWeight:800,cursor:"pointer",fontSize:13}}>取消</button>
+              <button onClick={()=>applySize(confirmSize)} style={{flex:1,padding:"10px 0",borderRadius:50,border:"none",background:accentC,color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13}}>确认</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
   const [sizeIdx,setSizeIdx]=useState(0);
   const {cols,rows}=BOARD_SIZES[sizeIdx];
   const [cells,setCells]=useState(()=>Array(rows).fill(null).map(()=>Array(cols).fill(null)));
