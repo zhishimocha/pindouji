@@ -3840,21 +3840,25 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
       </div>
 
       <div style={{padding:"8px 16px 0"}}>
-        {/* AI次数 */}
-        <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
-          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🤖 AI次数</div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12}}>
-            <div>
-              <div style={{fontSize:20,fontWeight:900,color:T.accent,lineHeight:1}}>{aiCreditText}</div>
-              <div style={{fontSize:11,color:T.textMid,marginTop:6}}>用于 AI 识图</div>
+        {!isAdmin && (
+          <>
+            {/* AI次数 */}
+            <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🤖 AI次数</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12}}>
+                <div>
+                  <div style={{fontSize:20,fontWeight:900,color:T.accent,lineHeight:1}}>{aiCreditText}</div>
+                  <div style={{fontSize:11,color:T.textMid,marginTop:6}}>用于 AI 识图</div>
+                </div>
+                <button onClick={onUpgrade}
+                  style={{padding:"10px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>
+                  购买次数
+                </button>
+              </div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>成功识别后扣除 1 次。</div>
             </div>
-            <button onClick={onUpgrade}
-              style={{padding:"10px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>
-              购买次数
-            </button>
-          </div>
-          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>{isAdmin?"管理员账号不消耗 AI 次数。":"成功识别后扣除 1 次。"}</div>
-        </div>
+          </>
+        )}
 
         {/* AI接口端 */}
         <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
