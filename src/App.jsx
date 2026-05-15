@@ -352,9 +352,9 @@ function gToBeads(g){return Math.round(g*100);}
 function fmtG(g){const n=Math.round(g*100)/100;return Number.isInteger(n)?String(n):n.toFixed(2).replace(/\.?0+$/,"");}
 
 const THEMES={
-  sky:{name:"晴空蓝",icon:"☁️",bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"毛绒 🐑",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff",toolboxPanelBg:"linear-gradient(180deg,#f8fcff 0%,#eef8ff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
-  fluffy:{name:"毛绒甜莓",icon:"🐑",bg:"linear-gradient(180deg,#fff6fa 0%,#ffeff5 40%,#edf6ff 100%)",card:"linear-gradient(145deg,#fffcfa 0%,#fff3f7 54%,#f4faff 100%)",border:"#f0d4de",accent:"#d07a94",accentLight:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",accentSoft:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",warn:"#e8b47f",warnBg:"linear-gradient(145deg,#fff8ef 0%,#fff2e6 100%)",warnBorder:"#f1d8bf",danger:"#e08a9e",dangerBg:"linear-gradient(145deg,#fff5f7 0%,#ffedf1 100%)",dangerBorder:"#f2cdd6",text:"#5e4250",textMid:"#aa8494",textLight:"#cfadb8",nav:"linear-gradient(180deg,rgba(255,252,253,0.96) 0%,rgba(255,243,248,0.98) 100%)",navBorder:"#f0d4de",barBg:"#f5dde4",bars:["#df8fa4","#f0b8c7","#f7dbe2","#cfe3ef","#f5e2cf"],switchBtn:"夜空 🌙",cardShadow:"0 14px 32px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -16px 24px rgba(255,255,255,0.52), inset 0 0 0 1px rgba(255,246,250,0.92)",floatShadow:"0 20px 48px rgba(200,130,155,0.20), inset 0 1px 0 rgba(255,255,255,0.96)",headerBg:"linear-gradient(135deg,#fffafc 0%,#ffeff6 58%,#edf6ff 100%)",navActiveDot:"#d07a94",toolboxPanelBg:"linear-gradient(180deg,#fff8fb 0%,#ffeff5 46%,#f4faff 100%)",toolboxCatBg:"linear-gradient(145deg,rgba(255,255,255,0.94) 0%,rgba(255,244,249,0.90) 100%)",plush:true,plushCard:"linear-gradient(145deg,#fffcfa 0%,#fff2f6 56%,#f3faff 100%)",plushChip:"linear-gradient(145deg,#fff7fa 0%,#ffeff5 58%,#f7faff 100%)",plushIcon:"linear-gradient(145deg,#fffdfb 0%,#fff0f6 58%,#ecf7ff 100%)",plushShadow:"0 16px 36px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -18px 26px rgba(255,255,255,0.52)",plushBorder:"#f2d4dd"},
-  night:{name:"夜空黄",icon:"🌙",bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"晴空 ☁️",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166",toolboxPanelBg:"#152236",toolboxCatBg:"#0d1b2e"}
+  sky:{name:"晴空蓝",icon:"☁️",bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"晴空蓝 ☁️",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff",toolboxPanelBg:"linear-gradient(180deg,#f8fcff 0%,#eef8ff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
+  fluffy:{name:"毛绒甜莓",icon:"🐑",bg:"linear-gradient(180deg,#fff6fa 0%,#ffeff5 40%,#edf6ff 100%)",card:"linear-gradient(145deg,#fffcfa 0%,#fff3f7 54%,#f4faff 100%)",border:"#f0d4de",accent:"#d07a94",accentLight:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",accentSoft:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",warn:"#e8b47f",warnBg:"linear-gradient(145deg,#fff8ef 0%,#fff2e6 100%)",warnBorder:"#f1d8bf",danger:"#e08a9e",dangerBg:"linear-gradient(145deg,#fff5f7 0%,#ffedf1 100%)",dangerBorder:"#f2cdd6",text:"#5e4250",textMid:"#aa8494",textLight:"#cfadb8",nav:"linear-gradient(180deg,rgba(255,252,253,0.96) 0%,rgba(255,243,248,0.98) 100%)",navBorder:"#f0d4de",barBg:"#f5dde4",bars:["#df8fa4","#f0b8c7","#f7dbe2","#cfe3ef","#f5e2cf"],switchBtn:"毛绒甜莓 🐑",cardShadow:"0 14px 32px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -16px 24px rgba(255,255,255,0.52), inset 0 0 0 1px rgba(255,246,250,0.92)",floatShadow:"0 20px 48px rgba(200,130,155,0.20), inset 0 1px 0 rgba(255,255,255,0.96)",headerBg:"linear-gradient(135deg,#fffafc 0%,#ffeff6 58%,#edf6ff 100%)",navActiveDot:"#d07a94",toolboxPanelBg:"linear-gradient(180deg,#fff8fb 0%,#ffeff5 46%,#f4faff 100%)",toolboxCatBg:"linear-gradient(145deg,rgba(255,255,255,0.94) 0%,rgba(255,244,249,0.90) 100%)",plush:true,plushCard:"linear-gradient(145deg,#fffcfa 0%,#fff2f6 56%,#f3faff 100%)",plushChip:"linear-gradient(145deg,#fff7fa 0%,#ffeff5 58%,#f7faff 100%)",plushIcon:"linear-gradient(145deg,#fffdfb 0%,#fff0f6 58%,#ecf7ff 100%)",plushShadow:"0 16px 36px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -18px 26px rgba(255,255,255,0.52)",plushBorder:"#f2d4dd"},
+  night:{name:"夜空黄",icon:"🌙",bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"夜空黄 🌙",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166",toolboxPanelBg:"#152236",toolboxCatBg:"#0d1b2e"}
 };
 const THEME_ORDER=["sky","fluffy","night"];
 
@@ -3077,15 +3077,15 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     };
 
     const skyCard={
-      bg:"linear-gradient(145deg,#f8fdff 0%,#e8f6ff 48%,#fff9ee 100%)",
-      border:"1px solid rgba(185,226,255,.95)",
-      shadow:"0 16px 34px rgba(74,158,255,.14), inset 0 3px 0 rgba(255,255,255,.82), inset 0 -18px 24px rgba(255,255,255,.44)"
+      bg:"linear-gradient(145deg,#fbfdff 0%,#eef4ff 48%,#f8f1ff 100%)",
+      border:"1px solid rgba(207,200,255,.88)",
+      shadow:"0 16px 34px rgba(139,115,216,.12), inset 0 3px 0 rgba(255,255,255,.84), inset 0 -18px 24px rgba(255,255,255,.44)"
     };
 
     const nightCard={
-      bg:"linear-gradient(145deg,#fff4c8 0%,#ffd166 46%,#3a2b12 100%)",
-      border:"1px solid rgba(255,209,102,.62)",
-      shadow:"0 18px 38px rgba(0,0,0,.36), 0 0 26px rgba(255,209,102,.10), inset 0 3px 0 rgba(255,255,255,.30), inset 0 -20px 26px rgba(0,0,0,.22)"
+      bg:"linear-gradient(145deg,#fff9dc 0%,#ffe9a6 42%,#ffd166 100%)",
+      border:"1px solid rgba(255,214,120,.95)",
+      shadow:"0 18px 36px rgba(0,0,0,.26), 0 0 22px rgba(255,209,102,.14), inset 0 3px 0 rgba(255,255,255,.62), inset 0 -18px 24px rgba(255,176,40,.18)"
     };
 
     const m=tn==="night"?nightCard:skyCard;
@@ -3095,16 +3095,15 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const softToolGlowStyle=(variant)=>{
     if(isFluffyUi) return plushToolGlowStyle(variant==="drawing"?"helper":variant);
 
-    const skyGlow="radial-gradient(circle,rgba(255,218,150,.42),rgba(122,203,255,.10) 62%,transparent 72%)";
-    const nightGlow="radial-gradient(circle,rgba(255,245,178,.42),rgba(255,209,102,.18) 58%,transparent 72%)";
-
     return {
       position:"absolute",
-      inset:variant==="missing"?"-30px auto auto -16px":variant==="helper"?"auto -22px -30px auto":"-28px -18px auto auto",
-      width:variant==="missing"?82:86,
-      height:variant==="missing"?82:86,
+      inset:"-30px auto auto -16px",
+      width:82,
+      height:82,
       borderRadius:"50%",
-      background:tn==="night"?nightGlow:skyGlow,
+      background:tn==="night"
+        ?"radial-gradient(circle,rgba(255,255,240,.58),rgba(255,209,102,.24) 58%,transparent 72%)"
+        :"radial-gradient(circle,rgba(186,213,255,.36),rgba(224,210,255,.12) 62%,transparent 72%)",
       filter:"blur(2px)"
     };
   };
@@ -3112,8 +3111,8 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   const softToolIconStyle=(variant)=>{
     if(isFluffyUi) return plushToolIconStyle(variant==="drawing"?"helper":variant);
 
-    const skyIcon="radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(232,247,255,.76) 48%,rgba(255,243,212,.58))";
-    const nightIcon="linear-gradient(145deg,#fff7cc 0%,#ffd166 50%,#3a2b12 100%)";
+    const skyIcon="radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(235,244,255,.76) 48%,rgba(235,224,255,.58))";
+    const nightIcon="radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(255,241,178,.86) 48%,rgba(255,209,102,.68))";
 
     return {
       width:52,
@@ -3121,7 +3120,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       borderRadius:19,
       background:tn==="night"?nightIcon:skyIcon,
       boxShadow:tn==="night"
-        ?"0 14px 28px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.30), inset 0 -16px 22px rgba(0,0,0,.22)"
+        ?"0 14px 26px rgba(120,76,0,.20), inset 0 3px 0 rgba(255,255,255,.70), inset 0 -14px 20px rgba(255,186,50,.22)"
         :"0 14px 28px rgba(74,158,255,.15), inset 0 3px 0 rgba(255,255,255,.88), inset 0 -16px 22px rgba(255,255,255,.44)",
       display:"flex",
       alignItems:"center",
@@ -3130,9 +3129,11 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       flexShrink:0,
       position:"relative",
       zIndex:1,
-      border:tn==="night"?"1px solid rgba(255,245,185,.45)":"1px solid rgba(255,255,255,.92)"
+      border:tn==="night"?"1px solid rgba(255,255,255,.86)":"1px solid rgba(255,255,255,.92)"
     };
   };
+
+  const toolTextColor=()=>tn==="night"?"#5a3a08":T.text;
 
   const worksProgressStyle=()=>{
     if(tn==="fluffy") return {background:T.card,padding:"20px 18px 16px",borderBottom:`1px solid ${T.border}`};
@@ -3570,25 +3571,25 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
           <div style={softToolGlowStyle("toolbox")}/>
           {!isPro&&<span style={{position:"absolute",top:7,right:7,fontSize:8,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 5px",fontWeight:900,lineHeight:1.2,zIndex:2}}>Pro</span>}
           <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("toolbox")}>🧰</div>
-          <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>工具箱</div>
+          <div style={{fontSize:12,fontWeight:900,color:toolTextColor(),lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>工具箱</div>
         </div>
         <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("missing")}
           style={softToolCardStyle("missing")}>
           <div style={softToolGlowStyle("missing")}/>
           <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("missing")}>🔍</div>
-          <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>缺色替换</div>
+          <div style={{fontSize:12,fontWeight:900,color:toolTextColor(),lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>缺色替换</div>
         </div>
         <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("helper")}
           style={softToolCardStyle("helper")}>
           <div style={softToolGlowStyle("helper")}/>
           <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("helper")}>📏</div>
-          <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>辅助工具</div>
+          <div style={{fontSize:12,fontWeight:900,color:toolTextColor(),lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>辅助工具</div>
         </div>
         <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("drawing")}
-          style={isFluffyUi?plushToolCardStyle("helper"):{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(255,245,238,.72))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(255,140,80,.12), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(255,210,178,.88)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
-          <div style={{position:"absolute",inset:"-28px -18px auto auto",width:76,height:76,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,200,150,.40),rgba(255,160,100,.08) 62%,transparent 72%)",filter:"blur(2px)"}}/>
-          <div className={isFluffyUi?"fur-icon":""} style={isFluffyUi?plushToolIconStyle("helper"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(255,245,230,.72) 48%,rgba(255,220,190,.5))",boxShadow:"0 12px 28px rgba(255,140,80,.15), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🎨</div>
-          <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>图纸绘制</div>
+          style={softToolCardStyle("drawing")}>
+          <div style={softToolGlowStyle("drawing")}/>
+          <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("drawing")}>🎨</div>
+          <div style={{fontSize:12,fontWeight:900,color:toolTextColor(),lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>图纸绘制</div>
         </div>
       </div>
 
