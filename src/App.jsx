@@ -10,10 +10,12 @@ const supabase = createClient(
 
 // ══════════════ AI次数购买弹窗 ══════════════
 function UpgradeModal({T,onClose}){
+  const [payType,setPayType]=useState("wechat");
+  const payQr=payType==="wechat"?"/ai-pay-wechat.jpg":"/ai-pay-alipay.jpg";
   const packs=[
     {name:"10次",price:"¥1.9",tag:"轻量体验"},
     {name:"30次",price:"¥4.9",tag:"常用"},
-    {name:"100次",price:"¥12.9",tag:"更划算"},
+    {name:"60次",price:"¥9.9",tag:"更划算"},
   ];
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
@@ -36,11 +38,30 @@ function UpgradeModal({T,onClose}){
         </div>
 
         <div style={{background:T.bg,border:`1px dashed ${T.border}`,borderRadius:18,padding:"14px 12px",marginBottom:14,textAlign:"center"}}>
-          <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:8}}>扫码付款</div>
-          <div style={{width:150,height:150,borderRadius:16,background:T.card,border:`1.5px solid ${T.border}`,margin:"0 auto 10px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:T.textLight,lineHeight:1.6,padding:12}}>
-            收款码<br/>放这里
+          <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:10}}>扫码付款</div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            <button
+              onClick={()=>setPayType("wechat")}
+              style={{padding:"9px 0",borderRadius:14,border:`1.5px solid ${payType==="wechat"?T.accent:T.border}`,background:payType==="wechat"?T.accent:T.card,color:payType==="wechat"?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}
+            >
+              微信
+            </button>
+            <button
+              onClick={()=>setPayType("alipay")}
+              style={{padding:"9px 0",borderRadius:14,border:`1.5px solid ${payType==="alipay"?T.accent:T.border}`,background:payType==="alipay"?T.accent:T.card,color:payType==="alipay"?"#fff":T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}
+            >
+              支付宝
+            </button>
           </div>
-          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>付款备注账号邮箱，人工开通次数。</div>
+
+          <img
+            src={payQr}
+            alt={payType==="wechat"?"微信收款码":"支付宝收款码"}
+            style={{width:210,height:210,objectFit:"contain",borderRadius:18,background:"#fff",border:`1.5px solid ${T.border}`,padding:8,margin:"0 auto 10px",display:"block"}}
+          />
+
+          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>付款备注账号邮箱，人工开通时间 9:00 - 21:00。非营业时间付款，次日处理。</div>
         </div>
 
         <div style={{fontSize:11,color:T.textLight,lineHeight:1.7,marginBottom:14,textAlign:"center"}}>系统失败不扣次数，识别结果可手动修改。</div>
@@ -246,9 +267,31 @@ function AuthPage({ T, tn, onLogin }) {
     if (!email || !password) { setErr("请填写邮箱和密码～"); return; }
     setLoading(true);
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) { setErr(error.message); setLoading(false); return; }
-      setMsg("注册成功！直接登录就可以啦～");
+
+      const uid = data.user?.id;
+      if (uid) {
+        try {
+          const resp = await fetch("/api/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uid }),
+          });
+          const result = await resp.json().catch(() => ({}));
+
+          if (resp.ok && result.grantedCredits) {
+            setMsg("注册成功！已获得 3 次 AI 识图体验，直接登录吧～🎉");
+          } else {
+            setMsg("注册成功！直接登录就可以啦～");
+          }
+        } catch (registerErr) {
+          console.error("register init failed:", registerErr);
+          setMsg("注册成功！直接登录就可以啦～");
+        }
+      } else {
+        setMsg("注册成功！直接登录就可以啦～");
+      }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setErr("邮箱或密码错误，请重试～");
@@ -511,6 +554,7 @@ export default function App(){
   const [showUpgrade,setShowUpgrade]=useState(false);
   const [showAiSettings,setShowAiSettings]=useState(false);
   const [aiCredits,setAiCredits]=useState(0);
+  const [isAdmin,setIsAdmin]=useState(false);
   const [aiSettings,setAiSettings]=useState(()=>{try{return JSON.parse(localStorage.getItem("pindou_ai_settings")||"{}")}catch{return {}}});
   const hasOwnApi=!!String(aiSettings?.apiKey||"").trim();
 
@@ -545,7 +589,7 @@ export default function App(){
 
   // 登录后从云端拉数据
   useEffect(()=>{
-    if(!user){setCloudReady(false);setIsPro(false);setSyncStatus("");return;}
+    if(!user){setCloudReady(false);setIsPro(false);setIsAdmin(false);setAiCredits(0);setSyncStatus("");return;}
     setCloudReady(false);
     async function loadCloud(){
       setSyncLoading(true);
@@ -554,6 +598,8 @@ export default function App(){
       // 拉用户资料：当前版本不再走月/季/年Pro，AI只看 ai_credits
       const {data:profile}=await supabase.from("profiles").select("*").eq("user_id",user.id).maybeSingle();
       setIsPro(true);
+      const nextIsAdmin=String(profile?.role || "").toLowerCase()==="admin";
+      setIsAdmin(nextIsAdmin);
       setAiCredits(Number(profile?.ai_credits || 0));
       if(error){
         setSyncStatus("err");
@@ -811,7 +857,7 @@ export default function App(){
 
   async function confirmCrop(){
     if(!cropImg)return;
-    if(!hasOwnApi && aiCredits<=0){setShowUpgrade(true);return;}
+    if(!isAdmin && !hasOwnApi && aiCredits<=0){setShowUpgrade(true);return;}
     setImgLoading(true);setImgErr("");
     try{
       let finalB64=cropImg;
@@ -829,24 +875,16 @@ export default function App(){
         finalB64=canvas.toDataURL('image/jpeg',0.92);
       }
       setCropImg(null);setCropBox(null);
-      const {data:{session}}=await supabase.auth.getSession();
-      const token=session?.access_token||"";
-      const resp=await fetch('/api/qwen',{
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          ...(token?{Authorization:`Bearer ${token}`}:{})
-        },
-        body:JSON.stringify({
-          image:finalB64,
-          aiMode:hasOwnApi?"own_api":"credits",
-          apiConfig:hasOwnApi?aiSettings:null
-        })
-      });
+      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        image:finalB64,
+        aiMode:hasOwnApi?"own_api":"credits",
+        apiConfig:hasOwnApi?aiSettings:null
+      })});
       const data=await resp.json();
+      if(data.isAdmin!==undefined)setIsAdmin(!!data.isAdmin);
       if(data.aiCredits!==undefined)setAiCredits(Number(data.aiCredits)||0);
       if(data.result&&data.result!=='无法识别'){
-        if(!hasOwnApi&&data.aiCredits===undefined)setAiCredits(v=>Math.max(0,(Number(v)||0)-1));
+        if(!isAdmin&&!hasOwnApi&&data.aiCredits===undefined)setAiCredits(v=>Math.max(0,(Number(v)||0)-1));
         // 解析成tags
         const tags=data.result.split(/[,，]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
           const m=s.match(/^([A-Za-z]+\d+|全部)\s*([+-])\s*(\d+)$/i);
@@ -1286,7 +1324,7 @@ export default function App(){
           {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} onRestoreStock={restoreStock} onLogStockDeduction={writeStockLogs} onCloudDeleteTask={deleteTaskFromCloud} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
 
           {/* 我的页 */}
-          {page==="mine"&&<MinePage T={T} tn={safeTn} setTn={setTn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} aiCredits={aiCredits} hasOwnApi={hasOwnApi} onOpenAiSettings={()=>setShowAiSettings(true)}/>}
+          {page==="mine"&&<MinePage T={T} tn={safeTn} setTn={setTn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} aiCredits={aiCredits} isAdmin={isAdmin} hasOwnApi={hasOwnApi} onOpenAiSettings={()=>setShowAiSettings(true)}/>}
 
         </div>{/* end 主内容滚动区 */}
 
@@ -1343,14 +1381,14 @@ export default function App(){
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 手动输入：A15-200、全部+100</div>
-                <button className="btn" onClick={()=>{if(!hasOwnApi&&aiCredits<=0){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
+                <button className="btn" onClick={()=>{if(!isAdmin&&!hasOwnApi&&aiCredits<=0){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
                   style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap",position:"relative"}}>
                   {imgLoading?"识别中…":"📷 识图"}
-                  <span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>{hasOwnApi?"API":`${aiCredits}次`}</span>
+                  <span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>{hasOwnApi?"API":isAdmin?"∞":`${aiCredits}次`}</span>
                 </button>
                 <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
               </div>
-              <div style={{fontSize:10,color:T.textLight,fontWeight:700,marginTop:-2}}>{hasOwnApi?"当前使用自己的 API，不消耗 AI 次数":`剩余 AI 次数：${aiCredits} 次`}</div>
+              <div style={{fontSize:10,color:T.textLight,fontWeight:700,marginTop:-2}}>{hasOwnApi?"当前使用自己的 API，不消耗 AI 次数":isAdmin?"当前为管理员账号，AI 次数不限":`剩余 AI 次数：${aiCredits} 次`}</div>
               <textarea value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
                 placeholder={"A15-200, B3+500, 全部-100"}
                 rows={2}
@@ -3729,8 +3767,9 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 // ══════════════════════════════════
 //  MinePage（我的页）
 // ══════════════════════════════════
-function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,aiCredits,hasOwnApi,onOpenAiSettings}){
+function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,aiCredits,isAdmin,hasOwnApi,onOpenAiSettings}){
   const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
+  const aiCreditText=isAdmin?"∞":`${aiCredits||0} 次`;
   const [nickname,setNickname]=useState(()=>localStorage.getItem('pindou_nickname')||"");
   const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
   const [editingName,setEditingName]=useState(false);
@@ -3797,7 +3836,7 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
           </div>
         )}
         <div style={{fontSize:11,color:T.textLight,marginTop:2}}>加入于 {joinDate}</div>
-        <div style={{marginTop:10,padding:"6px 16px",borderRadius:50,background:T.accentSoft,fontSize:11,fontWeight:900,color:T.accent}}>AI次数：{aiCredits||0} 次</div>
+        <div style={{marginTop:10,padding:"6px 16px",borderRadius:50,background:T.accentSoft,fontSize:11,fontWeight:900,color:T.accent}}>AI次数：{aiCreditText}</div>
       </div>
 
       <div style={{padding:"8px 16px 0"}}>
@@ -3806,7 +3845,7 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
           <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🤖 AI次数</div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12}}>
             <div>
-              <div style={{fontSize:20,fontWeight:900,color:T.accent,lineHeight:1}}>{aiCredits||0} 次</div>
+              <div style={{fontSize:20,fontWeight:900,color:T.accent,lineHeight:1}}>{aiCreditText}</div>
               <div style={{fontSize:11,color:T.textMid,marginTop:6}}>用于 AI 识图</div>
             </div>
             <button onClick={onUpgrade}
@@ -3814,7 +3853,7 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
               购买次数
             </button>
           </div>
-          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>成功识别后扣除 1 次。</div>
+          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>{isAdmin?"管理员账号不消耗 AI 次数。":"成功识别后扣除 1 次。"}</div>
         </div>
 
         {/* AI接口端 */}
