@@ -13,8 +13,8 @@ function UpgradeModal({T,onClose}){
   const [payType,setPayType]=useState("wechat");
   const payQr=payType==="wechat"?"/ai-pay-wechat.jpg":"/ai-pay-alipay.jpg";
   const packs=[
-    {name:"10次",price:"¥1.9",tag:"轻量体验"},
-    {name:"30次",price:"¥4.9",tag:"常用"},
+    {name:"10次",price:"¥2.9",tag:"轻量体验"},
+    {name:"30次",price:"¥5.9",tag:"常用"},
     {name:"60次",price:"¥9.9",tag:"更划算"},
   ];
   return(
