@@ -3017,6 +3017,61 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     };
     return {width:52,height:52,borderRadius:19,background:maps[variant],boxShadow:"0 14px 26px rgba(214,143,166,.20), inset 0 3px 0 rgba(255,255,255,.82), inset 0 -18px 22px rgba(255,255,255,.40)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,247,249,.92)"};
   };
+  const softToolCardStyle=(variant)=>{
+    if(isFluffyUi) return plushToolCardStyle(variant==="drawing"?"helper":variant);
+    const common={borderRadius:28,padding:"13px 6px 11px",minHeight:92,cursor:"pointer",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden",isolation:"isolate"};
+    const sky={
+      toolbox:{bg:"linear-gradient(145deg,#f8fdff 0%,#e8f6ff 48%,#fff9ee 100%)",border:"1px solid rgba(185,226,255,.95)",shadow:"0 16px 34px rgba(74,158,255,.14), inset 0 3px 0 rgba(255,255,255,.82), inset 0 -18px 24px rgba(255,255,255,.44)"},
+      missing:{bg:"linear-gradient(145deg,#fbfdff 0%,#eef4ff 48%,#f8f1ff 100%)",border:"1px solid rgba(207,200,255,.88)",shadow:"0 16px 34px rgba(139,115,216,.12), inset 0 3px 0 rgba(255,255,255,.84), inset 0 -18px 24px rgba(255,255,255,.44)"},
+      helper:{bg:"linear-gradient(145deg,#f8fdff 0%,#e8f7ff 50%,#fff8e8 100%)",border:"1px solid rgba(185,226,255,.92)",shadow:"0 16px 34px rgba(74,158,255,.13), inset 0 3px 0 rgba(255,255,255,.84), inset 0 -18px 24px rgba(255,255,255,.44)"},
+      drawing:{bg:"linear-gradient(145deg,#fffdf8 0%,#fff0df 45%,#f0f8ff 100%)",border:"1px solid rgba(255,210,178,.88)",shadow:"0 16px 34px rgba(255,160,80,.12), inset 0 3px 0 rgba(255,255,255,.84), inset 0 -18px 24px rgba(255,255,255,.44)"}
+    };
+    const night={
+      toolbox:{bg:"linear-gradient(145deg,#172641 0%,#101b2f 54%,#221b10 100%)",border:"1px solid rgba(255,209,102,.24)",shadow:"0 18px 38px rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06), inset 0 -18px 24px rgba(0,0,0,.22)"},
+      missing:{bg:"linear-gradient(145deg,#16243d 0%,#111a2f 48%,#241a2a 100%)",border:"1px solid rgba(167,139,250,.26)",shadow:"0 18px 38px rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06), inset 0 -18px 24px rgba(0,0,0,.22)"},
+      helper:{bg:"linear-gradient(145deg,#15233b 0%,#0f1b30 50%,#1c2518 100%)",border:"1px solid rgba(111,204,255,.22)",shadow:"0 18px 38px rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06), inset 0 -18px 24px rgba(0,0,0,.22)"},
+      drawing:{bg:"linear-gradient(145deg,#1c2337 0%,#141b2e 50%,#2a1d12 100%)",border:"1px solid rgba(255,183,92,.26)",shadow:"0 18px 38px rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06), inset 0 -18px 24px rgba(0,0,0,.22)"}
+    };
+    const m=(tn==="night"?night:sky)[variant]||sky.toolbox;
+    return {...common,background:m.bg,border:m.border,boxShadow:m.shadow};
+  };
+  const softToolGlowStyle=(variant)=>{
+    if(isFluffyUi) return plushToolGlowStyle(variant==="drawing"?"helper":variant);
+    const sky={
+      toolbox:"radial-gradient(circle,rgba(255,218,150,.42),rgba(122,203,255,.10) 62%,transparent 72%)",
+      missing:"radial-gradient(circle,rgba(186,213,255,.36),rgba(224,210,255,.12) 62%,transparent 72%)",
+      helper:"radial-gradient(circle,rgba(255,232,173,.34),rgba(126,210,255,.12) 62%,transparent 72%)",
+      drawing:"radial-gradient(circle,rgba(255,204,160,.38),rgba(255,176,118,.08) 62%,transparent 72%)"
+    };
+    const night={
+      toolbox:"radial-gradient(circle,rgba(255,209,102,.24),rgba(80,145,220,.08) 62%,transparent 72%)",
+      missing:"radial-gradient(circle,rgba(167,139,250,.20),rgba(255,143,163,.08) 62%,transparent 72%)",
+      helper:"radial-gradient(circle,rgba(111,204,255,.18),rgba(255,209,102,.08) 62%,transparent 72%)",
+      drawing:"radial-gradient(circle,rgba(255,183,92,.22),rgba(255,143,163,.07) 62%,transparent 72%)"
+    };
+    return {position:"absolute",inset:variant==="missing"?"-30px auto auto -16px":variant==="helper"?"auto -22px -30px auto":"-28px -18px auto auto",width:variant==="missing"?82:86,height:variant==="missing"?82:86,borderRadius:"50%",background:(tn==="night"?night:sky)[variant]||sky.toolbox,filter:"blur(2px)"};
+  };
+  const softToolIconStyle=(variant)=>{
+    if(isFluffyUi) return plushToolIconStyle(variant==="drawing"?"helper":variant);
+    const sky={
+      toolbox:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(232,247,255,.76) 48%,rgba(255,243,212,.58))",
+      missing:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(235,244,255,.76) 48%,rgba(235,224,255,.58))",
+      helper:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(232,247,255,.76) 48%,rgba(255,243,217,.58))",
+      drawing:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(255,246,232,.78) 48%,rgba(255,218,188,.58))"
+    };
+    const night={
+      toolbox:"linear-gradient(145deg,#223352 0%,#121d31 56%,#2a2110 100%)",
+      missing:"linear-gradient(145deg,#202e4b 0%,#151d33 55%,#2a1a30 100%)",
+      helper:"linear-gradient(145deg,#1d314f 0%,#111c30 56%,#1e2818 100%)",
+      drawing:"linear-gradient(145deg,#283047 0%,#151d30 55%,#32200f 100%)"
+    };
+    return {width:52,height:52,borderRadius:19,background:(tn==="night"?night:sky)[variant]||sky.toolbox,boxShadow:tn==="night"?"0 14px 28px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.08), inset 0 -16px 22px rgba(0,0,0,.24)":"0 14px 28px rgba(74,158,255,.15), inset 0 3px 0 rgba(255,255,255,.88), inset 0 -16px 22px rgba(255,255,255,.44)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:tn==="night"?"1px solid rgba(255,255,255,.10)":"1px solid rgba(255,255,255,.92)"};
+  };
+  const worksProgressStyle=()=>{
+    if(tn==="fluffy") return {background:T.card,padding:"20px 18px 16px",borderBottom:`1px solid ${T.border}`};
+    if(tn==="night") return {background:"linear-gradient(135deg,#0f1b2e 0%,#172844 58%,#241e10 100%)",padding:"20px 18px 16px",borderBottom:"1px solid #1e3352"};
+    return {background:"linear-gradient(135deg,#edf9ff 0%,#f5f9ff 56%,#fffdf8 100%)",padding:"20px 18px 16px",borderBottom:"1px solid #d6ebff"};
+  };
 
   const getTaskCreatedTime = useCallback((task)=>{
     const raw = task?.createdAt || task?.doneDate;
@@ -3402,7 +3457,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       })()}
 
       {/* 进度区 */}
-      <div style={{background:`linear-gradient(135deg,${T.accentSoft} 0%,#f5f0ff 100%)`,padding:"20px 18px 16px",borderBottom:`1px solid ${T.border}`}}>
+      <div style={worksProgressStyle()}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:10}}>
           <div>
             <div style={{fontSize:18,fontWeight:900,color:T.accent}}>作品</div>
@@ -3444,22 +3499,22 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       {/* 工具入口 */}
       <div style={{padding:"16px 16px 0",display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10}}>
         <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>{if(!isPro){onUpgrade();return;}setShowToolbox(true);}}
-          style={isFluffyUi?plushToolCardStyle("toolbox"):{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(239,248,255,.72))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(75,155,215,.15), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(178,221,255,.88)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
-          <div style={isFluffyUi?plushToolGlowStyle("toolbox"):{position:"absolute",inset:"-28px -18px auto auto",width:76,height:76,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,214,143,.42),rgba(122,203,255,.08) 62%,transparent 72%)",filter:"blur(2px)"}}/>
+          style={softToolCardStyle("toolbox")}>
+          <div style={softToolGlowStyle("toolbox")}/>
           {!isPro&&<span style={{position:"absolute",top:7,right:7,fontSize:8,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"1px 5px",fontWeight:900,lineHeight:1.2,zIndex:2}}>Pro</span>}
-          <div className={isFluffyUi?"fur-icon":""} style={isFluffyUi?plushToolIconStyle("toolbox"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.96),rgba(232,247,255,.72) 48%,rgba(255,242,207,.5))",boxShadow:"0 12px 28px rgba(74,158,255,.18), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🧰</div>
+          <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("toolbox")}>🧰</div>
           <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>工具箱</div>
         </div>
         <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("missing")}
-          style={isFluffyUi?plushToolCardStyle("missing"):{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(244,240,255,.74))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(139,115,216,.13), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(205,193,255,.8)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
-          <div style={isFluffyUi?plushToolGlowStyle("missing"):{position:"absolute",inset:"-30px auto auto -16px",width:82,height:82,borderRadius:"50%",background:"radial-gradient(circle,rgba(186,213,255,.38),rgba(255,220,238,.12) 62%,transparent 72%)",filter:"blur(2px)"}}/>
-          <div className={isFluffyUi?"fur-icon":""} style={isFluffyUi?plushToolIconStyle("missing"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(235,244,255,.72) 48%,rgba(232,220,255,.5))",boxShadow:"0 12px 28px rgba(154,123,220,.16), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>🔍</div>
+          style={softToolCardStyle("missing")}>
+          <div style={softToolGlowStyle("missing")}/>
+          <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("missing")}>🔍</div>
           <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>缺色替换</div>
         </div>
         <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("helper")}
-          style={isFluffyUi?plushToolCardStyle("helper"):{background:"linear-gradient(145deg,rgba(255,255,255,.92),rgba(238,249,255,.72))",borderRadius:26,padding:"13px 6px 11px",minHeight:92,boxShadow:"0 14px 30px rgba(74,158,255,.14), inset 0 1px 0 rgba(255,255,255,.95)",cursor:"pointer",border:"1px solid rgba(178,221,255,.88)",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden"}}>
-          <div style={isFluffyUi?plushToolGlowStyle("helper"):{position:"absolute",inset:"auto -22px -30px auto",width:86,height:86,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,232,173,.36),rgba(126,210,255,.12) 62%,transparent 72%)",filter:"blur(2px)"}}/>
-          <div className={isFluffyUi?"fur-icon":""} style={isFluffyUi?plushToolIconStyle("helper"):{width:48,height:48,borderRadius:"50%",background:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.97),rgba(232,247,255,.72) 48%,rgba(255,243,217,.5))",boxShadow:"0 12px 28px rgba(74,158,255,.17), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -10px 18px rgba(255,255,255,.45)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:"1px solid rgba(255,255,255,.9)"}}>📏</div>
+          style={softToolCardStyle("helper")}>
+          <div style={softToolGlowStyle("helper")}/>
+          <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("helper")}>📏</div>
           <div style={{fontSize:12,fontWeight:900,color:T.text,lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>辅助工具</div>
         </div>
         <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("drawing")}
@@ -3780,14 +3835,54 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
   const plushSectionStyle=isFluffyUi?{background:T.plushCard||T.card,border:`1.5px solid ${T.plushBorder||T.border}`,boxShadow:T.plushShadow||T.cardShadow}:{background:T.card,border:`1.5px solid ${T.border}`,boxShadow:T.cardShadow};
   const fluffyPreviewRow=(key,active)=>{
     const theme=THEMES[key];
-    const previewPlush=key==="fluffy";
-    if(!previewPlush) return {display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:16,border:`1.5px solid ${active?theme.accent:T.border}`,background:active?theme.accentSoft:T.accentSoft,cursor:"pointer",boxShadow:active?`0 0 0 3px ${theme.accent}18`:"none"};
-    return {display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:20,border:`1.5px solid ${active?theme.accent:(theme.plushBorder||theme.border)}`,background:"linear-gradient(145deg,#fff0f6 0%,#ffd0df 48%,#f7fbff 100%)",cursor:"pointer",boxShadow:active?`${theme.plushShadow||theme.cardShadow}, 0 0 0 3px ${theme.accent}18`:(theme.plushShadow||theme.cardShadow),position:"relative",overflow:"visible",isolation:"isolate"};
+    const base={display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:20,cursor:"pointer",position:"relative",overflow:"hidden",isolation:"isolate"};
+    const maps={
+      sky:{
+        bg:"linear-gradient(145deg,#eaf7ff 0%,#d7efff 48%,#f8fcff 100%)",
+        border:active?"#21a8ff":"#bfe3ff",
+        shadow:active?"0 0 0 3px rgba(33,168,255,.18), 0 14px 28px rgba(74,158,255,.14)":"0 10px 22px rgba(74,158,255,.09)"
+      },
+      fluffy:{
+        bg:"linear-gradient(145deg,#fff0f6 0%,#ffd0df 48%,#f7fbff 100%)",
+        border:active?theme.accent:(theme.plushBorder||theme.border),
+        shadow:active?`${theme.plushShadow||theme.cardShadow}, 0 0 0 3px ${theme.accent}18`:(theme.plushShadow||theme.cardShadow)
+      },
+      night:{
+        bg:"linear-gradient(145deg,#0b1526 0%,#14243d 50%,#09111f 100%)",
+        border:active?"#ffd166":"#2a4162",
+        shadow:active?"0 0 0 3px rgba(255,209,102,.22), 0 16px 34px rgba(0,0,0,.32)":"0 12px 26px rgba(0,0,0,.28)"
+      }
+    };
+    const m=maps[key]||maps.sky;
+    return {...base,background:m.bg,border:`1.5px solid ${m.border}`,boxShadow:m.shadow};
   };
   const fluffyPreviewIcon=(key)=>{
     const theme=THEMES[key];
-    if(key!=="fluffy") return {width:38,height:38,borderRadius:14,background:theme.headerBg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:`1.5px solid ${theme.border}`,boxShadow:theme.cardShadow};
-    return {width:42,height:42,borderRadius:16,background:theme.plushIcon||theme.headerBg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:`1.5px solid ${theme.plushBorder||theme.border}`,boxShadow:theme.plushShadow||theme.cardShadow};
+    const maps={
+      sky:{
+        size:42,
+        radius:16,
+        bg:"linear-gradient(145deg,#f8fdff 0%,#d8f0ff 54%,#ffffff 100%)",
+        border:"#bfe3ff",
+        shadow:"0 12px 26px rgba(74,158,255,.16), inset 0 2px 0 rgba(255,255,255,.92), inset 0 -12px 18px rgba(255,255,255,.48)"
+      },
+      fluffy:{
+        size:42,
+        radius:16,
+        bg:theme.plushIcon||theme.headerBg,
+        border:theme.plushBorder||theme.border,
+        shadow:theme.plushShadow||theme.cardShadow
+      },
+      night:{
+        size:42,
+        radius:16,
+        bg:"linear-gradient(145deg,#15233b 0%,#07101e 58%,#0d1b2e 100%)",
+        border:"#2d4a6f",
+        shadow:"0 14px 28px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.10), inset 0 -14px 20px rgba(0,0,0,.32)"
+      }
+    };
+    const m=maps[key]||maps.sky;
+    return {width:m.size,height:m.size,borderRadius:m.radius,background:m.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,border:`1.5px solid ${m.border}`,boxShadow:m.shadow};
   };
   function chooseTheme(key){setTn(key);try{localStorage.setItem("pindou_current_theme",key);}catch{}}
   function setAsDefaultTheme(key){setDefaultTheme(key);setTn(key);try{localStorage.setItem("pindou_default_theme",key);localStorage.setItem("pindou_current_theme",key);}catch{}}
@@ -3840,21 +3935,25 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
       </div>
 
       <div style={{padding:"8px 16px 0"}}>
-        {/* AI次数 */}
-        <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
-          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🤖 AI次数</div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12}}>
-            <div>
-              <div style={{fontSize:20,fontWeight:900,color:T.accent,lineHeight:1}}>{aiCreditText}</div>
-              <div style={{fontSize:11,color:T.textMid,marginTop:6}}>用于 AI 识图</div>
+        {!isAdmin && (
+          <>
+            {/* AI次数 */}
+            <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🤖 AI次数</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12}}>
+                <div>
+                  <div style={{fontSize:20,fontWeight:900,color:T.accent,lineHeight:1}}>{aiCreditText}</div>
+                  <div style={{fontSize:11,color:T.textMid,marginTop:6}}>用于 AI 识图</div>
+                </div>
+                <button onClick={onUpgrade}
+                  style={{padding:"10px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>
+                  购买次数
+                </button>
+              </div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>成功识别后扣除 1 次。</div>
             </div>
-            <button onClick={onUpgrade}
-              style={{padding:"10px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>
-              购买次数
-            </button>
-          </div>
-          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>{isAdmin?"管理员账号不消耗 AI 次数。":"成功识别后扣除 1 次。"}</div>
-        </div>
+          </>
+        )}
 
         {/* AI接口端 */}
         <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
@@ -3879,16 +3978,18 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
               const theme=THEMES[key];
               const active=tn===key;
               const isDefault=defaultTheme===key;
+              const previewTextColor=key==="night"?"#dbeafe":key==="fluffy"?"#6b4050":"#244a72";
+              const previewSubColor=key==="night"?"#8aa7cf":key==="fluffy"?"#b98298":"#6a90b8";
               return (
                 <div key={key} className={key==="fluffy"?"cc fur-card":"cc"} onClick={()=>chooseTheme(key)}
                   style={fluffyPreviewRow(key,active)}>
                   <div className={key==="fluffy"?"fur-icon":""} style={fluffyPreviewIcon(key)}>{theme.icon}</div>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:900,color:T.text}}>{theme.name}</div>
-                    <div style={{fontSize:10,color:T.textMid,marginTop:2}}>{"点击立即切换"}</div>
+                    <div style={{fontSize:13,fontWeight:900,color:previewTextColor}}>{theme.name}</div>
+                    <div style={{fontSize:10,color:previewSubColor,marginTop:2}}>{"点击立即切换"}</div>
                   </div>
                   <button onClick={(e)=>{e.stopPropagation();setAsDefaultTheme(key);}}
-                    style={{width:28,height:28,borderRadius:"50%",border:`2px solid ${isDefault?theme.accent:(key==="fluffy"?(theme.plushBorder||theme.border):T.border)}`,background:isDefault?theme.accent:(key==="fluffy"?(theme.plushChip||theme.card):T.card),color:isDefault?"#fff":(key==="fluffy"?theme.accent:T.textLight),display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,cursor:"pointer",flexShrink:0,boxShadow:key==="fluffy"?(theme.plushShadow||theme.cardShadow):"none"}}>
+                    style={{width:28,height:28,borderRadius:"50%",border:`2px solid ${isDefault?theme.accent:(key==="night"?"#405b80":key==="fluffy"?(theme.plushBorder||theme.border):"#bfe3ff")}`,background:isDefault?theme.accent:(key==="night"?"#101c2f":key==="fluffy"?(theme.plushChip||theme.card):"#f8fcff"),color:isDefault?"#fff":(key==="night"?"#8aa7cf":key==="fluffy"?theme.accent:"#8ab9df"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,cursor:"pointer",flexShrink:0,boxShadow:key==="fluffy"?(theme.plushShadow||theme.cardShadow):"none"}}>
                     {isDefault?"✓":""}
                   </button>
                 </div>
