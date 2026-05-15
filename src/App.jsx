@@ -352,9 +352,9 @@ function gToBeads(g){return Math.round(g*100);}
 function fmtG(g){const n=Math.round(g*100)/100;return Number.isInteger(n)?String(n):n.toFixed(2).replace(/\.?0+$/,"");}
 
 const THEMES={
-  sky:{name:"晴空蓝",icon:"☁️",bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"夜空 🌙",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff",toolboxPanelBg:"linear-gradient(180deg,#f8fcff 0%,#eef8ff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
-  fluffy:{name:"毛绒甜莓",icon:"🐑",bg:"linear-gradient(180deg,#fff6fa 0%,#ffeff5 40%,#edf6ff 100%)",card:"linear-gradient(145deg,#fffcfa 0%,#fff3f7 54%,#f4faff 100%)",border:"#f0d4de",accent:"#d07a94",accentLight:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",accentSoft:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",warn:"#e8b47f",warnBg:"linear-gradient(145deg,#fff8ef 0%,#fff2e6 100%)",warnBorder:"#f1d8bf",danger:"#e08a9e",dangerBg:"linear-gradient(145deg,#fff5f7 0%,#ffedf1 100%)",dangerBorder:"#f2cdd6",text:"#5e4250",textMid:"#aa8494",textLight:"#cfadb8",nav:"linear-gradient(180deg,rgba(255,252,253,0.96) 0%,rgba(255,243,248,0.98) 100%)",navBorder:"#f0d4de",barBg:"#f5dde4",bars:["#df8fa4","#f0b8c7","#f7dbe2","#cfe3ef","#f5e2cf"],switchBtn:"晴空 ☁️",cardShadow:"0 14px 32px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -16px 24px rgba(255,255,255,0.52), inset 0 0 0 1px rgba(255,246,250,0.92)",floatShadow:"0 20px 48px rgba(200,130,155,0.20), inset 0 1px 0 rgba(255,255,255,0.96)",headerBg:"linear-gradient(135deg,#fffafc 0%,#ffeff6 58%,#edf6ff 100%)",navActiveDot:"#d07a94",toolboxPanelBg:"linear-gradient(180deg,#fff8fb 0%,#ffeff5 46%,#f4faff 100%)",toolboxCatBg:"linear-gradient(145deg,rgba(255,255,255,0.94) 0%,rgba(255,244,249,0.90) 100%)",plush:true,plushCard:"linear-gradient(145deg,#fffcfa 0%,#fff2f6 56%,#f3faff 100%)",plushChip:"linear-gradient(145deg,#fff7fa 0%,#ffeff5 58%,#f7faff 100%)",plushIcon:"linear-gradient(145deg,#fffdfb 0%,#fff0f6 58%,#ecf7ff 100%)",plushShadow:"0 16px 36px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -18px 26px rgba(255,255,255,0.52)",plushBorder:"#f2d4dd"},
-  night:{name:"夜空黄",icon:"🌙",bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"毛绒 🐑",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166",toolboxPanelBg:"#152236",toolboxCatBg:"#0d1b2e"}
+  sky:{name:"晴空蓝",icon:"☁️",bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"毛绒 🐑",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff",toolboxPanelBg:"linear-gradient(180deg,#f8fcff 0%,#eef8ff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
+  fluffy:{name:"毛绒甜莓",icon:"🐑",bg:"linear-gradient(180deg,#fff6fa 0%,#ffeff5 40%,#edf6ff 100%)",card:"linear-gradient(145deg,#fffcfa 0%,#fff3f7 54%,#f4faff 100%)",border:"#f0d4de",accent:"#d07a94",accentLight:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",accentSoft:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",warn:"#e8b47f",warnBg:"linear-gradient(145deg,#fff8ef 0%,#fff2e6 100%)",warnBorder:"#f1d8bf",danger:"#e08a9e",dangerBg:"linear-gradient(145deg,#fff5f7 0%,#ffedf1 100%)",dangerBorder:"#f2cdd6",text:"#5e4250",textMid:"#aa8494",textLight:"#cfadb8",nav:"linear-gradient(180deg,rgba(255,252,253,0.96) 0%,rgba(255,243,248,0.98) 100%)",navBorder:"#f0d4de",barBg:"#f5dde4",bars:["#df8fa4","#f0b8c7","#f7dbe2","#cfe3ef","#f5e2cf"],switchBtn:"夜空 🌙",cardShadow:"0 14px 32px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -16px 24px rgba(255,255,255,0.52), inset 0 0 0 1px rgba(255,246,250,0.92)",floatShadow:"0 20px 48px rgba(200,130,155,0.20), inset 0 1px 0 rgba(255,255,255,0.96)",headerBg:"linear-gradient(135deg,#fffafc 0%,#ffeff6 58%,#edf6ff 100%)",navActiveDot:"#d07a94",toolboxPanelBg:"linear-gradient(180deg,#fff8fb 0%,#ffeff5 46%,#f4faff 100%)",toolboxCatBg:"linear-gradient(145deg,rgba(255,255,255,0.94) 0%,rgba(255,244,249,0.90) 100%)",plush:true,plushCard:"linear-gradient(145deg,#fffcfa 0%,#fff2f6 56%,#f3faff 100%)",plushChip:"linear-gradient(145deg,#fff7fa 0%,#ffeff5 58%,#f7faff 100%)",plushIcon:"linear-gradient(145deg,#fffdfb 0%,#fff0f6 58%,#ecf7ff 100%)",plushShadow:"0 16px 36px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -18px 26px rgba(255,255,255,0.52)",plushBorder:"#f2d4dd"},
+  night:{name:"夜空黄",icon:"🌙",bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"晴空 ☁️",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166",toolboxPanelBg:"#152236",toolboxCatBg:"#0d1b2e"}
 };
 const THEME_ORDER=["sky","fluffy","night"];
 
@@ -875,7 +875,10 @@ export default function App(){
         finalB64=canvas.toDataURL('image/jpeg',0.92);
       }
       setCropImg(null);setCropBox(null);
-      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      const {data:{session}}=await supabase.auth.getSession();
+      const headers={"Content-Type":"application/json"};
+      if(session?.access_token)headers.Authorization=`Bearer ${session.access_token}`;
+      const resp=await fetch('/api/qwen',{method:'POST',headers,body:JSON.stringify({
         image:finalB64,
         aiMode:hasOwnApi?"own_api":"credits",
         apiConfig:hasOwnApi?aiSettings:null
@@ -1321,7 +1324,7 @@ export default function App(){
           </>}
 
           {/* 作品页 */}
-          {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} onRestoreStock={restoreStock} onLogStockDeduction={writeStockLogs} onCloudDeleteTask={deleteTaskFromCloud} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
+          {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} onRestoreStock={restoreStock} onLogStockDeduction={writeStockLogs} onCloudDeleteTask={deleteTaskFromCloud} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)} hasOwnApi={hasOwnApi} aiSettings={aiSettings} aiCredits={aiCredits} isAdmin={isAdmin} setAiCredits={setAiCredits} setIsAdmin={setIsAdmin}/>} 
 
           {/* 我的页 */}
           {page==="mine"&&<MinePage T={T} tn={safeTn} setTn={setTn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} aiCredits={aiCredits} isAdmin={isAdmin} hasOwnApi={hasOwnApi} onOpenAiSettings={()=>setShowAiSettings(true)}/>}
@@ -1634,7 +1637,7 @@ function getSimilarColors(targetId,stock,count=6){
 // ══════════════════════════════════
 //  MissingColorPage（缺色替换）
 // ══════════════════════════════════
-function MissingColorPage({T,stock,onBack}){
+function MissingColorPage({T,stock,onBack,user,hasOwnApi,aiSettings,aiCredits,isAdmin,setAiCredits,setIsAdmin,onUpgrade}){
   const [mode,setMode]=useState("scan"); // scan | search
   // --- 图纸识别 ---
   const [step,setStep]=useState("upload");
@@ -1722,24 +1725,58 @@ function MissingColorPage({T,stock,onBack}){
 
   async function recognize(){
     if(!imgSrc)return;
+
+    if(!hasOwnApi && !isAdmin && Number(aiCredits||0)<=0){
+      setErr("AI次数不足，请购买次数或使用自己的API。");
+      onUpgrade?.();
+      return;
+    }
+
     setLoading(true);
     setErr("");
+
     try{
+      const {data:{session}}=await supabase.auth.getSession();
+      const headers={"Content-Type":"application/json"};
+
+      if(session?.access_token){
+        headers.Authorization=`Bearer ${session.access_token}`;
+      }
+
+      if(!hasOwnApi && !session?.access_token){
+        setErr("请先登录后再使用AI识别。");
+        setLoading(false);
+        return;
+      }
+
       const resp=await fetch('/api/qwen',{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers,
         body:JSON.stringify({
           image:imgSrc,
-          prompt:`请识别图纸下方色块统计区域，提取每个色号和对应的颗数，格式为：色号 颗数，每行一个，例如：\nA1 200\nB3 150\n只输出色号和数字，不要其他内容。`
+          aiMode:hasOwnApi?"own_api":"credits",
+          apiConfig:hasOwnApi?aiSettings:null
         })
       });
-      const data=await resp.json();
+
+      const data=await resp.json().catch(()=>({}));
+
+      if(data.isAdmin!==undefined)setIsAdmin?.(!!data.isAdmin);
+      if(data.aiCredits!==undefined)setAiCredits?.(Number(data.aiCredits)||0);
+
+      if(!resp.ok || data.error){
+        if(resp.status===402)onUpgrade?.();
+        setErr(data.error||"识别失败，建议框选底部统计表区域再试～");
+        return;
+      }
+
       if(data.result){
-        const lines=data.result.split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
+        const lines=String(data.result).split(/[\n,，]+/).map(s=>s.trim()).filter(Boolean);
         const items=lines.map(line=>{
           const m=line.match(/([A-Za-z]+\d+)\D+(\d+)/);
           return m?{id:m[1].toUpperCase(),need:parseInt(m[2])}:null;
         }).filter(Boolean);
+
         if(items.length>0){
           setParsed(items);
           setStep("result");
@@ -1955,6 +1992,9 @@ function MissingColorPage({T,stock,onBack}){
                   <button onClick={recognize} disabled={loading} style={{flex:2,padding:"10px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer",opacity:loading?0.7:1}}>
                     {loading?"🔍 识别中…":"✓ 开始识别"}
                   </button>
+                </div>
+                <div style={{fontSize:10,color:T.textLight,lineHeight:1.7,textAlign:"center"}}>
+                  {hasOwnApi?"使用自己的 API，不消耗 AI次数":isAdmin?"管理员账号不消耗 AI次数":`成功识别后扣除 1 次 AI次数，剩余 ${aiCredits||0} 次`}
                 </div>
               </div>
             )}
@@ -2953,7 +2993,7 @@ function HelperToolPage({T,onBack}){
     </div>
   );
 }
-function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,onRestoreStock,onLogStockDeduction,onCloudDeleteTask,tasks,setTasks,tasksLoaded,onPushHistory}){
+function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,onRestoreStock,onLogStockDeduction,onCloudDeleteTask,tasks,setTasks,tasksLoaded,onPushHistory,hasOwnApi,aiSettings,aiCredits,isAdmin,setAiCredits,setIsAdmin}){
   const [view,setView]=useState("home");
   const [monthGoal,setMonthGoal]=useState(()=>{try{const s=localStorage.getItem('pindou_month_goal');return s?Number(s):5;}catch{return 5;}});
   const [showGoalEdit,setShowGoalEdit]=useState(false);
@@ -3019,54 +3059,81 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   };
   const softToolCardStyle=(variant)=>{
     if(isFluffyUi) return plushToolCardStyle(variant==="drawing"?"helper":variant);
-    const common={borderRadius:28,padding:"13px 6px 11px",minHeight:92,cursor:"pointer",display:"flex",flexDirection:"column",gap:7,alignItems:"center",justifyContent:"center",position:"relative",boxSizing:"border-box",overflow:"hidden",isolation:"isolate"};
-    const sky={
-      toolbox:{bg:"linear-gradient(145deg,#f8fdff 0%,#e8f6ff 48%,#fff9ee 100%)",border:"1px solid rgba(185,226,255,.95)",shadow:"0 16px 34px rgba(74,158,255,.14), inset 0 3px 0 rgba(255,255,255,.82), inset 0 -18px 24px rgba(255,255,255,.44)"},
-      missing:{bg:"linear-gradient(145deg,#fbfdff 0%,#eef4ff 48%,#f8f1ff 100%)",border:"1px solid rgba(207,200,255,.88)",shadow:"0 16px 34px rgba(139,115,216,.12), inset 0 3px 0 rgba(255,255,255,.84), inset 0 -18px 24px rgba(255,255,255,.44)"},
-      helper:{bg:"linear-gradient(145deg,#f8fdff 0%,#e8f7ff 50%,#fff8e8 100%)",border:"1px solid rgba(185,226,255,.92)",shadow:"0 16px 34px rgba(74,158,255,.13), inset 0 3px 0 rgba(255,255,255,.84), inset 0 -18px 24px rgba(255,255,255,.44)"},
-      drawing:{bg:"linear-gradient(145deg,#fffdf8 0%,#fff0df 45%,#f0f8ff 100%)",border:"1px solid rgba(255,210,178,.88)",shadow:"0 16px 34px rgba(255,160,80,.12), inset 0 3px 0 rgba(255,255,255,.84), inset 0 -18px 24px rgba(255,255,255,.44)"}
+
+    const common={
+      borderRadius:28,
+      padding:"13px 6px 11px",
+      minHeight:92,
+      cursor:"pointer",
+      display:"flex",
+      flexDirection:"column",
+      gap:7,
+      alignItems:"center",
+      justifyContent:"center",
+      position:"relative",
+      boxSizing:"border-box",
+      overflow:"hidden",
+      isolation:"isolate"
     };
-    const night={
-      toolbox:{bg:"linear-gradient(145deg,#172641 0%,#101b2f 54%,#221b10 100%)",border:"1px solid rgba(255,209,102,.24)",shadow:"0 18px 38px rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06), inset 0 -18px 24px rgba(0,0,0,.22)"},
-      missing:{bg:"linear-gradient(145deg,#16243d 0%,#111a2f 48%,#241a2a 100%)",border:"1px solid rgba(167,139,250,.26)",shadow:"0 18px 38px rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06), inset 0 -18px 24px rgba(0,0,0,.22)"},
-      helper:{bg:"linear-gradient(145deg,#15233b 0%,#0f1b30 50%,#1c2518 100%)",border:"1px solid rgba(111,204,255,.22)",shadow:"0 18px 38px rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06), inset 0 -18px 24px rgba(0,0,0,.22)"},
-      drawing:{bg:"linear-gradient(145deg,#1c2337 0%,#141b2e 50%,#2a1d12 100%)",border:"1px solid rgba(255,183,92,.26)",shadow:"0 18px 38px rgba(0,0,0,.34), inset 0 2px 0 rgba(255,255,255,.06), inset 0 -18px 24px rgba(0,0,0,.22)"}
+
+    const skyCard={
+      bg:"linear-gradient(145deg,#f8fdff 0%,#e8f6ff 48%,#fff9ee 100%)",
+      border:"1px solid rgba(185,226,255,.95)",
+      shadow:"0 16px 34px rgba(74,158,255,.14), inset 0 3px 0 rgba(255,255,255,.82), inset 0 -18px 24px rgba(255,255,255,.44)"
     };
-    const m=(tn==="night"?night:sky)[variant]||sky.toolbox;
+
+    const nightCard={
+      bg:"linear-gradient(145deg,#fff4c8 0%,#ffd166 46%,#3a2b12 100%)",
+      border:"1px solid rgba(255,209,102,.62)",
+      shadow:"0 18px 38px rgba(0,0,0,.36), 0 0 26px rgba(255,209,102,.10), inset 0 3px 0 rgba(255,255,255,.30), inset 0 -20px 26px rgba(0,0,0,.22)"
+    };
+
+    const m=tn==="night"?nightCard:skyCard;
     return {...common,background:m.bg,border:m.border,boxShadow:m.shadow};
   };
+
   const softToolGlowStyle=(variant)=>{
     if(isFluffyUi) return plushToolGlowStyle(variant==="drawing"?"helper":variant);
-    const sky={
-      toolbox:"radial-gradient(circle,rgba(255,218,150,.42),rgba(122,203,255,.10) 62%,transparent 72%)",
-      missing:"radial-gradient(circle,rgba(186,213,255,.36),rgba(224,210,255,.12) 62%,transparent 72%)",
-      helper:"radial-gradient(circle,rgba(255,232,173,.34),rgba(126,210,255,.12) 62%,transparent 72%)",
-      drawing:"radial-gradient(circle,rgba(255,204,160,.38),rgba(255,176,118,.08) 62%,transparent 72%)"
+
+    const skyGlow="radial-gradient(circle,rgba(255,218,150,.42),rgba(122,203,255,.10) 62%,transparent 72%)";
+    const nightGlow="radial-gradient(circle,rgba(255,245,178,.42),rgba(255,209,102,.18) 58%,transparent 72%)";
+
+    return {
+      position:"absolute",
+      inset:variant==="missing"?"-30px auto auto -16px":variant==="helper"?"auto -22px -30px auto":"-28px -18px auto auto",
+      width:variant==="missing"?82:86,
+      height:variant==="missing"?82:86,
+      borderRadius:"50%",
+      background:tn==="night"?nightGlow:skyGlow,
+      filter:"blur(2px)"
     };
-    const night={
-      toolbox:"radial-gradient(circle,rgba(255,209,102,.24),rgba(80,145,220,.08) 62%,transparent 72%)",
-      missing:"radial-gradient(circle,rgba(167,139,250,.20),rgba(255,143,163,.08) 62%,transparent 72%)",
-      helper:"radial-gradient(circle,rgba(111,204,255,.18),rgba(255,209,102,.08) 62%,transparent 72%)",
-      drawing:"radial-gradient(circle,rgba(255,183,92,.22),rgba(255,143,163,.07) 62%,transparent 72%)"
-    };
-    return {position:"absolute",inset:variant==="missing"?"-30px auto auto -16px":variant==="helper"?"auto -22px -30px auto":"-28px -18px auto auto",width:variant==="missing"?82:86,height:variant==="missing"?82:86,borderRadius:"50%",background:(tn==="night"?night:sky)[variant]||sky.toolbox,filter:"blur(2px)"};
   };
+
   const softToolIconStyle=(variant)=>{
     if(isFluffyUi) return plushToolIconStyle(variant==="drawing"?"helper":variant);
-    const sky={
-      toolbox:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(232,247,255,.76) 48%,rgba(255,243,212,.58))",
-      missing:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(235,244,255,.76) 48%,rgba(235,224,255,.58))",
-      helper:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(232,247,255,.76) 48%,rgba(255,243,217,.58))",
-      drawing:"radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(255,246,232,.78) 48%,rgba(255,218,188,.58))"
+
+    const skyIcon="radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(232,247,255,.76) 48%,rgba(255,243,212,.58))";
+    const nightIcon="linear-gradient(145deg,#fff7cc 0%,#ffd166 50%,#3a2b12 100%)";
+
+    return {
+      width:52,
+      height:52,
+      borderRadius:19,
+      background:tn==="night"?nightIcon:skyIcon,
+      boxShadow:tn==="night"
+        ?"0 14px 28px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.30), inset 0 -16px 22px rgba(0,0,0,.22)"
+        :"0 14px 28px rgba(74,158,255,.15), inset 0 3px 0 rgba(255,255,255,.88), inset 0 -16px 22px rgba(255,255,255,.44)",
+      display:"flex",
+      alignItems:"center",
+      justifyContent:"center",
+      fontSize:22,
+      flexShrink:0,
+      position:"relative",
+      zIndex:1,
+      border:tn==="night"?"1px solid rgba(255,245,185,.45)":"1px solid rgba(255,255,255,.92)"
     };
-    const night={
-      toolbox:"linear-gradient(145deg,#223352 0%,#121d31 56%,#2a2110 100%)",
-      missing:"linear-gradient(145deg,#202e4b 0%,#151d33 55%,#2a1a30 100%)",
-      helper:"linear-gradient(145deg,#1d314f 0%,#111c30 56%,#1e2818 100%)",
-      drawing:"linear-gradient(145deg,#283047 0%,#151d30 55%,#32200f 100%)"
-    };
-    return {width:52,height:52,borderRadius:19,background:(tn==="night"?night:sky)[variant]||sky.toolbox,boxShadow:tn==="night"?"0 14px 28px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.08), inset 0 -16px 22px rgba(0,0,0,.24)":"0 14px 28px rgba(74,158,255,.15), inset 0 3px 0 rgba(255,255,255,.88), inset 0 -16px 22px rgba(255,255,255,.44)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,position:"relative",zIndex:1,border:tn==="night"?"1px solid rgba(255,255,255,.10)":"1px solid rgba(255,255,255,.92)"};
   };
+
   const worksProgressStyle=()=>{
     if(tn==="fluffy") return {background:T.card,padding:"20px 18px 16px",borderBottom:`1px solid ${T.border}`};
     if(tn==="night") return {background:"linear-gradient(135deg,#0f1b2e 0%,#172844 58%,#241e10 100%)",padding:"20px 18px 16px",borderBottom:"1px solid #1e3352"};
@@ -3306,7 +3373,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   }
   const pickedTask=pickedId?tasks.find(t=>t.id===pickedId):null;
   // 缺色替换页
-  if(view==="missing")return <MissingColorPage T={T} stock={stock} onBack={()=>setView("home")}/>;
+  if(view==="missing")return <MissingColorPage T={T} stock={stock} onBack={()=>setView("home")} user={user} hasOwnApi={hasOwnApi} aiSettings={aiSettings} aiCredits={aiCredits} isAdmin={isAdmin} setAiCredits={setAiCredits} setIsAdmin={setIsAdmin} onUpgrade={onUpgrade}/>;
   // 图纸助手页
   if(view==="guide")return <GuideAssistant T={T} onBack={()=>setView("home")}/> ;
 
