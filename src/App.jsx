@@ -8,73 +8,111 @@ const supabase = createClient(
   "sb_publishable_FFxfIZn_lbYyA2ZUTNBlOw_NB-MFhyP"
 );
 
-// ══════════════ 升级弹窗 ══════════════
+// ══════════════ AI次数购买弹窗 ══════════════
 function UpgradeModal({T,onClose}){
-  const plans=[
-    {name:"月费",price:"¥9.9",sub:"公测限时",tag:"先试试看"},
-    {name:"年费",price:"¥19.9",sub:"公测限时",tag:"推荐"},
-    {name:"终身",price:"¥38.8",sub:"公测限时",tag:"一次买断"},
-  ];
-  const perks=[
-    {icon:"🧰",title:"工具箱",desc:"记录豆板、豆针、豆铲规格与备注"},
-    {icon:"📖",title:"拼豆日记",desc:"把每张作品的过程都留住"},
-    {icon:"🔍",title:"缺色替换",desc:"快速找到可替代颜色"},
-    {icon:"🤖",title:"AI识图",desc:"免费版限 5 次，Pro 无限识别"},
-    {icon:"☁️",title:"云同步",desc:"换设备也不怕数据丢失"},
+  const packs=[
+    {name:"10次",price:"¥1.9",tag:"轻量体验"},
+    {name:"30次",price:"¥4.9",tag:"常用"},
+    {name:"100次",price:"¥12.9",tag:"更划算"},
   ];
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
       onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:T.card,borderRadius:28,padding:"24px 18px",width:"100%",maxWidth:390,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Nunito',sans-serif",maxHeight:"86vh",overflowY:"auto"}}>
         <div style={{textAlign:"center",marginBottom:18}}>
-          <div style={{fontSize:36,marginBottom:8}}>🌟</div>
-          <div style={{fontSize:19,fontWeight:900,color:T.accent,marginBottom:6}}>开通 Pro，让拼豆更轻松一点</div>
-          <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>把零碎的记录、工具和库存，都整理得明明白白</div>
+          <div style={{fontSize:36,marginBottom:8}}>🤖</div>
+          <div style={{fontSize:19,fontWeight:900,color:T.accent,marginBottom:6}}>购买 AI 次数</div>
+          <div style={{fontSize:12,color:T.textMid,lineHeight:1.7}}>用于 AI 识图，成功识别后扣除 1 次</div>
         </div>
 
-        <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:10}}>🧪 公测限时福利</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
-          {plans.map(p=>(
-            <div key={p.name} style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"12px 8px",textAlign:"center"}}>
-              <div style={{fontSize:11,fontWeight:900,color:T.text}}>{p.name}</div>
-              <div style={{fontSize:18,fontWeight:900,color:T.text,margin:"6px 0 4px"}}>{p.price}</div>
-              <div style={{fontSize:10,color:T.textMid,lineHeight:1.5}}>{p.sub}</div>
-              <div style={{fontSize:10,color:T.textLight,fontWeight:800,marginTop:4}}>{p.tag}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{fontSize:10,color:T.textLight,lineHeight:1.6,marginBottom:18,textAlign:"center"}}>
-          公测结束后恢复原价：¥12/月 · ¥38.8/年 · ¥68.8终身
-        </div>
-
-        <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:10}}>开通 Pro 后解锁：</div>
-        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
-          {perks.map(p=>(
-            <div key={p.icon} style={{display:"flex",alignItems:"center",gap:10,background:T.bg,borderRadius:14,padding:"10px 12px",border:`1px solid ${T.border}`}}>
-              <div style={{fontSize:22,flexShrink:0}}>{p.icon}</div>
-              <div>
-                <div style={{fontSize:12,fontWeight:800,color:T.text}}>{p.title}</div>
-                <div style={{fontSize:10,color:T.textMid,marginTop:2,lineHeight:1.5}}>{p.desc}</div>
-              </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+          {packs.map(p=>(
+            <div key={p.name} style={{background:T.bg,border:`1.5px solid ${T.border}`,borderRadius:18,padding:"13px 8px",textAlign:"center"}}>
+              <div style={{fontSize:13,fontWeight:900,color:T.text}}>{p.name}</div>
+              <div style={{fontSize:18,fontWeight:900,color:T.accent,margin:"6px 0 4px"}}>{p.price}</div>
+              <div style={{fontSize:10,color:T.textLight,fontWeight:800}}>{p.tag}</div>
             </div>
           ))}
         </div>
 
-        <div style={{background:T.bg,border:`1px dashed ${T.border}`,borderRadius:14,padding:"10px 12px",marginBottom:14}}>
-          <div style={{fontSize:11,color:T.textMid,fontWeight:800,marginBottom:4}}>免费版本可使用</div>
-          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>图纸管理、即将出炉、基础拼豆进度、本地数据保存</div>
+        <div style={{background:T.bg,border:`1px dashed ${T.border}`,borderRadius:18,padding:"14px 12px",marginBottom:14,textAlign:"center"}}>
+          <div style={{fontSize:12,fontWeight:900,color:T.text,marginBottom:8}}>扫码付款</div>
+          <div style={{width:150,height:150,borderRadius:16,background:T.card,border:`1.5px solid ${T.border}`,margin:"0 auto 10px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:T.textLight,lineHeight:1.6,padding:12}}>
+            收款码<br/>放这里
+          </div>
+          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>付款备注账号邮箱，人工开通次数。</div>
         </div>
 
-        <div style={{fontSize:11,color:T.textMid,textAlign:"center",marginBottom:12}}>拼豆本来就很快乐，记录它也应该轻松一点</div>
+        <div style={{fontSize:11,color:T.textLight,lineHeight:1.7,marginBottom:14,textAlign:"center"}}>系统失败不扣次数，识别结果可手动修改。</div>
 
-        <div style={{background:`linear-gradient(135deg,#ff8fa3,#ffd166,#4a9eff)`,borderRadius:50,padding:"13px 0",textAlign:"center",marginBottom:10,cursor:"pointer"}} className={`fur-btn`}
-          onClick={()=>alert("联系大橘：v：daju_laila 开通Pro～")}>
-          <div style={{fontSize:14,fontWeight:900,color:"#fff"}}>立即开通 Pro</div>
-        </div>
         <button onClick={onClose}
           style={{width:"100%",padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-          先用免费版
+          关闭
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════ AI接口端弹窗 ══════════════
+function AiSettingsModal({T,onClose,onSave,initial}){
+  const presets={
+    qwen:{label:"通义千问 Qwen",baseUrl:"https://dashscope.aliyuncs.com/compatible-mode/v1",model:"qwen3-vl-flash"},
+    openai:{label:"OpenAI",baseUrl:"https://api.openai.com/v1",model:"gpt-4o-mini"},
+    gemini:{label:"Gemini",baseUrl:"https://generativelanguage.googleapis.com/v1beta/openai",model:"gemini-2.5-flash"},
+    openrouter:{label:"OpenRouter",baseUrl:"https://openrouter.ai/api/v1",model:"google/gemini-2.5-flash"},
+    siliconflow:{label:"硅基流动",baseUrl:"https://api.siliconflow.cn/v1",model:""},
+    custom:{label:"自定义",baseUrl:"",model:""},
+  };
+  const [provider,setProvider]=useState(initial?.provider||"qwen");
+  const [baseUrl,setBaseUrl]=useState(initial?.baseUrl||presets.qwen.baseUrl);
+  const [apiKey,setApiKey]=useState(initial?.apiKey||"");
+  const [model,setModel]=useState(initial?.model||presets.qwen.model);
+  function chooseProvider(v){
+    setProvider(v);
+    const p=presets[v]||presets.custom;
+    setBaseUrl(p.baseUrl||"");
+    if(p.model)setModel(p.model);
+  }
+  function save(){
+    const cfg={provider,baseUrl:baseUrl.trim(),apiKey:apiKey.trim(),model:model.trim()};
+    localStorage.setItem("pindou_ai_settings",JSON.stringify(cfg));
+    onSave(cfg);
+    onClose();
+  }
+  function clear(){
+    localStorage.removeItem("pindou_ai_settings");
+    const cfg={provider:"qwen",baseUrl:presets.qwen.baseUrl,apiKey:"",model:presets.qwen.model};
+    onSave(cfg);
+    onClose();
+  }
+  const inp={width:"100%",border:`1.5px solid ${T.border}`,borderRadius:12,background:T.bg,color:T.text,outline:"none",padding:"11px 12px",fontSize:13,fontFamily:"'Nunito',sans-serif",boxSizing:"border-box"};
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 18px"}}
+      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{background:T.card,borderRadius:26,padding:"22px 18px",width:"100%",maxWidth:390,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",fontFamily:"'Nunito',sans-serif"}}>
+        <div style={{fontSize:19,fontWeight:900,color:T.accent,marginBottom:16,textAlign:"center"}}>AI接口端</div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <label style={{fontSize:12,fontWeight:800,color:T.text}}>接口来源
+            <select value={provider} onChange={e=>chooseProvider(e.target.value)} style={{...inp,marginTop:6}}>
+              {Object.entries(presets).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </label>
+          <label style={{fontSize:12,fontWeight:800,color:T.text}}>基础 URL
+            <input value={baseUrl} onChange={e=>setBaseUrl(e.target.value)} placeholder="https://..." style={{...inp,marginTop:6}}/>
+          </label>
+          <label style={{fontSize:12,fontWeight:800,color:T.text}}>API Key
+            <input value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="输入你的API密钥" type="password" style={{...inp,marginTop:6}}/>
+          </label>
+          <label style={{fontSize:12,fontWeight:800,color:T.text}}>模型名称
+            <input value={model} onChange={e=>setModel(e.target.value)} placeholder="模型名称" style={{...inp,marginTop:6}}/>
+          </label>
+        </div>
+        <div style={{fontSize:11,color:T.textMid,lineHeight:1.7,marginTop:12}}>填写后不消耗 AI 次数。</div>
+        <div style={{display:"flex",gap:8,marginTop:16}}>
+          <button onClick={clear} style={{flex:1,padding:"11px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:"transparent",color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:800,cursor:"pointer"}}>清除</button>
+          <button onClick={save} style={{flex:1,padding:"11px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>保存</button>
+        </div>
       </div>
     </div>
   );
@@ -126,22 +164,6 @@ function JarLogo({ accent, size=110 }) {
     </div>
   );
 }
-
-const MASTER_INVITE_CODE = "PINDOU";
-const INVITE_LIMIT = 5;
-const INVITE_BONUS = 2;
-const TRIAL_DAYS = 3;
-
-function genInviteCode(uid) {
-  // 用uid生成6位邀请码
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[parseInt(uid.replace(/-/g,"").slice(i*4, i*4+4), 16) % chars.length];
-  }
-  return code;
-}
-
 
 // ══════════════ 云同步安全工具：单作品表 + 扣豆流水 ══════════════
 function taskIdOf(task){
@@ -201,7 +223,6 @@ function AuthPage({ T, tn, onLogin }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [inviteInput, setInviteInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -225,25 +246,9 @@ function AuthPage({ T, tn, onLogin }) {
     if (!email || !password) { setErr("请填写邮箱和密码～"); return; }
     setLoading(true);
     if (mode === "signup") {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ email, password });
       if (error) { setErr(error.message); setLoading(false); return; }
-      const uid = data.user?.id;
-      if (uid) {
-        // 调服务端API处理邀请码，用service_role key绕过RLS
-        const resp = await fetch("/api/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid, inviteCode: inviteInput.trim() }),
-        });
-        const result = await resp.json();
-        if (result.hasTrial) {
-          setMsg("注册成功！已获得3天Pro试用，直接登录吧～🎉");
-        } else {
-          setMsg("注册成功！直接登录就可以啦～");
-        }
-      } else {
-        setMsg("注册成功！直接登录就可以啦～");
-      }
+      setMsg("注册成功！直接登录就可以啦～");
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setErr("邮箱或密码错误，请重试～");
@@ -270,9 +275,6 @@ function AuthPage({ T, tn, onLogin }) {
             <input value={email} onChange={e => setEmail(e.target.value)} placeholder="邮箱地址" type="email" style={inp()} />
             <input value={password} onChange={e => setPassword(e.target.value)} placeholder="密码（至少6位）" type="password" style={inp()}
               onKeyDown={e => e.key === "Enter" && handleSubmit()} />
-            {mode==="signup"&&(
-              <input value={inviteInput} onChange={e=>setInviteInput(e.target.value)} placeholder="邀请码（选填）" style={inp({borderStyle:"dashed"})}/>
-            )}
           </div>
           {err && <div style={{ marginTop: 10, fontSize: 12, color: T.danger, fontWeight: 600 }}>{err}</div>}
           {msg && <div style={{ marginTop: 10, fontSize: 12, color: "#4caf50", fontWeight: 600 }}>{msg}</div>}
@@ -505,12 +507,12 @@ export default function App(){
   },[]);
 
 
-  const [isPro,setIsPro]=useState(false);
+  const [isPro,setIsPro]=useState(false); // 当前版本砍掉Pro付费，登录后默认开放原有非AI功能
   const [showUpgrade,setShowUpgrade]=useState(false);
-  const [inviteInfo,setInviteInfo]=useState({code:"",count:0,bonus:0,trialExp:null});
-  const FREE_AI_LIMIT=5;
-  const [freeAiUsed,setFreeAiUsed]=useState(()=>{try{const v=localStorage.getItem('pindou_free_ai_used');return v?Number(v):0}catch{return 0}});
-  const totalAiLimit = FREE_AI_LIMIT + (inviteInfo.bonus || 0);
+  const [showAiSettings,setShowAiSettings]=useState(false);
+  const [aiCredits,setAiCredits]=useState(0);
+  const [aiSettings,setAiSettings]=useState(()=>{try{return JSON.parse(localStorage.getItem("pindou_ai_settings")||"{}")}catch{return {}}});
+  const hasOwnApi=!!String(aiSettings?.apiKey||"").trim();
 
   const [stock,setStock]=useState(INIT_STOCK);
   const [used,setUsed]=useState(INIT_USED);
@@ -518,7 +520,6 @@ export default function App(){
   const [syncStatus,setSyncStatus]=useState("");
   const [cloudReady,setCloudReady]=useState(false);
   const [page,setPage]=useState("home");
-  useEffect(()=>{try{localStorage.setItem('pindou_free_ai_used',String(freeAiUsed));}catch{}},[freeAiUsed]);
 
   // 库存提醒
   const [showStockAlert,setShowStockAlert]=useState(false);
@@ -550,26 +551,10 @@ export default function App(){
       setSyncLoading(true);
       // 拉库存
       const {data,error}=await supabase.from("stock").select("color,quantity,used").eq("user_id",user.id);
-      // 拉plan
-      const {data:profile}=await supabase.from("profiles").select("plan, role, pro_expires_at, trial_expires_at, bonus_ai_count, invite_code, invite_count").eq("user_id",user.id).single();
-      const now=new Date();
-      const isTesterPro=profile?.plan==="tester_pro" && profile?.pro_expires_at && new Date(profile.pro_expires_at)>now;
-      const isPaidPro=profile?.plan==="pro";
-      const isAdmin=profile?.role==="admin";
-      const isTrialPro=profile?.trial_expires_at && new Date(profile.trial_expires_at)>now;
-      const nextIsPro=!!(isAdmin||isPaidPro||isTesterPro||isTrialPro);
-      setIsPro(nextIsPro);
-      // 邀请码不存在时自动生成
-      if(!profile?.invite_code){
-        const myCode=genInviteCode(user.id);
-        await supabase.from("profiles").update({invite_code:myCode}).eq("user_id",user.id);
-      }
-      setInviteInfo({
-        code: profile?.invite_code || genInviteCode(user.id),
-        count: profile?.invite_count || 0,
-        bonus: profile?.bonus_ai_count || 0,
-        trialExp: profile?.trial_expires_at || null,
-      });
+      // 拉用户资料：当前版本不再走月/季/年Pro，AI只看 ai_credits
+      const {data:profile}=await supabase.from("profiles").select("*").eq("user_id",user.id).maybeSingle();
+      setIsPro(true);
+      setAiCredits(Number(profile?.ai_credits || 0));
       if(error){
         setSyncStatus("err");
         // 出错时才读本地缓存兜底
@@ -826,7 +811,7 @@ export default function App(){
 
   async function confirmCrop(){
     if(!cropImg)return;
-    if(!isPro&&freeAiUsed>=totalAiLimit){setShowUpgrade(true);return;}
+    if(!hasOwnApi && aiCredits<=0){setShowUpgrade(true);return;}
     setImgLoading(true);setImgErr("");
     try{
       let finalB64=cropImg;
@@ -844,11 +829,24 @@ export default function App(){
         finalB64=canvas.toDataURL('image/jpeg',0.92);
       }
       setCropImg(null);setCropBox(null);
-      const resp=await fetch('/api/qwen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:finalB64})});
+      const {data:{session}}=await supabase.auth.getSession();
+      const token=session?.access_token||"";
+      const resp=await fetch('/api/qwen',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          ...(token?{Authorization:`Bearer ${token}`}:{})
+        },
+        body:JSON.stringify({
+          image:finalB64,
+          aiMode:hasOwnApi?"own_api":"credits",
+          apiConfig:hasOwnApi?aiSettings:null
+        })
+      });
       const data=await resp.json();
+      if(data.aiCredits!==undefined)setAiCredits(Number(data.aiCredits)||0);
       if(data.result&&data.result!=='无法识别'){
-        // Free用户才消耗次数，Pro期间不计入
-        if(!isPro) setFreeAiUsed(v=>v+1);
+        if(!hasOwnApi&&data.aiCredits===undefined)setAiCredits(v=>Math.max(0,(Number(v)||0)-1));
         // 解析成tags
         const tags=data.result.split(/[,，]+/).map(s=>s.trim()).filter(Boolean).map(s=>{
           const m=s.match(/^([A-Za-z]+\d+|全部)\s*([+-])\s*(\d+)$/i);
@@ -1131,6 +1129,7 @@ export default function App(){
     <>
       <style>{G}</style>
       {showUpgrade&&<UpgradeModal T={T} onClose={()=>setShowUpgrade(false)}/>}
+      {showAiSettings&&<AiSettingsModal T={T} initial={aiSettings} onSave={setAiSettings} onClose={()=>setShowAiSettings(false)}/>}
       {showStockAlert&&<StockAlertModal T={T} stock={stock} alertThreshold={alertThreshold} setAlertThreshold={setAlertThreshold} onClose={()=>setShowStockAlert(false)}/>}
       <div className="tt" style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",background:T.bg,fontFamily:"'Nunito',sans-serif",color:T.text}}>
 
@@ -1287,7 +1286,7 @@ export default function App(){
           {page==="works"&&<WorksPage T={T} tn={tn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} stock={stock} used={used} resetKey={resetKey} onDeductStock={deductStock} onRestoreStock={restoreStock} onLogStockDeduction={writeStockLogs} onCloudDeleteTask={deleteTaskFromCloud} tasks={tasks} setTasks={setTasks} tasksLoaded={tasksLoaded} onPushHistory={(t)=>pushHistory(stock,used,t)}/>}
 
           {/* 我的页 */}
-          {page==="mine"&&<MinePage T={T} tn={safeTn} setTn={setTn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} inviteInfo={inviteInfo}/>}
+          {page==="mine"&&<MinePage T={T} tn={safeTn} setTn={setTn} user={user} isPro={isPro} onUpgrade={()=>setShowUpgrade(true)} onLogout={handleLogout} onExport={exportData} onImport={()=>importRef.current?.click()} aiCredits={aiCredits} hasOwnApi={hasOwnApi} onOpenAiSettings={()=>setShowAiSettings(true)}/>}
 
         </div>{/* end 主内容滚动区 */}
 
@@ -1344,14 +1343,14 @@ export default function App(){
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{fontSize:11,color:T.textLight,fontWeight:600,flex:1}}>✏️ 手动输入：A15-200、全部+100</div>
-                <button className="btn" onClick={()=>{if(!isPro&&freeAiUsed>=totalAiLimit){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
+                <button className="btn" onClick={()=>{if(!hasOwnApi&&aiCredits<=0){setShowUpgrade(true);return;}imgRef.current?.click();}} disabled={imgLoading}
                   style={{padding:"5px 12px",borderRadius:50,border:`1.5px solid ${T.border}`,cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,background:T.accentSoft,color:T.accent,whiteSpace:"nowrap",position:"relative"}}>
                   {imgLoading?"识别中…":"📷 识图"}
-                  {!isPro&&<span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>{Math.max(0,totalAiLimit-freeAiUsed)}次</span>}
+                  <span style={{position:"absolute",top:-5,right:-5,fontSize:9,background:"#ffd166",color:"#7a5000",borderRadius:50,padding:"1px 4px",fontWeight:900}}>{hasOwnApi?"API":`${aiCredits}次`}</span>
                 </button>
                 <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
               </div>
-              {!isPro&&<div style={{fontSize:10,color:T.textLight,fontWeight:700,marginTop:-2}}>免费版剩余 AI 识图 {Math.max(0,totalAiLimit-freeAiUsed)} 次，Pro 无限次</div>}
+              <div style={{fontSize:10,color:T.textLight,fontWeight:700,marginTop:-2}}>{hasOwnApi?"当前使用自己的 API，不消耗 AI 次数":`剩余 AI 次数：${aiCredits} 次`}</div>
               <textarea value={cmdText} onChange={e=>{setCmdText(e.target.value);setCmdErr("");}}
                 placeholder={"A15-200, B3+500, 全部-100"}
                 rows={2}
@@ -3730,7 +3729,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 // ══════════════════════════════════
 //  MinePage（我的页）
 // ══════════════════════════════════
-function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,inviteInfo}){
+function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,aiCredits,hasOwnApi,onOpenAiSettings}){
   const joinDate=user?.created_at?new Date(user.created_at).toLocaleDateString('zh-CN'):"未知";
   const [nickname,setNickname]=useState(()=>localStorage.getItem('pindou_nickname')||"");
   const [avatar,setAvatar]=useState(()=>localStorage.getItem('pindou_avatar')||"");
@@ -3794,38 +3793,43 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,in
         ):(
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}} onClick={()=>{setNameInput(nickname);setEditingName(true);}}>
             <div style={{fontSize:16,fontWeight:800,color:T.text}}>{nickname||"点击设置昵称"}</div>
-            {isPro&&<span style={{fontSize:10,background:"linear-gradient(90deg,#ffd166,#ffb347)",color:"#7a4000",borderRadius:50,padding:"2px 8px",fontWeight:900}}>Pro ✦</span>}
             <span style={{fontSize:12,color:T.textLight,cursor:"pointer"}}>✏️</span>
           </div>
         )}
         <div style={{fontSize:11,color:T.textLight,marginTop:2}}>加入于 {joinDate}</div>
-        {/* Pro状态小横幅 */}
-        {isPro?(
-          <div style={{marginTop:10,padding:"6px 16px",borderRadius:50,background:"linear-gradient(90deg,#ffd166,#ffb347)",fontSize:11,fontWeight:900,color:"#7a4000"}}>✦ Pro 会员 · 全功能已解锁</div>
-        ):(
-          <div className="cc" onClick={onUpgrade} style={{marginTop:10,padding:"7px 18px",borderRadius:50,background:"linear-gradient(135deg,#ffe066,#ffd166,#ffb347)",border:"1.5px solid #ffd166",fontSize:12,fontWeight:900,color:"#7a4000",cursor:"pointer",boxShadow:"0 2px 12px rgba(255,209,102,0.45)"}}>🌟 升级 Pro · 解锁全功能</div>
-        )}
+        <div style={{marginTop:10,padding:"6px 16px",borderRadius:50,background:T.accentSoft,fontSize:11,fontWeight:900,color:T.accent}}>AI次数：{aiCredits||0} 次</div>
       </div>
 
       <div style={{padding:"8px 16px 0"}}>
-        {/* 邀请好友 */}
+        {/* AI次数 */}
         <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
-          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🎁 邀请好友</div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-            <div style={{flex:1,background:T.accentSoft,borderRadius:12,padding:"10px 14px",fontSize:16,fontWeight:900,color:T.accent,letterSpacing:2,textAlign:"center"}}>{inviteInfo.code||"加载中…"}</div>
-            <button onClick={()=>{navigator.clipboard.writeText(inviteInfo.code);}} style={{padding:"10px 14px",borderRadius:12,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>复制</button>
-          </div>
-          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7,marginBottom:8}}>
-            好友填你的邀请码注册 → 好友得 <b style={{color:T.accent}}>3天Pro试用</b><br/>
-            你每邀请1人 → 得 <b style={{color:T.accent}}>+2次AI识图</b>，最多邀请5人
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{flex:1,background:T.bg,borderRadius:10,height:6,overflow:"hidden"}}>
-              <div style={{width:`${Math.min((inviteInfo.count||0)/5*100,100)}%`,height:"100%",background:T.accent,borderRadius:10,transition:"width 0.4s"}}/>
+          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🤖 AI次数</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12}}>
+            <div>
+              <div style={{fontSize:20,fontWeight:900,color:T.accent,lineHeight:1}}>{aiCredits||0} 次</div>
+              <div style={{fontSize:11,color:T.textMid,marginTop:6}}>用于 AI 识图</div>
             </div>
-            <div style={{fontSize:11,color:T.textMid,fontWeight:700,whiteSpace:"nowrap"}}>{inviteInfo.count||0} / 5 人</div>
+            <button onClick={onUpgrade}
+              style={{padding:"10px 14px",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer"}}>
+              购买次数
+            </button>
           </div>
-          {(inviteInfo.bonus||0)>0&&<div style={{marginTop:8,fontSize:11,color:"#4caf50",fontWeight:700}}>🎉 已获得 {inviteInfo.bonus} 次额外识图</div>}
+          <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>成功识别后扣除 1 次。</div>
+        </div>
+
+        {/* AI接口端 */}
+        <div className={isFluffyUi?"fur-card":""} style={{...plushSectionStyle,borderRadius:20,padding:"16px",marginBottom:12,position:"relative",overflow:isFluffyUi?"visible":"hidden"}}>
+          <div style={{fontSize:12,fontWeight:700,color:T.textLight,marginBottom:12,letterSpacing:0.5}}>🔌 AI接口端</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:900,color:T.text,marginBottom:6}}>使用自己的 API</div>
+              <div style={{fontSize:11,color:T.textMid,lineHeight:1.7}}>{hasOwnApi?"已填写，不消耗 AI 次数。":"填写后不消耗 AI 次数。"}</div>
+            </div>
+            <button onClick={onOpenAiSettings}
+              style={{padding:"10px 14px",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.accent,fontFamily:"'Nunito',sans-serif",fontSize:12,fontWeight:900,cursor:"pointer",whiteSpace:"nowrap"}}>
+              设置
+            </button>
+          </div>
         </div>
 
         {/* 皮肤设置 */}
