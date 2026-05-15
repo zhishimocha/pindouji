@@ -3083,9 +3083,9 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     };
 
     const nightCard={
-      bg:"linear-gradient(145deg,#fff9dc 0%,#ffe9a6 42%,#ffd166 100%)",
-      border:"1px solid rgba(255,214,120,.95)",
-      shadow:"0 18px 36px rgba(0,0,0,.26), 0 0 22px rgba(255,209,102,.14), inset 0 3px 0 rgba(255,255,255,.62), inset 0 -18px 24px rgba(255,176,40,.18)"
+      bg:"linear-gradient(145deg,rgba(255,250,222,.94) 0%,rgba(255,232,154,.78) 36%,rgba(255,210,96,.52) 64%,rgba(44,34,17,.22) 100%), radial-gradient(circle at 24% 18%,rgba(255,255,255,.70),transparent 34%), radial-gradient(circle at 82% 80%,rgba(255,196,58,.30),transparent 46%)",
+      border:"1.5px solid rgba(255,224,144,.86)",
+      shadow:"0 18px 38px rgba(0,0,0,.30), 0 0 28px rgba(255,209,102,.12), inset 0 3px 0 rgba(255,255,255,.56), inset 0 -20px 26px rgba(255,190,76,.14)"
     };
 
     const m=tn==="night"?nightCard:skyCard;
@@ -3102,7 +3102,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       height:82,
       borderRadius:"50%",
       background:tn==="night"
-        ?"radial-gradient(circle,rgba(255,255,240,.58),rgba(255,209,102,.24) 58%,transparent 72%)"
+        ?"radial-gradient(circle,rgba(255,255,235,.44),rgba(255,224,128,.18) 54%,transparent 74%)"
         :"radial-gradient(circle,rgba(186,213,255,.36),rgba(224,210,255,.12) 62%,transparent 72%)",
       filter:"blur(2px)"
     };
@@ -3112,7 +3112,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     if(isFluffyUi) return plushToolIconStyle(variant==="drawing"?"helper":variant);
 
     const skyIcon="radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(235,244,255,.76) 48%,rgba(235,224,255,.58))";
-    const nightIcon="radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(255,241,178,.86) 48%,rgba(255,209,102,.68))";
+    const nightIcon="radial-gradient(circle at 30% 24%,rgba(255,255,255,.72),rgba(255,248,214,.46) 42%,rgba(255,219,106,.24) 68%,rgba(255,255,255,.10) 100%)";
 
     return {
       width:52,
@@ -3120,7 +3120,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       borderRadius:19,
       background:tn==="night"?nightIcon:skyIcon,
       boxShadow:tn==="night"
-        ?"0 14px 26px rgba(120,76,0,.20), inset 0 3px 0 rgba(255,255,255,.70), inset 0 -14px 20px rgba(255,186,50,.22)"
+        ?"0 14px 26px rgba(0,0,0,.18), inset 0 3px 0 rgba(255,255,255,.56), inset 0 -14px 20px rgba(255,190,76,.10)"
         :"0 14px 28px rgba(74,158,255,.15), inset 0 3px 0 rgba(255,255,255,.88), inset 0 -16px 22px rgba(255,255,255,.44)",
       display:"flex",
       alignItems:"center",
