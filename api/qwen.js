@@ -19,9 +19,11 @@ function getBearerToken(req) {
 
 function supabaseHeaders(extra = {}) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
   if (!serviceKey) {
     throw new Error("缺少 SUPABASE_SERVICE_ROLE_KEY 环境变量");
   }
+
   return {
     apikey: serviceKey,
     Authorization: `Bearer ${serviceKey}`,
@@ -42,8 +44,34 @@ async function getUserIdFromToken(accessToken) {
   });
 
   if (!resp.ok) return null;
+
   const user = await resp.json();
   return user?.id || null;
+}
+
+async function getUserProfile(userId) {
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=user_id,ai_credits,role`,
+    {
+      method: "GET",
+      headers: supabaseHeaders(),
+    }
+  );
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`读取用户资料失败：${text}`);
+  }
+
+  const rows = await resp.json();
+  const row = rows?.[0] || {};
+
+  return {
+    userId: row.user_id || userId,
+    aiCredits: Number(row.ai_credits || 0),
+    role: String(row.role || ""),
+    isAdmin: String(row.role || "").toLowerCase() === "admin",
+  };
 }
 
 async function getAiCredits(userId) {
@@ -62,6 +90,7 @@ async function getAiCredits(userId) {
 
   const rows = await resp.json();
   const row = rows?.[0];
+
   return Number(row?.ai_credits || 0);
 }
 
@@ -73,7 +102,9 @@ async function setAiCredits(userId, nextCredits) {
     {
       method: "PATCH",
       headers: supabaseHeaders({ Prefer: "return=representation" }),
-      body: JSON.stringify({ ai_credits: safeCredits }),
+      body: JSON.stringify({
+        ai_credits: safeCredits,
+      }),
     }
   );
 
@@ -104,28 +135,50 @@ async function writeCreditLog(userId, changeAmount, type, note = "") {
 }
 
 async function consumeOneCredit(userId) {
-  const current = await getAiCredits(userId);
+  const profile = await getUserProfile(userId);
 
-  if (current <= 0) {
-    return { ok: false, credits: 0 };
+  // admin 账号不扣次数
+  if (profile.isAdmin) {
+    return {
+      ok: true,
+      credits: profile.aiCredits,
+      isAdmin: true,
+    };
   }
 
-  const next = await setAiCredits(userId, current - 1);
+  if (profile.aiCredits <= 0) {
+    return {
+      ok: false,
+      credits: 0,
+      isAdmin: false,
+    };
+  }
+
+  const next = await setAiCredits(userId, profile.aiCredits - 1);
   await writeCreditLog(userId, -1, "consume", "AI识图预扣1次");
-  return { ok: true, credits: next };
+
+  return {
+    ok: true,
+    credits: next,
+    isAdmin: false,
+  };
 }
 
 async function refundOneCredit(userId, note = "AI识图失败返还1次") {
   const current = await getAiCredits(userId);
   const next = await setAiCredits(userId, current + 1);
+
   await writeCreditLog(userId, 1, "refund", note);
+
   return next;
 }
 
 function normalizeBaseUrl(baseUrl = "") {
   const clean = String(baseUrl || "").trim().replace(/\/+$/, "");
+
   if (!clean) return "";
   if (clean.endsWith("/chat/completions")) return clean;
+
   return `${clean}/chat/completions`;
 }
 
@@ -150,8 +203,16 @@ async function callOwnOpenAiCompatible({ image, apiConfig }) {
         {
           role: "user",
           content: [
-            { type: "text", text: OCR_PROMPT },
-            { type: "image_url", image_url: { url: image } },
+            {
+              type: "text",
+              text: OCR_PROMPT,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: image,
+              },
+            },
           ],
         },
       ],
@@ -167,6 +228,7 @@ async function callOwnOpenAiCompatible({ image, apiConfig }) {
   }
 
   const content = data?.choices?.[0]?.message?.content;
+
   if (Array.isArray(content)) {
     const textPart = content.find((x) => x?.type === "text" || x?.text);
     return textPart?.text || "无法识别";
@@ -177,7 +239,10 @@ async function callOwnOpenAiCompatible({ image, apiConfig }) {
 
 async function callPlatformQwen(image) {
   const apiKey = process.env.QWEN_API_KEY;
-  if (!apiKey) throw new Error("缺少 QWEN_API_KEY 环境变量");
+
+  if (!apiKey) {
+    throw new Error("缺少 QWEN_API_KEY 环境变量");
+  }
 
   const response = await fetch(
     "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
@@ -194,8 +259,12 @@ async function callPlatformQwen(image) {
             {
               role: "user",
               content: [
-                { image },
-                { text: OCR_PROMPT },
+                {
+                  image,
+                },
+                {
+                  text: OCR_PROMPT,
+                },
               ],
             },
           ],
@@ -219,63 +288,118 @@ async function callPlatformQwen(image) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({
+      error: "Method not allowed",
+    });
   }
 
-  const { image, aiMode = "credits", apiConfig = null } = req.body || {};
+  const {
+    image,
+    aiMode = "credits",
+    apiConfig = null,
+  } = req.body || {};
 
   if (!image) {
-    return res.status(400).json({ error: "No image" });
+    return res.status(400).json({
+      error: "No image",
+    });
   }
 
   // 使用自己的API：不扣AI次数
   if (aiMode === "own_api") {
     try {
-      const result = await callOwnOpenAiCompatible({ image, apiConfig });
-      return res.status(200).json({ result, usedOwnApi: true });
+      const result = await callOwnOpenAiCompatible({
+        image,
+        apiConfig,
+      });
+
+      return res.status(200).json({
+        result,
+        usedOwnApi: true,
+      });
     } catch (e) {
-      return res.status(500).json({ error: e.message || "自带API识别失败" });
+      return res.status(500).json({
+        error: e.message || "自带API识别失败",
+      });
     }
   }
 
-  // 使用平台AI次数：需要登录 + 有剩余次数
+  // 使用平台AI次数：需要登录
   const accessToken = getBearerToken(req);
   const userId = await getUserIdFromToken(accessToken);
 
   if (!userId) {
-    return res.status(401).json({ error: "请先登录后再使用AI识图" });
+    return res.status(401).json({
+      error: "请先登录后再使用AI识图",
+    });
   }
 
   let creditsAfterConsume = 0;
   let consumed = false;
+  let isAdmin = false;
 
   try {
     const consume = await consumeOneCredit(userId);
+
     if (!consume.ok) {
-      return res.status(402).json({ error: "AI次数不足，请购买次数或使用自己的API", aiCredits: consume.credits });
+      return res.status(402).json({
+        error: "AI次数不足，请购买次数或使用自己的API",
+        aiCredits: consume.credits,
+      });
     }
 
-    consumed = true;
+    isAdmin = !!consume.isAdmin;
+    consumed = !isAdmin;
     creditsAfterConsume = consume.credits;
 
     const result = await callPlatformQwen(image);
 
     if (!result || result === "无法识别") {
+      // admin 没有扣次数，所以不需要返还
+      if (isAdmin) {
+        return res.status(200).json({
+          result: "无法识别",
+          aiCredits: creditsAfterConsume,
+          isAdmin: true,
+        });
+      }
+
       const refundedCredits = await refundOneCredit(userId, "AI未能识别，返还1次");
-      return res.status(200).json({ result: "无法识别", aiCredits: refundedCredits });
+
+      return res.status(200).json({
+        result: "无法识别",
+        aiCredits: refundedCredits,
+        isAdmin: false,
+      });
     }
 
-    return res.status(200).json({ result, aiCredits: creditsAfterConsume });
+    return res.status(200).json({
+      result,
+      aiCredits: creditsAfterConsume,
+      isAdmin,
+    });
   } catch (e) {
     if (consumed) {
       try {
         const refundedCredits = await refundOneCredit(userId, "AI接口失败，返还1次");
-        return res.status(500).json({ error: e.message || "AI识图失败", aiCredits: refundedCredits });
+
+        return res.status(500).json({
+          error: e.message || "AI识图失败",
+          aiCredits: refundedCredits,
+          isAdmin: false,
+        });
       } catch (refundErr) {
-        return res.status(500).json({ error: `${e.message || "AI识图失败"}；次数返还失败：${refundErr.message}` });
+        return res.status(500).json({
+          error: `${e.message || "AI识图失败"}；次数返还失败：${refundErr.message}`,
+        });
       }
     }
 
-    return res.status(500).json({ error: e.message || "AI识图失败" });
+    return res.status(500).json({
+      error: e.message || "AI识图失败",
+      aiCredits: creditsAfterConsume,
+      isAdmin,
+    });
   }
-}
+    }
+
