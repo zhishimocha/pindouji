@@ -352,9 +352,9 @@ function gToBeads(g){return Math.round(g*100);}
 function fmtG(g){const n=Math.round(g*100)/100;return Number.isInteger(n)?String(n):n.toFixed(2).replace(/\.?0+$/,"");}
 
 const THEMES={
-  sky:{name:"晴空蓝",icon:"☁️",bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"晴空蓝 ☁️",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff",toolboxPanelBg:"linear-gradient(180deg,#f8fcff 0%,#eef8ff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
-  fluffy:{name:"毛绒甜莓",icon:"🐑",bg:"linear-gradient(180deg,#fff6fa 0%,#ffeff5 40%,#edf6ff 100%)",card:"linear-gradient(145deg,#fffcfa 0%,#fff3f7 54%,#f4faff 100%)",border:"#f0d4de",accent:"#d07a94",accentLight:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",accentSoft:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",warn:"#e8b47f",warnBg:"linear-gradient(145deg,#fff8ef 0%,#fff2e6 100%)",warnBorder:"#f1d8bf",danger:"#e08a9e",dangerBg:"linear-gradient(145deg,#fff5f7 0%,#ffedf1 100%)",dangerBorder:"#f2cdd6",text:"#5e4250",textMid:"#aa8494",textLight:"#cfadb8",nav:"linear-gradient(180deg,rgba(255,252,253,0.96) 0%,rgba(255,243,248,0.98) 100%)",navBorder:"#f0d4de",barBg:"#f5dde4",bars:["#df8fa4","#f0b8c7","#f7dbe2","#cfe3ef","#f5e2cf"],switchBtn:"毛绒甜莓 🐑",cardShadow:"0 14px 32px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -16px 24px rgba(255,255,255,0.52), inset 0 0 0 1px rgba(255,246,250,0.92)",floatShadow:"0 20px 48px rgba(200,130,155,0.20), inset 0 1px 0 rgba(255,255,255,0.96)",headerBg:"linear-gradient(135deg,#fffafc 0%,#ffeff6 58%,#edf6ff 100%)",navActiveDot:"#d07a94",toolboxPanelBg:"linear-gradient(180deg,#fff8fb 0%,#ffeff5 46%,#f4faff 100%)",toolboxCatBg:"linear-gradient(145deg,rgba(255,255,255,0.94) 0%,rgba(255,244,249,0.90) 100%)",plush:true,plushCard:"linear-gradient(145deg,#fffcfa 0%,#fff2f6 56%,#f3faff 100%)",plushChip:"linear-gradient(145deg,#fff7fa 0%,#ffeff5 58%,#f7faff 100%)",plushIcon:"linear-gradient(145deg,#fffdfb 0%,#fff0f6 58%,#ecf7ff 100%)",plushShadow:"0 16px 36px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -18px 26px rgba(255,255,255,0.52)",plushBorder:"#f2d4dd"},
-  night:{name:"夜空黄",icon:"🌙",bg:"#0d1b2e",card:"#152236",border:"#1e3352",accent:"#ffd166",accentLight:"#2a2010",accentSoft:"#1e1808",warn:"#ffd166",warnBg:"#1e1808",warnBorder:"#3a3010",danger:"#ff8fa3",dangerBg:"#1e0810",dangerBorder:"#3a1020",text:"#d4e8ff",textMid:"#7a9cc0",textLight:"#304860",nav:"#0a1520",navBorder:"#1a2d44",barBg:"#1a2d44",bars:["#ffd166","#ffbb44","#ffa533","#ff8f22","#ff7a11"],switchBtn:"夜空黄 🌙",cardShadow:"0 4px 16px rgba(0,0,0,0.4)",floatShadow:"0 8px 32px rgba(255,209,102,0.15)",headerBg:"linear-gradient(135deg,#0d1b2e 0%,#162540 100%)",navActiveDot:"#ffd166",toolboxPanelBg:"#152236",toolboxCatBg:"#0d1b2e"}
+  sky:{name:"天霁蓝",icon:"☁️",bg:"#f0f7ff",card:"#ffffff",border:"#cce3ff",accent:"#4a9eff",accentLight:"#ddeeff",accentSoft:"#eaf4ff",warn:"#f5a623",warnBg:"#fff8ec",warnBorder:"#fde5b0",danger:"#ff6b6b",dangerBg:"#fff0f0",dangerBorder:"#ffd0d0",text:"#2c4a6e",textMid:"#6a90b8",textLight:"#a8c4e0",nav:"#ffffff",navBorder:"#dceeff",barBg:"#dceeff",bars:["#4a9eff","#72b4ff","#9acaff","#b8d8ff","#d4eaff"],switchBtn:"天霁蓝 ☁️",cardShadow:"0 4px 16px rgba(74,158,255,0.10)",floatShadow:"0 8px 32px rgba(74,158,255,0.20)",headerBg:"linear-gradient(135deg,#e8f4ff 0%,#f5f0ff 100%)",navActiveDot:"#4a9eff",toolboxPanelBg:"linear-gradient(180deg,#f8fcff 0%,#eef8ff 100%)",toolboxCatBg:"rgba(255,255,255,0.78)"},
+  fluffy:{name:"春梅冷萃",icon:"🐑",bg:"linear-gradient(180deg,#fff6fa 0%,#ffeff5 40%,#edf6ff 100%)",card:"linear-gradient(145deg,#fffcfa 0%,#fff3f7 54%,#f4faff 100%)",border:"#f0d4de",accent:"#d07a94",accentLight:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",accentSoft:"linear-gradient(145deg,#fff8fb 0%,#ffeff5 56%,#f5faff 100%)",warn:"#e8b47f",warnBg:"linear-gradient(145deg,#fff8ef 0%,#fff2e6 100%)",warnBorder:"#f1d8bf",danger:"#e08a9e",dangerBg:"linear-gradient(145deg,#fff5f7 0%,#ffedf1 100%)",dangerBorder:"#f2cdd6",text:"#5e4250",textMid:"#aa8494",textLight:"#cfadb8",nav:"linear-gradient(180deg,rgba(255,252,253,0.96) 0%,rgba(255,243,248,0.98) 100%)",navBorder:"#f0d4de",barBg:"#f5dde4",bars:["#df8fa4","#f0b8c7","#f7dbe2","#cfe3ef","#f5e2cf"],switchBtn:"春梅冷萃 🐑",cardShadow:"0 14px 32px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -16px 24px rgba(255,255,255,0.52), inset 0 0 0 1px rgba(255,246,250,0.92)",floatShadow:"0 20px 48px rgba(200,130,155,0.20), inset 0 1px 0 rgba(255,255,255,0.96)",headerBg:"linear-gradient(135deg,#fffafc 0%,#ffeff6 58%,#edf6ff 100%)",navActiveDot:"#d07a94",toolboxPanelBg:"linear-gradient(180deg,#fff8fb 0%,#ffeff5 46%,#f4faff 100%)",toolboxCatBg:"linear-gradient(145deg,rgba(255,255,255,0.94) 0%,rgba(255,244,249,0.90) 100%)",plush:true,plushCard:"linear-gradient(145deg,#fffcfa 0%,#fff2f6 56%,#f3faff 100%)",plushChip:"linear-gradient(145deg,#fff7fa 0%,#ffeff5 58%,#f7faff 100%)",plushIcon:"linear-gradient(145deg,#fffdfb 0%,#fff0f6 58%,#ecf7ff 100%)",plushShadow:"0 16px 36px rgba(200,130,155,0.18), inset 0 2px 0 rgba(255,255,255,0.96), inset 0 -18px 26px rgba(255,255,255,0.52)",plushBorder:"#f2d4dd"},
+  night:{name:"月胧青",icon:"🌙",bg:"radial-gradient(circle at 18% 18%,rgba(240,229,174,.58) 0%,rgba(250,246,222,.30) 28%,transparent 44%), radial-gradient(circle at 22% 78%,rgba(164,210,145,.34) 0%,rgba(216,236,197,.28) 36%,transparent 58%), linear-gradient(180deg,#fbf8e9 0%,#f7f4df 43%,#eaf4da 100%)",card:"linear-gradient(145deg,rgba(255,253,239,.96) 0%,rgba(249,247,226,.93) 55%,rgba(238,248,226,.94) 100%)",border:"#dedbb6",accent:"#948b39",accentLight:"linear-gradient(145deg,#fffbe7 0%,#f1e5ae 48%,#eef7df 100%)",accentSoft:"linear-gradient(145deg,rgba(255,251,231,.86) 0%,rgba(240,229,174,.54) 54%,rgba(230,246,217,.72) 100%)",warn:"#b58f30",warnBg:"#fff7df",warnBorder:"#ead99a",danger:"#b85d60",dangerBg:"#fff1ed",dangerBorder:"#efc5b7",text:"#4f532f",textMid:"#858764",textLight:"#b5b79a",nav:"linear-gradient(180deg,rgba(255,253,238,0.96) 0%,rgba(238,248,226,0.98) 100%)",navBorder:"#dcdcb8",barBg:"#e7edca",bars:["#f0e5ae","#d8e8b5","#a4d291","#cfdca5","#948b39"],switchBtn:"月胧青 🌙",cardShadow:"0 12px 30px rgba(132,139,80,0.14), inset 0 2px 0 rgba(255,255,255,0.80), inset 0 -18px 28px rgba(255,255,255,0.38)",floatShadow:"0 16px 42px rgba(148,139,57,0.18)",headerBg:"radial-gradient(circle at 12% 20%,rgba(240,229,174,.54),transparent 34%), radial-gradient(circle at 86% 72%,rgba(164,210,145,.30),transparent 40%), linear-gradient(135deg,#fffbea 0%,#f4efd2 52%,#e9f4dc 100%)",navActiveDot:"#948b39",toolboxPanelBg:"linear-gradient(180deg,#fffbea 0%,#eef7df 100%)",toolboxCatBg:"rgba(255,253,239,0.78)"}
 };
 const THEME_ORDER=["sky","fluffy","night"];
 
@@ -485,7 +485,7 @@ const StockCard = React.memo(function StockCard({c,tn,T,stock,used,compact,batch
         transform:isFocused?"scale(1.04)":isSel?"scale(0.97)":"none",
         transition:"opacity 0.25s,filter 0.25s,transform 0.18s,box-shadow 0.18s,border 0.18s"}}>
       <div style={{background:c.hex,height:compact?40:50,display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-        {tn==="night"&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.2)"}}/>}
+        {tn==="night"&&<div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,rgba(255,251,231,0.18),rgba(164,210,145,0.10))"}}/>}
         <span style={{fontSize:compact?12:13,fontWeight:800,color:dk?"rgba(255,255,255,0.9)":"rgba(40,30,20,0.65)",position:"relative"}}>{c.id}</span>
         {batch&&<div style={{position:"absolute",right:8,width:20,height:20,borderRadius:"50%",background:isSel?T.accent:"rgba(255,255,255,0.8)",border:`2px solid ${isSel?T.accent:"rgba(200,200,200,0.9)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,color:"#fff",fontWeight:800}}>{isSel?"✓":""}</div>}
         {isFocused&&<div style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.35)",borderRadius:6,padding:"1px 5px",fontSize:9,color:"#fff",fontWeight:800}}>✦ 拼这个</div>}
@@ -3083,9 +3083,9 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     };
 
     const nightCard={
-      bg:"linear-gradient(145deg,rgba(255,250,222,.94) 0%,rgba(255,232,154,.78) 36%,rgba(255,210,96,.52) 64%,rgba(44,34,17,.22) 100%), radial-gradient(circle at 24% 18%,rgba(255,255,255,.70),transparent 34%), radial-gradient(circle at 82% 80%,rgba(255,196,58,.30),transparent 46%)",
-      border:"1.5px solid rgba(255,224,144,.86)",
-      shadow:"0 18px 38px rgba(0,0,0,.30), 0 0 28px rgba(255,209,102,.12), inset 0 3px 0 rgba(255,255,255,.56), inset 0 -20px 26px rgba(255,190,76,.14)"
+      bg:"linear-gradient(145deg,rgba(255,253,238,.96) 0%,rgba(245,239,202,.82) 46%,rgba(225,244,211,.78) 100%), radial-gradient(circle at 22% 18%,rgba(255,255,255,.76),transparent 34%), radial-gradient(circle at 82% 78%,rgba(164,210,145,.28),transparent 46%)",
+      border:"1.5px solid rgba(222,219,182,.90)",
+      shadow:"0 16px 34px rgba(132,139,80,.14), inset 0 3px 0 rgba(255,255,255,.76), inset 0 -18px 24px rgba(255,255,255,.34)"
     };
 
     const m=tn==="night"?nightCard:skyCard;
@@ -3102,7 +3102,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       height:82,
       borderRadius:"50%",
       background:tn==="night"
-        ?"radial-gradient(circle,rgba(255,255,235,.44),rgba(255,224,128,.18) 54%,transparent 74%)"
+        ?"radial-gradient(circle,rgba(255,253,231,.58),rgba(164,210,145,.18) 54%,transparent 74%)"
         :"radial-gradient(circle,rgba(186,213,255,.36),rgba(224,210,255,.12) 62%,transparent 72%)",
       filter:"blur(2px)"
     };
@@ -3112,7 +3112,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
     if(isFluffyUi) return plushToolIconStyle(variant==="drawing"?"helper":variant);
 
     const skyIcon="radial-gradient(circle at 32% 26%,rgba(255,255,255,.98),rgba(235,244,255,.76) 48%,rgba(235,224,255,.58))";
-    const nightIcon="radial-gradient(circle at 30% 24%,rgba(255,255,255,.72),rgba(255,248,214,.46) 42%,rgba(255,219,106,.24) 68%,rgba(255,255,255,.10) 100%)";
+    const nightIcon="radial-gradient(circle at 30% 24%,rgba(255,255,255,.90),rgba(250,246,222,.72) 42%,rgba(164,210,145,.26) 72%,rgba(255,255,255,.16) 100%)";
 
     return {
       width:52,
@@ -3120,7 +3120,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       borderRadius:19,
       background:tn==="night"?nightIcon:skyIcon,
       boxShadow:tn==="night"
-        ?"0 14px 26px rgba(0,0,0,.18), inset 0 3px 0 rgba(255,255,255,.56), inset 0 -14px 20px rgba(255,190,76,.10)"
+        ?"0 14px 26px rgba(132,139,80,.14), inset 0 3px 0 rgba(255,255,255,.78), inset 0 -14px 20px rgba(164,210,145,.12)"
         :"0 14px 28px rgba(74,158,255,.15), inset 0 3px 0 rgba(255,255,255,.88), inset 0 -16px 22px rgba(255,255,255,.44)",
       display:"flex",
       alignItems:"center",
@@ -3129,7 +3129,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
       flexShrink:0,
       position:"relative",
       zIndex:1,
-      border:tn==="night"?"1px solid rgba(255,255,255,.86)":"1px solid rgba(255,255,255,.92)"
+      border:tn==="night"?"1px solid rgba(255,253,238,.92)":"1px solid rgba(255,255,255,.92)"
     };
   };
 
@@ -3137,7 +3137,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
 
   const worksProgressStyle=()=>{
     if(tn==="fluffy") return {background:T.card,padding:"20px 18px 16px",borderBottom:`1px solid ${T.border}`};
-    if(tn==="night") return {background:"linear-gradient(135deg,#0f1b2e 0%,#172844 58%,#241e10 100%)",padding:"20px 18px 16px",borderBottom:"1px solid #1e3352"};
+    if(tn==="night") return {background:"radial-gradient(circle at 10% 18%,rgba(240,229,174,.50),transparent 34%), radial-gradient(circle at 90% 78%,rgba(164,210,145,.26),transparent 40%), linear-gradient(135deg,#fffbea 0%,#f4efd2 54%,#e9f4dc 100%)",padding:"20px 18px 16px",borderBottom:"1px solid #dedbb6"};
     return {background:"linear-gradient(135deg,#edf9ff 0%,#f5f9ff 56%,#fffdf8 100%)",padding:"20px 18px 16px",borderBottom:"1px solid #d6ebff"};
   };
 
@@ -3916,9 +3916,9 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
         shadow:active?`${theme.plushShadow||theme.cardShadow}, 0 0 0 3px ${theme.accent}18`:(theme.plushShadow||theme.cardShadow)
       },
       night:{
-        bg:"linear-gradient(145deg,#0b1526 0%,#14243d 50%,#09111f 100%)",
-        border:active?"#ffd166":"#2a4162",
-        shadow:active?"0 0 0 3px rgba(255,209,102,.22), 0 16px 34px rgba(0,0,0,.32)":"0 12px 26px rgba(0,0,0,.28)"
+        bg:"linear-gradient(145deg,#fffbea 0%,#f1e5ae 46%,#e8f5dd 100%)",
+        border:active?"#948b39":"#dedbb6",
+        shadow:active?"0 0 0 3px rgba(148,139,57,.18), 0 16px 34px rgba(132,139,80,.16)":"0 12px 26px rgba(132,139,80,.10)"
       }
     };
     const m=maps[key]||maps.sky;
@@ -3944,9 +3944,9 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
       night:{
         size:42,
         radius:16,
-        bg:"linear-gradient(145deg,#15233b 0%,#07101e 58%,#0d1b2e 100%)",
-        border:"#2d4a6f",
-        shadow:"0 14px 28px rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.10), inset 0 -14px 20px rgba(0,0,0,.32)"
+        bg:"linear-gradient(145deg,#fffdf0 0%,#f0e5ae 54%,#e9f6df 100%)",
+        border:"#dedbb6",
+        shadow:"0 14px 28px rgba(132,139,80,.14), inset 0 2px 0 rgba(255,255,255,.82), inset 0 -14px 20px rgba(164,210,145,.14)"
       }
     };
     const m=maps[key]||maps.sky;
@@ -4046,8 +4046,8 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
               const theme=THEMES[key];
               const active=tn===key;
               const isDefault=defaultTheme===key;
-              const previewTextColor=key==="night"?"#dbeafe":key==="fluffy"?"#6b4050":"#244a72";
-              const previewSubColor=key==="night"?"#8aa7cf":key==="fluffy"?"#b98298":"#6a90b8";
+              const previewTextColor=key==="night"?"#4f532f":key==="fluffy"?"#6b4050":"#244a72";
+              const previewSubColor=key==="night"?"#858764":key==="fluffy"?"#b98298":"#6a90b8";
               return (
                 <div key={key} className={key==="fluffy"?"cc fur-card":"cc"} onClick={()=>chooseTheme(key)}
                   style={fluffyPreviewRow(key,active)}>
@@ -4057,7 +4057,7 @@ function MinePage({T,tn,setTn,user,isPro,onUpgrade,onLogout,onExport,onImport,ai
                     <div style={{fontSize:10,color:previewSubColor,marginTop:2}}>{"点击立即切换"}</div>
                   </div>
                   <button onClick={(e)=>{e.stopPropagation();setAsDefaultTheme(key);}}
-                    style={{width:28,height:28,borderRadius:"50%",border:`2px solid ${isDefault?theme.accent:(key==="night"?"#405b80":key==="fluffy"?(theme.plushBorder||theme.border):"#bfe3ff")}`,background:isDefault?theme.accent:(key==="night"?"#101c2f":key==="fluffy"?(theme.plushChip||theme.card):"#f8fcff"),color:isDefault?"#fff":(key==="night"?"#8aa7cf":key==="fluffy"?theme.accent:"#8ab9df"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,cursor:"pointer",flexShrink:0,boxShadow:key==="fluffy"?(theme.plushShadow||theme.cardShadow):"none"}}>
+                    style={{width:28,height:28,borderRadius:"50%",border:`2px solid ${isDefault?theme.accent:(key==="night"?"#dedbb6":key==="fluffy"?(theme.plushBorder||theme.border):"#bfe3ff")}`,background:isDefault?theme.accent:(key==="night"?"rgba(255,253,239,.78)":key==="fluffy"?(theme.plushChip||theme.card):"#f8fcff"),color:isDefault?"#fff":(key==="night"?"#948b39":key==="fluffy"?theme.accent:"#8ab9df"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:900,cursor:"pointer",flexShrink:0,boxShadow:key==="fluffy"?(theme.plushShadow||theme.cardShadow):"none"}}>
                     {isDefault?"✓":""}
                   </button>
                 </div>
@@ -4463,7 +4463,15 @@ function HomeStats({T,tn,tasks,used,stock,wL,wC,setWL,setWC,restockReminderThres
       if(count<=7) return "rgba(215,122,148,.86)";
       return "#d07a94";
     }
-    if(!count||count===0) return tn==="night"?"rgba(255,255,255,0.06)":"rgba(74,158,255,0.08)";
+    if(tn==="night"){
+      if(!count||count===0) return "rgba(164,210,145,0.12)";
+      if(count===1) return "rgba(164,210,145,0.30)";
+      if(count<=3) return "rgba(164,210,145,0.48)";
+      if(count<=5) return "rgba(148,139,57,0.54)";
+      if(count<=7) return "rgba(148,139,57,0.72)";
+      return "#948b39";
+    }
+    if(!count||count===0) return "rgba(74,158,255,0.08)";
     if(count===1) return "rgba(74,158,255,0.25)";
     if(count<=3) return "rgba(74,158,255,0.45)";
     if(count<=5) return "rgba(74,158,255,0.65)";
@@ -5970,5 +5978,3 @@ function GuideAssistant({T, onBack}){
   );
 }
 // trigger vercel redeploy
-
-
