@@ -182,7 +182,7 @@ function normalizeBaseUrl(baseUrl = "") {
   return `${clean}/chat/completions`;
 }
 
-async function callOwnOpenAiCompatible({ image, apiConfig }) {
+async function callOwnOpenAiCompatible({ image, apiConfig, prompt }) {
   const apiKey = String(apiConfig?.apiKey || "").trim();
   const baseUrl = normalizeBaseUrl(apiConfig?.baseUrl || "");
   const model = String(apiConfig?.model || "").trim();
@@ -205,7 +205,7 @@ async function callOwnOpenAiCompatible({ image, apiConfig }) {
           content: [
             {
               type: "text",
-              text: OCR_PROMPT,
+              text: String(prompt || OCR_PROMPT),
             },
             {
               type: "image_url",
@@ -237,7 +237,7 @@ async function callOwnOpenAiCompatible({ image, apiConfig }) {
   return String(content || "无法识别").trim();
 }
 
-async function callPlatformQwen(image) {
+async function callPlatformQwen(image, prompt) {
   const apiKey = process.env.QWEN_API_KEY;
 
   if (!apiKey) {
@@ -263,7 +263,7 @@ async function callPlatformQwen(image) {
                   image,
                 },
                 {
-                  text: OCR_PROMPT,
+                  text: String(prompt || OCR_PROMPT),
                 },
               ],
             },
@@ -295,6 +295,7 @@ export default async function handler(req, res) {
 
   const {
     image,
+    prompt = "",
     aiMode = "credits",
     apiConfig = null,
   } = req.body || {};
@@ -311,6 +312,7 @@ export default async function handler(req, res) {
       const result = await callOwnOpenAiCompatible({
         image,
         apiConfig,
+        prompt,
       });
 
       return res.status(200).json({
@@ -352,7 +354,7 @@ export default async function handler(req, res) {
     consumed = !isAdmin;
     creditsAfterConsume = consume.credits;
 
-    const result = await callPlatformQwen(image);
+    const result = await callPlatformQwen(image, prompt);
 
     if (!result || result === "无法识别") {
       // admin 没有扣次数，所以不需要返还

@@ -3376,7 +3376,7 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
   // 缺色替换页
   if(view==="missing")return <MissingColorPage T={T} stock={stock} onBack={()=>setView("home")} user={user} hasOwnApi={hasOwnApi} aiSettings={aiSettings} aiCredits={aiCredits} isAdmin={isAdmin} setAiCredits={setAiCredits} setIsAdmin={setIsAdmin} onUpgrade={onUpgrade}/>;
   // 图纸助手页
-  if(view==="guide")return <GuideAssistant T={T} onBack={()=>setView("home")}/> ;
+  if(view==="guide")return <GuideAssistant T={T} onBack={()=>setView("home")} hasOwnApi={hasOwnApi} aiSettings={aiSettings} aiCredits={aiCredits} isAdmin={isAdmin} setAiCredits={setAiCredits} setIsAdmin={setIsAdmin} onUpgrade={onUpgrade}/> ;
 
   // 辅助工具页
   if(view==="helper")return <HelperToolPage T={T} onBack={()=>setView("home")}/>;
@@ -5172,7 +5172,7 @@ function ToolboxModal({toolbox,setToolbox,T,onClose}){
 
 
 
-function GuideAssistant({T, onBack}){
+function GuideAssistant({T, onBack, hasOwnApi=false, aiSettings=null, aiCredits=0, isAdmin=false, setAiCredits, setIsAdmin, onUpgrade}){
   const [step, setStep] = useState("upload");
   const [imgSrc, setImgSrc] = useState(null);
   const [imgNaturalW, setImgNaturalW] = useState(0);
@@ -5196,6 +5196,8 @@ function GuideAssistant({T, onBack}){
   const [completedColors, setCompletedColors] = useState([]);
   const [renderSize, setRenderSize] = useState({w:0,h:0});
   const [cropRect, setCropRect] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState("");
 
   const [highlightZoom, setHighlightZoom] = useState(1);
   const [highlightPan, setHighlightPan] = useState({x:0,y:0});
@@ -5291,6 +5293,8 @@ function GuideAssistant({T, onBack}){
       setColorGrid(null);
       setColorList([]);
       setActiveColor(null);
+      setAnalyzing(false);
+      setAnalysisError("");
       setCropRect(null);
       setCropX1(0.05);
       setCropY1(0.05);
@@ -5439,7 +5443,14 @@ function GuideAssistant({T, onBack}){
   function onCropTouchEnd(){ endCropDrag(); }
 
   async function analyzeColors(){
-    if(!imgSrc) return;
+    if(!imgSrc || analyzing) return;
+    if(!hasOwnApi && !isAdmin && Number(aiCredits||0)<=0){
+      setAnalysisError("AI credits are not enough. Please buy credits or configure your own API.");
+      onUpgrade?.();
+      return;
+    }
+    setAnalyzing(true);
+    setAnalysisError("");
     const img = new Image();
     img.onload = async () => {
       try{
@@ -5492,12 +5503,33 @@ function GuideAssistant({T, onBack}){
 8. 合法色号只能从这里选：${validCodes}
 9. 不允许输出任何不在合法列表中的值。`;
 
+        const {data:{session}} = await supabase.auth.getSession();
+        const headers = {'Content-Type':'application/json'};
+        if(session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+
+        if(!hasOwnApi && !session?.access_token){
+          setAnalysisError("Please log in before AI analysis, or configure your own API.");
+          return;
+        }
+
         const resp = await fetch('/api/qwen',{
           method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ image: cropB64, prompt })
+          headers,
+          body:JSON.stringify({
+            image: cropB64,
+            prompt,
+            aiMode: hasOwnApi ? "own_api" : "credits",
+            apiConfig: hasOwnApi ? aiSettings : null,
+          })
         });
-        const data = await resp.json();
+        const data = await resp.json().catch(()=>({}));
+        if(data.isAdmin!==undefined) setIsAdmin?.(!!data.isAdmin);
+        if(data.aiCredits!==undefined) setAiCredits?.(Number(data.aiCredits)||0);
+        if(!resp.ok || data.error){
+          if(resp.status===402) onUpgrade?.();
+          setAnalysisError(data.error || "Analysis failed. Please try again later.");
+          return;
+        }
         const raw = String(data?.result || "").trim();
         const cleaned = raw
           .replace(/^```(?:json)?/i, "")
@@ -5546,8 +5578,7 @@ function GuideAssistant({T, onBack}){
           .sort((a,b)=>b.count-a.count);
 
         if(!mergedColorList.length){
-          alert(`这一版OCR没能成功读出格子色号，先检查网格是否对齐，再框得紧一点。
-如果还不行，把这张图单独裁成更紧的主体再试。`);
+          setAnalysisError("No bead codes were detected. Check grid alignment or crop the main area tighter.");
           return;
         }
 
@@ -5561,8 +5592,14 @@ function GuideAssistant({T, onBack}){
         setCropRect({x1,y1,x2,y2,w,h,localGridX,localGridY,rows,cols});
         setStep("highlight");
       }catch(err){
-        alert(`分析失败：${err.message || err}`);
+        setAnalysisError(`Analysis failed: ${err.message || err}`);
+      }finally{
+        setAnalyzing(false);
       }
+    };
+    img.onerror = () => {
+      setAnalysisError("Image failed to load. Please upload it again.");
+      setAnalyzing(false);
     };
     img.src = imgSrc;
   }
@@ -5947,9 +5984,16 @@ function GuideAssistant({T, onBack}){
                 </div>
               ))}
             </div>
+            {analysisError&&(
+              <div style={{fontSize:12,color:T.danger,fontWeight:800,lineHeight:1.6,background:T.dangerBg,borderRadius:12,padding:"8px 10px",marginBottom:10}}>
+                {analysisError}
+              </div>
+            )}
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setStep("align")} style={{flex:1,padding:"12px 0",borderRadius:50,border:`1.5px solid ${T.border}`,background:T.card,color:T.textMid,fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>← 上一步</button>
-              <button onClick={analyzeColors} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:"pointer"}}>✨ 开始分析</button>
+              <button onClick={analyzeColors} disabled={analyzing} style={{flex:2,padding:"12px 0",borderRadius:50,border:"none",background:analyzing?"#aaa":T.accent,color:"#fff",fontFamily:"'Nunito',sans-serif",fontSize:13,fontWeight:900,cursor:analyzing?"wait":"pointer"}}>
+                {analyzing?"Analyzing...":"Start analysis"}
+              </button>
             </div>
           </div>
         </div>
