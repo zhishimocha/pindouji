@@ -5478,14 +5478,15 @@ function GuideAssistant({T, onBack, hasOwnApi=false, aiSettings=null, aiCredits=
         const rows = Math.max(1, Math.floor((h - localGridY) / gridPx));
 
         const cropCanvas = document.createElement("canvas");
-        cropCanvas.width = Math.max(1, Math.round(w * 2));
-        cropCanvas.height = Math.max(1, Math.round(h * 2));
+        const ocrScale = Math.min(2, 1600 / Math.max(w, h));
+        cropCanvas.width = Math.max(1, Math.round(w * ocrScale));
+        cropCanvas.height = Math.max(1, Math.round(h * ocrScale));
         const cropCtx = cropCanvas.getContext("2d");
         cropCtx.imageSmoothingEnabled = false;
         cropCtx.fillStyle = "#ffffff";
         cropCtx.fillRect(0,0,cropCanvas.width,cropCanvas.height);
         cropCtx.drawImage(img, x1, y1, w, h, 0, 0, cropCanvas.width, cropCanvas.height);
-        const cropB64 = cropCanvas.toDataURL("image/png");
+        const cropB64 = cropCanvas.toDataURL("image/jpeg", 0.86);
 
         const validCodes = ALL_COLORS.map(c=>c.id).join(", ");
         const prompt = `你在做拼豆图纸单格OCR。
@@ -5512,9 +5513,12 @@ function GuideAssistant({T, onBack, hasOwnApi=false, aiSettings=null, aiCredits=
           return;
         }
 
+        const ctrl = new AbortController();
+        const timer = setTimeout(()=>ctrl.abort(), 60000);
         const resp = await fetch('/api/qwen',{
           method:'POST',
           headers,
+          signal: ctrl.signal,
           body:JSON.stringify({
             image: cropB64,
             prompt,
@@ -5522,6 +5526,7 @@ function GuideAssistant({T, onBack, hasOwnApi=false, aiSettings=null, aiCredits=
             apiConfig: hasOwnApi ? aiSettings : null,
           })
         });
+        clearTimeout(timer);
         const data = await resp.json().catch(()=>({}));
         if(data.isAdmin!==undefined) setIsAdmin?.(!!data.isAdmin);
         if(data.aiCredits!==undefined) setAiCredits?.(Number(data.aiCredits)||0);
@@ -5592,7 +5597,7 @@ function GuideAssistant({T, onBack, hasOwnApi=false, aiSettings=null, aiCredits=
         setCropRect({x1,y1,x2,y2,w,h,localGridX,localGridY,rows,cols});
         setStep("highlight");
       }catch(err){
-        setAnalysisError(`Analysis failed: ${err.message || err}`);
+        setAnalysisError(err?.name==="AbortError" ? "Analysis timed out. Crop the main pattern tighter and try again." : `Analysis failed: ${err.message || err}`);
       }finally{
         setAnalyzing(false);
       }
