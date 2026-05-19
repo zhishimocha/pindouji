@@ -3585,6 +3585,12 @@ function WorksPage({T,tn,user,isPro,onUpgrade,stock,used,resetKey,onDeductStock,
           <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("helper")}>📏</div>
           <div style={{fontSize:12,fontWeight:900,color:toolTextColor(),lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>辅助工具</div>
         </div>
+        <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("guide")}
+          style={softToolCardStyle("helper")}>
+          <div style={softToolGlowStyle("helper")}/>
+          <div className={isFluffyUi?"fur-icon":""} style={softToolIconStyle("helper")}>🔦</div>
+          <div style={{fontSize:12,fontWeight:900,color:toolTextColor(),lineHeight:1,whiteSpace:"nowrap",position:"relative",zIndex:1}}>高亮专注</div>
+        </div>
         <div className={isFluffyUi?"cc fur-card":"cc"} onClick={()=>setView("drawing")}
           style={softToolCardStyle("drawing")}>
           <div style={softToolGlowStyle("drawing")}/>
