@@ -5573,22 +5573,78 @@ function GuideAssistant({T, onBack}){
       canvas.height = h;
 
       ctx.clearRect(0,0,w,h);
-      ctx.fillStyle = "#fff";
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = "#343735";
       ctx.fillRect(0,0,w,h);
+      ctx.globalAlpha = 0.16;
       ctx.drawImage(img,x1,y1,w,h,0,0,w,h);
+      ctx.globalAlpha = 1;
+
+      const officialMap = Object.fromEntries(ALL_COLORS.map(c=>[c.id,c]));
+      const drawLabel = (text, cx, cy, size, color) => {
+        const label = String(text || "");
+        if(!label) return;
+        const fontSize = Math.max(8, Math.min(size * 0.42, label.length > 3 ? size * 0.32 : size * 0.48));
+        ctx.font = `900 ${fontSize}px 'Nunito', Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = Math.max(1.5, fontSize * 0.12);
+        ctx.strokeStyle = color === "#111111" ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)";
+        ctx.fillStyle = color;
+        ctx.strokeText(label, cx, cy);
+        ctx.fillText(label, cx, cy);
+      };
 
       colorGrid.forEach((row,ri)=>row.forEach((id,ci)=>{
-        if(!id || completedColors.includes(id)) return;
         const cx = localGridX + ci*gridPx;
         const cy = localGridY + ri*gridPx;
+        if(!id || completedColors.includes(id)) return;
+        const color = officialMap[id];
+        const hex = color?.hex || "#b8b8b8";
         if(id===activeColor){
-          ctx.fillStyle="rgba(255,220,0,0.36)";
+          ctx.fillStyle = hex;
           ctx.fillRect(cx,cy,gridPx,gridPx);
-          ctx.strokeStyle="rgba(255,170,0,1)";
-          ctx.lineWidth=Math.max(1.2, gridPx*0.06);
-          ctx.strokeRect(cx+0.75,cy+0.75,gridPx-1.5,gridPx-1.5);
+          ctx.strokeStyle = "#13d66f";
+          ctx.lineWidth = Math.max(1.6, gridPx*0.07);
+          ctx.strokeRect(cx+ctx.lineWidth/2,cy+ctx.lineWidth/2,gridPx-ctx.lineWidth,gridPx-ctx.lineWidth);
+          drawLabel(id, cx + gridPx/2, cy + gridPx/2, gridPx, readableTextColor(hex));
+        }else{
+          ctx.fillStyle = mixHexWith(hex, [52,55,53], 0.68);
+          ctx.fillRect(cx,cy,gridPx,gridPx);
+          drawLabel(id, cx + gridPx/2, cy + gridPx/2, gridPx, readableTextColor(hex)==="#111111" ? "rgba(20,20,20,0.72)" : "rgba(230,230,230,0.55)");
         }
       }));
+
+      const cols = colorGrid[0]?.length || 0;
+      const rows = colorGrid.length || 0;
+      ctx.setLineDash([]);
+      for(let ci=0; ci<=cols; ci++){
+        const x = localGridX + ci*gridPx;
+        const isMajor = ci > 0 && ci % 10 === 0;
+        const isMid = ci > 0 && ci % 5 === 0;
+        ctx.beginPath();
+        ctx.moveTo(x, localGridY);
+        ctx.lineTo(x, localGridY + rows*gridPx);
+        ctx.strokeStyle = isMajor || isMid ? "rgba(255,45,45,0.92)" : "rgba(0,0,0,0.30)";
+        ctx.lineWidth = isMajor ? Math.max(2, gridPx*0.055) : isMid ? Math.max(1.4, gridPx*0.04) : Math.max(0.6, gridPx*0.018);
+        if(isMid && !isMajor) ctx.setLineDash([Math.max(4, gridPx*0.18), Math.max(3, gridPx*0.12)]);
+        else ctx.setLineDash([]);
+        ctx.stroke();
+      }
+      for(let ri=0; ri<=rows; ri++){
+        const y = localGridY + ri*gridPx;
+        const isMajor = ri > 0 && ri % 10 === 0;
+        const isMid = ri > 0 && ri % 5 === 0;
+        ctx.beginPath();
+        ctx.moveTo(localGridX, y);
+        ctx.lineTo(localGridX + cols*gridPx, y);
+        ctx.strokeStyle = isMajor || isMid ? "rgba(255,45,45,0.92)" : "rgba(0,0,0,0.30)";
+        ctx.lineWidth = isMajor ? Math.max(2, gridPx*0.055) : isMid ? Math.max(1.4, gridPx*0.04) : Math.max(0.6, gridPx*0.018);
+        if(isMid && !isMajor) ctx.setLineDash([Math.max(4, gridPx*0.18), Math.max(3, gridPx*0.12)]);
+        else ctx.setLineDash([]);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
     };
     img.src = imgSrc;
   },[step,colorGrid,activeColor,imgSrc,cropRect,gridPx,completedColors]);
@@ -5604,6 +5660,20 @@ function GuideAssistant({T, onBack}){
 
   const activeMeta = colorList.find(c=>c.id===activeColor);
   const completedMeta = colorList.filter(c=>completedColors.includes(c.id));
+
+  function mixHexWith(hex, mixRgb, amount){
+    const [r,g,b] = hexToRgb(hex || "#cccccc");
+    const m = Math.max(0, Math.min(1, amount));
+    const nr = Math.round(r * (1 - m) + mixRgb[0] * m);
+    const ng = Math.round(g * (1 - m) + mixRgb[1] * m);
+    const nb = Math.round(b * (1 - m) + mixRgb[2] * m);
+    return `rgb(${nr},${ng},${nb})`;
+  }
+
+  function readableTextColor(hex){
+    const [r,g,b] = hexToRgb(hex || "#cccccc");
+    return (r * 299 + g * 587 + b * 114) / 1000 > 145 ? "#111111" : "#f4f4f4";
+  }
 
   function startHighlightTouch(e){
     const ts = highlightTouch.current;
